@@ -14,9 +14,14 @@ from typing import Optional
 from datetime import date, datetime
 import os
 import logging
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sofem-mes")
+
+# Absolute paths — works regardless of where Railway runs from
+BASE_DIR     = Path(__file__).parent.parent  # sofem-cloud/
+FRONTEND_DIR = BASE_DIR / "frontend"
 
 # ─────────────────────────────────────────
 # DATABASE — reads from Railway env vars
@@ -50,7 +55,11 @@ app.add_middleware(
 )
 
 # Serve frontend
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+    logger.info(f"✅ Frontend found at {FRONTEND_DIR}")
+else:
+    logger.warning(f"⚠️ Frontend not found at {FRONTEND_DIR}")
 
 # ─────────────────────────────────────────
 # HELPERS
@@ -138,7 +147,10 @@ class ProduitCreate(BaseModel):
 # ─────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 def root():
-    return FileResponse("frontend/index.html")
+    index = FRONTEND_DIR / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return {"message": "SOFEM MES API v1.0 — frontend not found"}
 
 @app.get("/api/health")
 def health(db=Depends(get_db)):
