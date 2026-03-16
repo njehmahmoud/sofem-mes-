@@ -16,7 +16,7 @@ def dashboard(db=Depends(get_db)):
     retard   = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE date_echeance < CURDATE() AND statut NOT IN ('COMPLETED','CANCELLED')", one=True)["n"]
     taux     = round(comp_m / total_m * 100, 1) if total_m > 0 else 0
     graphique = q(db, """
-        SELECT DATE_FORMAT(created_at,'%b %Y') mois, COUNT(*) total
+        SELECT DATE_FORMAT(MIN(created_at),'%b %Y') mois, COUNT(*) total
         FROM ordres_fabrication
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
         GROUP BY YEAR(created_at), MONTH(created_at)
