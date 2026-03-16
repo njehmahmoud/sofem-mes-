@@ -690,7 +690,9 @@ async function loadMonitor(){
 }
 async function advEtape(ofId,etape,cur){
   const next={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[cur];if(!next)return;
-  try{await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`${etape} → ${next} ✓`);loadMonitor();}
+  // Get operateur_id from token if available
+  const opId = localStorage.getItem('operateur_id') ? parseInt(localStorage.getItem('operateur_id')) : null;
+  try{await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`,{method:'PUT',body:JSON.stringify({statut:next, operateur_id:opId})});toast(`${etape} → ${next} ✓`);loadMonitor();}
   catch(e){toast(e.message,'err');}
 }
 
