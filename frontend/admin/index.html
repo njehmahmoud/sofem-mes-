@@ -589,7 +589,11 @@ function renderOrders(ofs){
     <td style="font-size:10px;color:var(--muted)">${of.atelier||'—'}</td>
     <td>${dateTd(of.date_echeance)}</td>
     <td><div style="display:flex;gap:4px">
-      ${of.statut==='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="printFacture(${of.id})" title="Imprimer facture">🖨️</button>`:''}
+      ${of.statut==='COMPLETED'?`
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px" onclick="printFacture(${of.id},'interne')" title="Rapport interne complet">🖨️ Interne</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--blue);font-size:8px" onclick="printFacture(${of.id},'client')" title="Facture client">📄 Client</button>
+        </div>`:''}
       ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
       ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
     </div></td>
@@ -639,9 +643,9 @@ async function cancelOF(id){
 }
 
 // ── FACTURE ────────────────────────────────────────────────
-async function printFacture(ofId) {
-  toast('Génération de la facture...', 'ok');
-  window.open(`${API}/api/facture/${ofId}`, '_blank');
+async function printFacture(ofId, type='interne') {
+  toast(type === 'client' ? 'Génération facture client...' : 'Génération rapport interne...', 'ok');
+  window.open(`${API}/api/facture/${ofId}?type=${type}`, '_blank');
 }
 
 // MONITOR
