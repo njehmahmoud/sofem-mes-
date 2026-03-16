@@ -320,10 +320,15 @@ td{padding:.65rem 1rem;vertical-align:middle}
 <!-- OPERATORS -->
 <div class="page" id="page-operators">
   <div class="ph">
-    <div><div class="ph-title">GESTION <span>OPÉRATEURS</span></div><div class="ph-sub">// ÉQUIPE DE PRODUCTION</div></div>
+    <div><div class="ph-title">GESTION <span>OPÉRATEURS</span></div><div class="ph-sub">// ÉQUIPE DE PRODUCTION SOFEM</div></div>
     <button class="btn" onclick="openModal('m-op')">+ Opérateur</button>
   </div>
-  <div class="sec"><div id="ops-list"><div class="loading"><div class="spin"></div></div></div></div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Avatar</th><th>Prénom</th><th>Nom</th><th>Spécialité</th><th>Téléphone</th><th>OFs Traités</th><th>Performance</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="ops-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
 </div>
 
 <!-- PRODUCTS -->
@@ -439,6 +444,21 @@ td{padding:.65rem 1rem;vertical-align:middle}
       <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-email"></div></div>
     </div>
     <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button><button class="btn" onclick="saveOperateur()">Créer</button></div>
+  </div>
+</div>
+
+<!-- Edit Operator Modal -->
+<div class="overlay" id="m-op-edit">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">MODIFIER OPÉRATEUR</div><button class="x" onclick="closeModal('m-op-edit')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="op-edit-id">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-edit-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-edit-nom"></div></div>
+      <div class="fg"><label>Spécialité *</label><select id="op-edit-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
+      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-edit-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-edit-email"></div></div>
+      <div class="fg"><label>Statut</label><select id="op-edit-actif"><option value="1">Actif</option><option value="0">Inactif</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op-edit')">Annuler</button><button class="btn" onclick="updateOperateur()">Enregistrer</button></div>
   </div>
 </div>
 
@@ -711,9 +731,78 @@ async function loadMaterials(){
 // OPERATORS
 async function loadOperators(){
   try{
-    const ops=await api('/api/operateurs');
-    $('ops-list').innerHTML=ops.length===0?'<div class="empty">Aucun opérateur</div>':ops.map(op=>{const init=(op.prenom[0]||'')+(op.nom[0]||'');const perf=op.performance||0;const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';return`<div class="op-item"><div class="op-av" style="width:38px;height:38px;font-size:12px">${init}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${op.prenom} ${op.nom}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite} · ${op.total_ofs||0} OFs · ${op.telephone||'—'}</div></div><div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:2px">PERFORMANCE</div><div class="op-score" style="font-size:24px;color:${col}">${perf}%</div></div></div>`;}).join('');
+    const ops = await api('/api/operateurs');
+    if(!ops) return;
+    $('ops-tb').innerHTML = ops.length===0 ? `<tr><td colspan="9"><div class="empty">Aucun opérateur</div></td></tr>`
+      : ops.map(op=>{
+          const init=(op.prenom[0]||'')+(op.nom[0]||'');
+          const perf=op.performance||0;
+          const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';
+          return `<tr>
+            <td><div class="op-av">${init}</div></td>
+            <td style="font-weight:500">${op.prenom}</td>
+            <td style="font-weight:500">${op.nom}</td>
+            <td><span class="badge b-normal" style="font-size:9px">${op.specialite}</span></td>
+            <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${op.telephone||'—'}</td>
+            <td style="font-family:'IBM Plex Mono',monospace;text-align:center">${op.total_ofs||0}</td>
+            <td><span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${col}">${perf}%</span></td>
+            <td>${op.actif?'<span class="badge b-completed">ACTIF</span>':'<span class="badge b-cancelled">INACTIF</span>'}</td>
+            <td>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-ghost btn-sm" onclick="openEditOp(${op.id},'${op.prenom}','${op.nom}','${op.specialite}','${op.telephone||''}','${op.email||''}',${op.actif?1:0})" title="Modifier">✏️</button>
+                <button class="btn btn-ghost btn-sm" style="color:${op.actif?'var(--red)':'var(--green)'}" onclick="toggleOp(${op.id},${op.actif?0:1})" title="${op.actif?'Désactiver':'Activer'}">${op.actif?'⏸':'▶'}</button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteOp(${op.id},'${op.prenom} ${op.nom}')" title="Supprimer">🗑️</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
   }catch(e){toast('Erreur: '+e.message,'err');}
+}
+
+function openEditOp(id, prenom, nom, spec, tel, email, actif) {
+  $('op-edit-id').value    = id;
+  $('op-edit-prenom').value = prenom;
+  $('op-edit-nom').value    = nom;
+  $('op-edit-spec').value   = spec;
+  $('op-edit-tel').value    = tel;
+  $('op-edit-email').value  = email;
+  $('op-edit-actif').value  = actif;
+  openModal('m-op-edit');
+}
+
+async function updateOperateur() {
+  const id = $('op-edit-id').value;
+  if(!$('op-edit-prenom').value||!$('op-edit-nom').value){toast('Prénom et Nom requis','err');return;}
+  try{
+    await api(`/api/operateurs/${id}`,{method:'PUT',body:JSON.stringify({
+      prenom:     $('op-edit-prenom').value,
+      nom:        $('op-edit-nom').value,
+      specialite: $('op-edit-spec').value,
+      telephone:  $('op-edit-tel').value||null,
+      email:      $('op-edit-email').value||null,
+      actif:      $('op-edit-actif').value === '1'
+    })});
+    toast('Opérateur mis à jour ✓');
+    closeModal('m-op-edit');
+    loadOperators();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function toggleOp(id, actif) {
+  try{
+    await api(`/api/operateurs/${id}`,{method:'PUT',body:JSON.stringify({actif: actif===1})});
+    toast(actif===1 ? 'Opérateur activé ✓' : 'Opérateur désactivé');
+    loadOperators();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function deleteOp(id, name) {
+  if(!confirm(`Supprimer définitivement ${name} ?\n\nAttention: cette action est irréversible.`))return;
+  try{
+    await api(`/api/operateurs/${id}`,{method:'DELETE'});
+    toast(`${name} supprimé`);
+    loadOperators();
+  }catch(e){toast(e.message,'err');}
 }
 
 // PRODUCTS
