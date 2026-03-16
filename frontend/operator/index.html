@@ -240,25 +240,31 @@ async function loadData() {
   try {
     // Dashboard stats
     const dash = await api(`/api/dashboard/operator/${operateur_id}`);
-    $('k-actifs').textContent  = dash.mes_ofs_actifs;
-    $('k-done').textContent    = dash.ofs_termines;
-    $('k-etapes').textContent  = dash.etapes_en_cours;
-    $('k-perf').textContent    = dash.performance + '%';
+    if(dash) {
+      $('k-actifs').textContent  = dash.mes_ofs_actifs;
+      $('k-done').textContent    = dash.ofs_termines;
+      $('k-etapes').textContent  = dash.etapes_en_cours;
+      $('k-perf').textContent    = dash.performance + '%';
+    }
 
-    // Active OFs (IN_PROGRESS assigned to me)
+    // All OFs assigned to me (backend already filters by operateur_id from token)
     const allOFs = await api('/api/of');
-    const active = allOFs.filter(o => o.statut === 'IN_PROGRESS');
+    if (!allOFs) return;
+
+    // Active = IN_PROGRESS + APPROVED (ready to start)
+    const active = allOFs.filter(o => ['IN_PROGRESS','APPROVED'].includes(o.statut));
     $('active-ofs').innerHTML = active.length === 0
-      ? '<div class="empty">✓ Aucun ordre en cours</div>'
+      ? '<div class="empty">✓ Aucun ordre en cours ou approuvé</div>'
       : active.map(of => renderOFCard(of, true)).join('');
 
-    // All my OFs
+    // All my OFs (all statuses)
     $('all-ofs').innerHTML = allOFs.length === 0
       ? '<div class="empty">Aucun ordre assigné</div>'
-      : allOFs.map(of => renderOFCard(of, of.statut==='IN_PROGRESS')).join('');
+      : allOFs.map(of => renderOFCard(of, ['IN_PROGRESS','APPROVED'].includes(of.statut))).join('');
 
     // Stock (read only)
     const mats = await api('/api/materiaux');
+    if (!mats) return;
     $('stock-list').innerHTML = mats.length === 0
       ? '<div class="empty">Aucun matériau</div>'
       : mats.map(m => {
@@ -298,8 +304,8 @@ function switchTab(btn, tabId) {
 }
 
 loadData();
-// Auto-refresh every 60 seconds
-setInterval(loadData, 60000);
+// Auto-refresh every 3 seconds
+setInterval(loadData, 3000);
 </script>
 </body>
 </html>
