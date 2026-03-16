@@ -14,7 +14,11 @@ import io
 router = APIRouter(prefix="/api/facture", tags=["facture"])
 
 
-def generate_pdf(of: dict, etapes: list, materiaux: list) -> bytes:
+def generate_pdf(of: dict, etapes: list, materiaux: list, type: str = "interne") -> bytes:
+    """
+    type = 'interne' → full report with stages + materials + costs
+    type = 'client'  → clean client invoice without internal details
+    """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -133,87 +137,87 @@ def generate_pdf(of: dict, etapes: list, materiaux: list) -> bytes:
         c.drawString(20*mm, y, title)
         return y - 8*mm
 
-    y_cur = section_title("ÉTAPES DE PRODUCTION", y_cur)
+    # ── ETAPES (interne only) ─────────────────────
+    if type == "interne":
+        y_cur = section_title("ÉTAPES DE PRODUCTION", y_cur)
 
-    # Table header
-    cols_e = [15*mm, 75*mm, 130*mm, 175*mm]
-    hdrs_e = ["ÉTAPE", "STATUT", "OPÉRATEUR", "DURÉE"]
-    c.setFillColor(DARK)
-    c.rect(15*mm, y_cur - 6*mm, W - 30*mm, 8*mm, fill=1, stroke=0)
-    for i, h in enumerate(hdrs_e):
-        c.setFillColor(WHITE)
-        c.setFont("Helvetica-Bold", 7)
-        c.drawString(cols_e[i] + 2*mm, y_cur - 3*mm, h)
-    y_cur -= 6*mm
+        cols_e = [15*mm, 75*mm, 130*mm, 175*mm]
+        hdrs_e = ["ÉTAPE", "STATUT", "OPÉRATEUR", "DURÉE"]
+        c.setFillColor(DARK)
+        c.rect(15*mm, y_cur - 6*mm, W - 30*mm, 8*mm, fill=1, stroke=0)
+        for i, h in enumerate(hdrs_e):
+            c.setFillColor(WHITE)
+            c.setFont("Helvetica-Bold", 7)
+            c.drawString(cols_e[i] + 2*mm, y_cur - 3*mm, h)
+        y_cur -= 6*mm
 
-    STAGE_ORDER = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage']
-    for idx, etape_name in enumerate(STAGE_ORDER):
-        e = next((x for x in etapes if x['etape'] == etape_name), None)
-        if not e:
-            continue
-        row_h = 8*mm
-        y_cur -= row_h
-        if idx % 2 == 0:
-            c.setFillColor(LIGHT)
-            c.rect(15*mm, y_cur, W - 30*mm, row_h, fill=1, stroke=0)
+        STAGE_ORDER = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage']
+        for idx, etape_name in enumerate(STAGE_ORDER):
+            e = next((x for x in etapes if x['etape'] == etape_name), None)
+            if not e:
+                continue
+            row_h = 8*mm
+            y_cur -= row_h
+            if idx % 2 == 0:
+                c.setFillColor(LIGHT)
+                c.rect(15*mm, y_cur, W - 30*mm, row_h, fill=1, stroke=0)
 
-        # Durée
-        duree = '—'
-        if e.get('debut') and e.get('fin'):
-            try:
-                mins = int((datetime.fromisoformat(str(e['fin'])) -
-                            datetime.fromisoformat(str(e['debut']))).total_seconds() / 60)
-                duree = f"{mins // 60}h {mins % 60}min" if mins >= 60 else f"{mins} min"
-            except:
-                duree = '—'
+            duree = '—'
+            if e.get('debut') and e.get('fin'):
+                try:
+                    mins = int((datetime.fromisoformat(str(e['fin'])) -
+                                datetime.fromisoformat(str(e['debut']))).total_seconds() / 60)
+                    duree = f"{mins // 60}h {mins % 60}min" if mins >= 60 else f"{mins} min"
+                except:
+                    duree = '—'
 
-        statut_icon = "✓ TERMINÉ" if e['statut'] == 'COMPLETED' else "⏳ EN COURS" if e['statut'] == 'IN_PROGRESS' else "— EN ATTENTE"
-        stat_col = GREEN if e['statut'] == 'COMPLETED' else RED if e['statut'] == 'IN_PROGRESS' else GRAY
+            statut_icon = "✓ TERMINÉ" if e['statut'] == 'COMPLETED' else "⏳ EN COURS" if e['statut'] == 'IN_PROGRESS' else "— EN ATTENTE"
+            stat_col = GREEN if e['statut'] == 'COMPLETED' else RED if e['statut'] == 'IN_PROGRESS' else GRAY
 
-        c.setFillColor(DARK); c.setFont("Helvetica-Bold", 8)
-        c.drawString(cols_e[0] + 2*mm, y_cur + 2.5*mm, etape_name)
-        c.setFillColor(stat_col); c.setFont("Helvetica", 7.5)
-        c.drawString(cols_e[1] + 2*mm, y_cur + 2.5*mm, statut_icon)
-        c.setFillColor(DARK); c.setFont("Helvetica", 7.5)
-        c.drawString(cols_e[2] + 2*mm, y_cur + 2.5*mm, str(e.get('operateur_nom') or '—')[:20])
-        c.setFont("Helvetica-Bold", 7.5)
-        c.drawString(cols_e[3] + 2*mm, y_cur + 2.5*mm, duree)
+            c.setFillColor(DARK); c.setFont("Helvetica-Bold", 8)
+            c.drawString(cols_e[0] + 2*mm, y_cur + 2.5*mm, etape_name)
+            c.setFillColor(stat_col); c.setFont("Helvetica", 7.5)
+            c.drawString(cols_e[1] + 2*mm, y_cur + 2.5*mm, statut_icon)
+            c.setFillColor(DARK); c.setFont("Helvetica", 7.5)
+            c.drawString(cols_e[2] + 2*mm, y_cur + 2.5*mm, str(e.get('operateur_nom') or '—')[:20])
+            c.setFont("Helvetica-Bold", 7.5)
+            c.drawString(cols_e[3] + 2*mm, y_cur + 2.5*mm, duree)
+            c.setStrokeColor(BORDER); c.setLineWidth(0.3)
+            c.line(15*mm, y_cur, W - 15*mm, y_cur)
 
-        c.setStrokeColor(BORDER); c.setLineWidth(0.3)
-        c.line(15*mm, y_cur, W - 15*mm, y_cur)
+        # ── MATERIAUX (interne only) ──────────────
+        y_cur -= 10*mm
+        y_cur = section_title("MATÉRIAUX CONSOMMÉS (ESTIMATIF)", y_cur)
 
-    # ── MATERIAUX TABLE ───────────────────────────
-    y_cur -= 10*mm
-    y_cur = section_title("MATÉRIAUX CONSOMMÉS (ESTIMATIF)", y_cur)
+        cols_m = [15*mm, 100*mm, 145*mm, 175*mm]
+        hdrs_m = ["MATÉRIAU", "CODE", "UNITÉ", "QTÉ CONSOMMÉE"]
+        c.setFillColor(DARK)
+        c.rect(15*mm, y_cur - 6*mm, W - 30*mm, 8*mm, fill=1, stroke=0)
+        for i, h in enumerate(hdrs_m):
+            c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 7)
+            c.drawString(cols_m[i] + 2*mm, y_cur - 3*mm, h)
+        y_cur -= 6*mm
 
-    cols_m = [15*mm, 100*mm, 145*mm, 175*mm]
-    hdrs_m = ["MATÉRIAU", "CODE", "UNITÉ", "QTÉ CONSOMMÉE"]
-    c.setFillColor(DARK)
-    c.rect(15*mm, y_cur - 6*mm, W - 30*mm, 8*mm, fill=1, stroke=0)
-    for i, h in enumerate(hdrs_m):
-        c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 7)
-        c.drawString(cols_m[i] + 2*mm, y_cur - 3*mm, h)
-    y_cur -= 6*mm
-
-    for idx, m in enumerate(materiaux[:4]):
-        consomme = round(float(m.get('stock_minimum', 0)) * 0.05 * of['quantite'] / 100, 3)
-        row_h = 8*mm
-        y_cur -= row_h
-        if idx % 2 == 0:
-            c.setFillColor(LIGHT)
-            c.rect(15*mm, y_cur, W - 30*mm, row_h, fill=1, stroke=0)
-        c.setFillColor(DARK); c.setFont("Helvetica", 7.5)
-        c.drawString(cols_m[0] + 2*mm, y_cur + 2.5*mm, str(m.get('nom',''))[:35])
-        c.drawString(cols_m[1] + 2*mm, y_cur + 2.5*mm, str(m.get('code','—')))
-        c.drawString(cols_m[2] + 2*mm, y_cur + 2.5*mm, str(m.get('unite','—')))
-        c.setFont("Helvetica-Bold", 7.5)
-        c.drawString(cols_m[3] + 2*mm, y_cur + 2.5*mm, str(consomme))
-        c.setStrokeColor(BORDER); c.setLineWidth(0.3)
-        c.line(15*mm, y_cur, W - 15*mm, y_cur)
+        for idx, m in enumerate(materiaux[:4]):
+            consomme = round(float(m.get('stock_minimum', 0)) * 0.05 * of['quantite'] / 100, 3)
+            row_h = 8*mm
+            y_cur -= row_h
+            if idx % 2 == 0:
+                c.setFillColor(LIGHT)
+                c.rect(15*mm, y_cur, W - 30*mm, row_h, fill=1, stroke=0)
+            c.setFillColor(DARK); c.setFont("Helvetica", 7.5)
+            c.drawString(cols_m[0] + 2*mm, y_cur + 2.5*mm, str(m.get('nom',''))[:35])
+            c.drawString(cols_m[1] + 2*mm, y_cur + 2.5*mm, str(m.get('code','—')))
+            c.drawString(cols_m[2] + 2*mm, y_cur + 2.5*mm, str(m.get('unite','—')))
+            c.setFont("Helvetica-Bold", 7.5)
+            c.drawString(cols_m[3] + 2*mm, y_cur + 2.5*mm, str(consomme))
+            c.setStrokeColor(BORDER); c.setLineWidth(0.3)
+            c.line(15*mm, y_cur, W - 15*mm, y_cur)
 
     # ── TOTALS ────────────────────────────────────
     y_cur -= 14*mm
-    y_cur = section_title("DÉTAIL FINANCIER", y_cur)
+    section_lbl = "DÉTAIL FINANCIER" if type == "interne" else "FACTURE CLIENT"
+    y_cur = section_title(section_lbl, y_cur)
 
     # Pricing row
     ht      = PRIX_UNIT * of['quantite']
@@ -287,7 +291,7 @@ def generate_pdf(of: dict, etapes: list, materiaux: list) -> bytes:
 
 
 @router.get("/{of_id}")
-def get_facture(of_id: int, user: dict = None, db=Depends(get_db)):
+def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
     # Get OF with etapes
     of = q(db, """
         SELECT o.*, p.nom produit_nom, p.code produit_code,
@@ -318,12 +322,13 @@ def get_facture(of_id: int, user: dict = None, db=Depends(get_db)):
     etapes = serialize(etapes)
     materiaux = serialize(materiaux)
 
-    pdf_bytes = generate_pdf(of, etapes, materiaux)
+    pdf_bytes = generate_pdf(of, etapes, materiaux, type)
 
     fac_num = f"FAC-{of['numero'].replace('OF-', '')}"
+    suffix  = "-CLIENT" if type == "client" else "-INTERNE"
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{fac_num}.pdf"'}
+        headers={"Content-Disposition": f'inline; filename="{fac_num}{suffix}.pdf"'}
     )
