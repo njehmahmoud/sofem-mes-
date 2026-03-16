@@ -492,8 +492,10 @@ const loading = n => `<tr><td colspan="${n}"><div class="loading"><div class="sp
 const empty   = (n,m='Aucune donnée') => `<tr><td colspan="${n}"><div class="empty">${m}</div></td></tr>`;
 
 async function api(path, opts={}) {
+  const currentToken = localStorage.getItem('token');
+  if (!currentToken) { logout(); return null; }
   const r = await fetch(API+path, {
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
     ...opts
   });
   const data = await r.json();
