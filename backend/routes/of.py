@@ -117,7 +117,7 @@ def update_etape(of_id: int, etape_nom: str, data: EtapeUpdate, user: dict = Dep
     etape = q(db, "SELECT id FROM etapes_production WHERE of_id=%s AND etape=%s", (of_id, etape_nom), one=True)
     if not etape: raise HTTPException(404, "Étape non trouvée")
     exe(db, """UPDATE etapes_production SET statut=%s, operateur_id=%s, notes=%s,
-        debut=CASE WHEN statut='PENDING' AND %s='IN_PROGRESS' THEN NOW() ELSE debut END,
+        debut=CASE WHEN %s='IN_PROGRESS' THEN NOW() ELSE debut END,
         fin=CASE WHEN %s='COMPLETED' THEN NOW() ELSE fin END
         WHERE of_id=%s AND etape=%s""",
         (data.statut, data.operateur_id, data.notes, data.statut, data.statut, of_id, etape_nom))
