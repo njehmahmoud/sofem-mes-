@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOFEM MES — Opérateur</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:.75rem}
+.brand-logo{width:32px;height:32px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:17px;overflow:hidden;position:relative;flex-shrink:0}
+.brand-logo::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.05) 4px,rgba(255,255,255,0.05) 8px)}
+.brand-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px}
+.op-badge{background:rgba(34,197,94,0.15);border:1px solid var(--green);color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:4px}
+.topbar-r{display:flex;align-items:center;gap:1rem}
+.user-chip{display:flex;align-items:center;gap:.5rem}
+.user-av{width:28px;height:28px;border-radius:50%;background:var(--red-g);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--red)}
+.user-nm{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .15s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+.clock{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
+.main{flex:1;padding:1.5rem;max-width:900px;margin:0 auto;width:100%}
+.ph{margin-bottom:1.5rem}
+.ph-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px}
+.ph-title span{color:var(--red)}
+.ph-sub{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.9rem;position:relative;overflow:hidden;text-align:center}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
+.kpi.g::before{background:var(--green)}.kpi.a::before{background:var(--accent)}.kpi.b::before{background:var(--blue)}
+.kpi-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;color:#fff}
+.kpi-val.r{color:var(--red)}.kpi-val.g{color:var(--green)}.kpi-val.a{color:var(--accent)}.kpi-val.b{color:var(--blue)}
+.sec{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
+.sec-h{padding:.8rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+.sec-title .ac{color:var(--red)}
+/* OF Cards */
+.of-cards{display:flex;flex-direction:column;gap:0}
+.of-card{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);transition:background .15s}
+.of-card:last-child{border-bottom:none}
+.of-card:hover{background:rgba(255,255,255,.02)}
+.of-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;gap:.5rem;flex-wrap:wrap}
+.of-num{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--red);font-weight:600}
+.of-prod{font-size:14px;font-weight:500;flex:1;margin:0 .5rem}
+.of-qty{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px;font-weight:600;text-transform:uppercase}
+.b-urgent{background:rgba(212,43,43,.2);color:#F87171}.b-high{background:rgba(245,166,35,.2);color:var(--accent)}.b-normal{background:rgba(59,130,246,.2);color:#60A5FA}.b-low{background:rgba(107,114,128,.2);color:var(--muted)}.b-completed{background:rgba(34,197,94,.15);color:var(--green)}.b-inprogress{background:var(--red-g);color:#F87171}.b-draft{background:rgba(107,114,128,.15);color:var(--muted)}
+/* Stage steps */
+.stages{display:flex;align-items:center;gap:0;width:100%}
+.stage-step{flex:1;position:relative}
+.stage-step::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:1px;height:60%;background:var(--border)}
+.stage-step:last-child::after{display:none}
+.stage-btn{width:100%;padding:.6rem .3rem;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;cursor:pointer;transition:background .15s;border-radius:4px}
+.stage-btn:hover:not(:disabled){background:rgba(255,255,255,.04)}
+.stage-btn:disabled{cursor:default}
+.stage-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;border:2px solid transparent;margin:0 auto;transition:all .2s}
+.stage-icon.done{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+.stage-icon.active{background:var(--red-g);border-color:var(--red);color:var(--red);animation:ring 1.5s infinite}
+.stage-icon.pending{background:var(--bg3);border-color:var(--border);color:var(--muted)}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(212,43,43,.4)}50%{box-shadow:0 0 0 5px rgba(212,43,43,0)}}
+.stage-lbl{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--muted);text-align:center;letter-spacing:.5px}
+.stage-action{font-size:7px;color:var(--red);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.deadline{display:flex;align-items:center;gap:.5rem;margin-top:.6rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+/* Materials read-only */
+.mat-row{display:flex;align-items:center;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);gap:.75rem}
+.mat-row:last-child{border-bottom:none}
+.bar-w{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;min-width:50px}
+.bar-f{height:100%;border-radius:2px}
+.bar-f.d{background:var(--red)}.bar-f.w{background:var(--accent)}.bar-f.ok{background:var(--green)}
+.loading{display:flex;align-items:center;justify-content:center;padding:2rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin-right:.6rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:2rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;z-index:9999;transform:translateY(16px);opacity:0;transition:all .25s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:var(--green);color:var(--green)}.toast.err{border-color:var(--red);color:#F87171}
+.footer{background:var(--bg2);border-top:1px solid var(--border);padding:.5rem 1.5rem;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);text-align:center}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.tab{padding:.65rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:#fff;border-bottom-color:var(--red)}
+.tab-content{display:none}.tab-content.active{display:block}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.stages{flex-wrap:nowrap;overflow-x:auto}.main{padding:1rem}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">S</div>
+    <div class="brand-name">SOFEM</div>
+    <span class="op-badge">OPÉRATEUR</span>
+  </div>
+  <div class="topbar-r">
+    <div class="user-chip">
+      <div class="user-av" id="user-av">—</div>
+      <div class="user-nm" id="user-nm">—</div>
+    </div>
+    <div class="clock" id="clock">—</div>
+    <button class="btn-logout" onclick="logout()">QUITTER</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="ph">
+    <div class="ph-title">MES <span>TÂCHES</span></div>
+    <div class="ph-sub" id="op-sub">// CHARGEMENT...</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">OFs Actifs</div><div class="kpi-val r" id="k-actifs">—</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Terminés</div><div class="kpi-val g" id="k-done">—</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Étapes en cours</div><div class="kpi-val a" id="k-etapes">—</div></div>
+    <div class="kpi b"><div class="kpi-lbl">Performance</div><div class="kpi-val b" id="k-perf">—</div></div>
+  </div>
+
+  <!-- OFs Tabs -->
+  <div class="sec">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-active')">EN COURS</div>
+      <div class="tab" onclick="switchTab(this,'tab-all')">TOUS MES OFs</div>
+      <div class="tab" onclick="switchTab(this,'tab-stock')">STOCK</div>
+    </div>
+
+    <!-- Active OFs -->
+    <div class="tab-content active" id="tab-active">
+      <div class="of-cards" id="active-ofs">
+        <div class="loading"><div class="spin"></div>CHARGEMENT...</div>
+      </div>
+    </div>
+
+    <!-- All OFs -->
+    <div class="tab-content" id="tab-all">
+      <div class="of-cards" id="all-ofs">
+        <div class="loading"><div class="spin"></div>CHARGEMENT...</div>
+      </div>
+    </div>
+
+    <!-- Stock (read only) -->
+    <div class="tab-content" id="tab-stock">
+      <div id="stock-list">
+        <div class="loading"><div class="spin"></div>CHARGEMENT...</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">SOFEM MES v2.0 · SMARTMOVE · © 2025</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const API        = window.location.origin;
+const token      = localStorage.getItem('token');
+const nom        = localStorage.getItem('nom');
+const prenom     = localStorage.getItem('prenom');
+const operateur_id = parseInt(localStorage.getItem('operateur_id') || '0');
+
+if (!token) window.location.href = '/';
+
+const $ = id => document.getElementById(id);
+const toast = (msg, type='ok') => {
+  const t=$('toast'); t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'), 3000);
+};
+
+const STAGES = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage'];
+
+async function api(path, opts={}) {
+  const r = await fetch(API+path, {
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    ...opts
+  });
+  const data = await r.json();
+  if (r.status === 401) { logout(); return; }
+  if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+}
+
+// Init
+const initials = (prenom[0]||'') + (nom[0]||'');
+$('user-av').textContent = initials;
+$('user-nm').textContent = `${prenom} ${nom}`;
+$('op-sub').textContent  = `// OPÉRATEUR · ${prenom.toUpperCase()} ${nom.toUpperCase()}`;
+
+function tick(){ $('clock').textContent = new Date().toLocaleString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+tick(); setInterval(tick, 1000);
+
+function logout(){ localStorage.clear(); window.location.href='/'; }
+
+function pBadge(p){const m={URGENT:'b-urgent',HIGH:'b-high',NORMAL:'b-normal',LOW:'b-low'};const l={URGENT:'URGENT',HIGH:'HAUTE',NORMAL:'NORMAL',LOW:'BASSE'};return`<span class="badge ${m[p]||'b-normal'}">${l[p]||p}`;}
+function sBadge(s){const m={IN_PROGRESS:'b-inprogress',COMPLETED:'b-completed',DRAFT:'b-draft',APPROVED:'b-approved'};const l={IN_PROGRESS:'En Cours',COMPLETED:'Terminé',DRAFT:'Brouillon',APPROVED:'Approuvé'};return`<span class="badge ${m[s]||'b-draft'}">${l[s]||s}</span>`;}
+
+function renderOFCard(of, showActions=true) {
+  const deadline = of.date_echeance;
+  const diff = deadline ? (new Date(deadline) - new Date()) / 86400000 : 99;
+  const dc = diff < 0 ? 'color:var(--red)' : diff < 3 ? 'color:var(--accent)' : 'color:var(--muted)';
+
+  const stages = STAGES.map(s => {
+    const e = (of.etapes||[]).find(x => x.etape === s);
+    const st = e ? e.statut : 'PENDING';
+    const cls = st==='COMPLETED' ? 'done' : st==='IN_PROGRESS' ? 'active' : 'pending';
+    const icon = st==='COMPLETED' ? '✓' : st==='IN_PROGRESS' ? '⬛' : '○';
+    const canAdvance = showActions && (st==='PENDING'||st==='IN_PROGRESS') && of.statut!=='COMPLETED';
+    const nextSt = {PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[st];
+    const actionLbl = st==='PENDING' ? 'DÉMARRER' : st==='IN_PROGRESS' ? 'TERMINER' : '';
+
+    return `<div class="stage-step">
+      <button class="stage-btn" ${!canAdvance?'disabled':''} onclick="${canAdvance?`advEtape(${of.id},'${s}','${st}')`:''}" title="${s}">
+        <div class="stage-icon ${cls}">${icon}</div>
+        <div class="stage-lbl">${s}</div>
+        ${canAdvance&&actionLbl?`<div class="stage-action">${actionLbl}</div>`:''}
+      </button>
+    </div>`;
+  }).join('');
+
+  return `<div class="of-card">
+    <div class="of-card-top">
+      <span class="of-num">${of.numero}</span>
+      <span class="of-prod">${of.produit_nom}</span>
+      <span class="of-qty">Qté: ${of.quantite}</span>
+      ${pBadge(of.priorite)}
+      ${sBadge(of.statut)}
+    </div>
+    <div class="stages">${stages}</div>
+    <div class="deadline">
+      <span>Atelier: ${of.atelier||'—'}</span>
+      <span>·</span>
+      <span style="${dc}">Échéance: ${deadline||'—'}</span>
+    </div>
+  </div>`;
+}
+
+async function loadData() {
+  try {
+    // Dashboard stats
+    const dash = await api(`/api/dashboard/operator/${operateur_id}`);
+    $('k-actifs').textContent  = dash.mes_ofs_actifs;
+    $('k-done').textContent    = dash.ofs_termines;
+    $('k-etapes').textContent  = dash.etapes_en_cours;
+    $('k-perf').textContent    = dash.performance + '%';
+
+    // Active OFs (IN_PROGRESS assigned to me)
+    const allOFs = await api('/api/of');
+    const active = allOFs.filter(o => o.statut === 'IN_PROGRESS');
+    $('active-ofs').innerHTML = active.length === 0
+      ? '<div class="empty">✓ Aucun ordre en cours</div>'
+      : active.map(of => renderOFCard(of, true)).join('');
+
+    // All my OFs
+    $('all-ofs').innerHTML = allOFs.length === 0
+      ? '<div class="empty">Aucun ordre assigné</div>'
+      : allOFs.map(of => renderOFCard(of, of.statut==='IN_PROGRESS')).join('');
+
+    // Stock (read only)
+    const mats = await api('/api/materiaux');
+    $('stock-list').innerHTML = mats.length === 0
+      ? '<div class="empty">Aucun matériau</div>'
+      : mats.map(m => {
+          const pct = Math.min(100, Math.round(m.pct_stock||0));
+          const cls = pct < 50 ? 'd' : pct < 90 ? 'w' : 'ok';
+          return `<div class="mat-row">
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:500">${m.nom}</div>
+              <div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${m.code} · ${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</div>
+            </div>
+            <div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;width:30px;text-align:right;color:var(--${cls==='d'?'red':cls==='w'?'accent':'green'})">${pct<100?pct+'%':'OK'}</div>
+          </div>`;
+        }).join('');
+
+  } catch(e) { toast('Erreur: '+e.message, 'err'); }
+}
+
+async function advEtape(ofId, etape, current) {
+  const next = {PENDING:'IN_PROGRESS', IN_PROGRESS:'COMPLETED'}[current];
+  if (!next) return;
+  try {
+    await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`, {
+      method: 'PUT',
+      body: JSON.stringify({statut: next})
+    });
+    toast(`${etape} → ${next} ✓`);
+    loadData();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  $(tabId).classList.add('active');
+}
+
+loadData();
+// Auto-refresh every 60 seconds
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>

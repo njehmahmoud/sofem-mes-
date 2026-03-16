@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOFEM MES — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:.75rem}
+.brand-logo{width:34px;height:34px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;overflow:hidden;position:relative;flex-shrink:0}
+.brand-logo::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.05) 4px,rgba(255,255,255,0.05) 8px)}
+.brand-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px}
+.brand-sub{font-size:8px;letter-spacing:2px;color:var(--red);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;margin-top:1px}
+.role-badge{background:var(--red-g);border:1px solid var(--red);color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.topbar-r{display:flex;align-items:center;gap:1rem}
+.user-info{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;transition:all .15s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+.clock{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.layout{display:flex;flex:1}
+.sidebar{width:190px;background:var(--bg2);border-right:1px solid var(--border);padding:1.25rem 0;flex-shrink:0;display:flex;flex-direction:column}
+.nav-group{margin-bottom:1.5rem}
+.nav-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:0 1.25rem;margin-bottom:.4rem}
+.nav-item{display:flex;align-items:center;gap:8px;padding:.5rem 1.25rem;cursor:pointer;font-size:12px;color:var(--muted);border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nav-item.active{color:#fff;background:var(--red-g);border-left-color:var(--red)}
+.sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted)}
+.main{flex:1;padding:1.75rem;overflow-y:auto}
+.page{display:none}.page.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:1rem}
+.ph-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;line-height:1}
+.ph-title span{color:var(--red)}
+.ph-sub{font-size:10px;color:var(--muted);margin-top:2px;font-family:'IBM Plex Mono',monospace}
+.ph-actions{display:flex;gap:.5rem;flex-shrink:0}
+.btn{background:var(--red);color:#fff;border:none;padding:.5rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:background .15s;white-space:nowrap}
+.btn:hover{background:var(--red-d)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--red);color:#fff;background:var(--red-g)}
+.btn-green{background:#15803d}.btn-green:hover{background:#166534}
+.btn-sm{padding:.28rem .65rem;font-size:9px}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;margin-bottom:1.5rem}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
+.kpi.g::before{background:var(--green)}.kpi.a::before{background:var(--accent)}.kpi.b::before{background:var(--blue)}.kpi.o::before{background:#F97316}
+.kpi-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:.3rem}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;color:#fff}
+.kpi-val.r{color:var(--red)}.kpi-val.g{color:var(--green)}.kpi-val.a{color:var(--accent)}.kpi-val.b{color:var(--blue)}.kpi-val.o{color:#F97316}
+.kpi-det{font-size:9px;color:var(--muted);margin-top:2px}
+.sec{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
+.sec-h{padding:.8rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+.sec-title .ac{color:var(--red)}
+.pipeline{display:flex;align-items:center;padding:1.1rem}
+.stage{flex:1;text-align:center;position:relative}
+.stage::after{content:'→';position:absolute;right:-8px;top:36%;color:var(--muted);font-size:12px}
+.stage:last-child::after{display:none}
+.sb{width:38px;height:38px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:12px;border:2px solid transparent}
+.sb.done{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+.sb.active{background:var(--red-g);border-color:var(--red);color:var(--red);animation:ring 1.5s infinite}
+.sb.pending{background:var(--bg3);border-color:var(--border);color:var(--muted)}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(212,43,43,.4)}50%{box-shadow:0 0 0 5px rgba(212,43,43,0)}}
+.stage-name{font-size:8px;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{padding:.6rem 1rem;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody tr:last-child{border-bottom:none}
+td{padding:.65rem 1rem;vertical-align:middle}
+.of-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red)}
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.b-urgent{background:rgba(212,43,43,.2);color:#F87171}
+.b-high{background:rgba(245,166,35,.2);color:var(--accent)}
+.b-normal{background:rgba(59,130,246,.2);color:#60A5FA}
+.b-low{background:rgba(107,114,128,.2);color:var(--muted)}
+.b-completed{background:rgba(34,197,94,.15);color:var(--green)}
+.b-inprogress{background:var(--red-g);color:#F87171}
+.b-draft{background:rgba(107,114,128,.15);color:var(--muted)}
+.b-approved{background:rgba(59,130,246,.15);color:#93C5FD}
+.b-admin{background:rgba(212,43,43,.2);color:#F87171}
+.b-manager{background:rgba(59,130,246,.2);color:#60A5FA}
+.b-operator{background:rgba(34,197,94,.15);color:var(--green)}
+.sdots{display:flex;gap:3px;align-items:center}
+.sd{width:8px;height:8px;border-radius:2px}
+.sd.done{background:var(--green)}.sd.in_progress{background:var(--red);animation:blink 1s infinite}.sd.pending{background:var(--bg3);border:1px solid var(--border)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.fbar{display:flex;gap:.4rem;padding:.6rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.fbtn{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.fbtn:hover,.fbtn.active{border-color:var(--red);color:#fff;background:var(--red-g)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.mat-item{display:flex;align-items:center;padding:.7rem 1.25rem;border-bottom:1px solid var(--border);gap:.75rem}
+.mat-item:last-child{border-bottom:none}
+.mat-name{font-size:12px;font-weight:500}
+.mat-ref{font-size:8px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:1px}
+.bar-w{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;min-width:50px}
+.bar-f{height:100%;border-radius:2px;transition:width .6s}
+.bar-f.d{background:var(--red)}.bar-f.w{background:var(--accent)}.bar-f.ok{background:var(--green)}
+.bar-pct{font-family:'IBM Plex Mono',monospace;font-size:9px;width:34px;text-align:right;flex-shrink:0}
+.bar-pct.d{color:var(--red)}.bar-pct.w{color:var(--accent)}.bar-pct.ok{color:var(--green)}
+.op-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;border-bottom:1px solid var(--border)}
+.op-item:last-child{border-bottom:none}
+.op-av{width:32px;height:32px;border-radius:50%;background:var(--red-g);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--red);flex-shrink:0}
+.op-score{font-family:'Bebas Neue',sans-serif;font-size:22px;margin-left:auto}
+.chart{display:flex;align-items:flex-end;gap:3px;padding:1rem 1.25rem;height:80px}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end}
+.bf{width:100%;border-radius:2px 2px 0 0;background:var(--red);opacity:.55;transition:height .8s}
+.bf.cur{opacity:1}
+.bl{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--muted)}
+.ms{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:3px;font-size:8px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .15s}
+.ms.done{background:rgba(34,197,94,.15);color:var(--green)}
+.ms.in_progress{background:var(--red-g);color:var(--red);animation:blink 1s infinite}
+.ms.pending{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.ms:hover{filter:brightness(1.3)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:440px;max-width:100%;max-height:90vh;overflow-y:auto}
+.modal-h{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px}
+.modal-b{padding:1.25rem;display:flex;flex-direction:column;gap:.8rem}
+.modal-f{padding:.8rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:.5rem;justify-content:flex-end}
+.x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer}.x:hover{color:#fff}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.fg input,.fg select,.fg textarea{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem .7rem;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;transition:border-color .15s;width:100%}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--red)}
+.fg select option{background:var(--bg3)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.loading{display:flex;align-items:center;justify-content:center;padding:2rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin-right:.75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:2rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;z-index:9999;transform:translateY(16px);opacity:0;transition:all .25s;max-width:280px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:#F87171}
+.footer{background:var(--bg2);border-top:1px solid var(--border);padding:.5rem 2rem;display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted)}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}.sidebar{width:160px}}
+@media(max-width:640px){.sidebar{display:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">S</div>
+    <div><div class="brand-name">SOFEM MES</div><div class="brand-sub">Administration</div></div>
+    <span class="role-badge" id="role-badge">ADMIN</span>
+  </div>
+  <div class="topbar-r">
+    <div class="user-info" id="user-info">—</div>
+    <div class="clock" id="clock">—</div>
+    <button class="btn-logout" onclick="logout()">DÉCONNEXION</button>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="nav-group">
+    <div class="nav-lbl">Principal</div>
+    <div class="nav-item active" data-p="dashboard">▣ Tableau de Bord</div>
+    <div class="nav-item" data-p="orders">📋 Ordres de Fab.</div>
+    <div class="nav-item" data-p="monitor">📡 Monitoring</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-lbl">Gestion</div>
+    <div class="nav-item" data-p="materials">📦 Matériaux</div>
+    <div class="nav-item" data-p="operators">👷 Opérateurs</div>
+    <div class="nav-item" data-p="products">⚙️ Produits</div>
+  </div>
+  <div class="nav-group" id="admin-only-nav">
+    <div class="nav-lbl">Admin</div>
+    <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
+    <div class="nav-item" data-p="reports">📊 Rapports</div>
+  </div>
+  <div class="sidebar-footer">SOFEM MES v2.0<br>SMARTMOVE · 2025</div>
+</nav>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="ph">
+    <div><div class="ph-title">TABLEAU DE <span>BORD</span></div><div class="ph-sub">// SOFEM · SFAX · ROUTE SIDI SALEM 2.5KM</div></div>
+    <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">Ordres Actifs</div><div class="kpi-val r" id="k-actifs">—</div><div class="kpi-det">En production</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Urgents</div><div class="kpi-val a" id="k-urgents">—</div><div class="kpi-det">Priorité critique</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Taux Complétion</div><div class="kpi-val g" id="k-taux">—</div><div class="kpi-det">Ce mois</div></div>
+    <div class="kpi b"><div class="kpi-lbl">Alertes Stock</div><div class="kpi-val b" id="k-stock">—</div><div class="kpi-det">Réappro. requis</div></div>
+    <div class="kpi o"><div class="kpi-lbl">En Retard</div><div class="kpi-val o" id="k-retard">—</div><div class="kpi-det">Délai dépassé</div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">PRODUCTION</span></div></div>
+    <div class="pipeline">
+      <div class="stage"><div class="sb pending" id="pip-0">○</div><div class="stage-name">AutoCAD</div></div>
+      <div class="stage"><div class="sb pending" id="pip-1">○</div><div class="stage-name">Découpage</div></div>
+      <div class="stage"><div class="sb pending" id="pip-2">○</div><div class="stage-name">Pliage</div></div>
+      <div class="stage"><div class="sb pending" id="pip-3">○</div><div class="stage-name">Soudage</div></div>
+      <div class="stage"><div class="sb pending" id="pip-4">○</div><div class="stage-name">Ponçage</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">ORDRES <span class="ac">RÉCENTS</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Échéance</th></tr></thead>
+      <tbody id="dash-ofs"><tr><td colspan="7"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="grid2">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span class="badge b-urgent" id="stock-ct">—</span></div>
+      <div id="dash-mats"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><div id="chart-taux" style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted)">—</div></div>
+        <div class="chart" id="dash-chart"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
+        <div id="dash-ops"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDERS -->
+<div class="page" id="page-orders">
+  <div class="ph">
+    <div><div class="ph-title">ORDRES DE <span>FABRICATION</span></div><div class="ph-sub">// GESTION COMPLÈTE</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost" onclick="loadOrders()">↺</button>
+      <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="fbar">
+      <button class="fbtn active" onclick="filterOF(this,'')">Tous</button>
+      <button class="fbtn" onclick="filterOF(this,'IN_PROGRESS')">En cours</button>
+      <button class="fbtn" onclick="filterOF(this,'DRAFT')">Brouillon</button>
+      <button class="fbtn" onclick="filterOF(this,'APPROVED')">Approuvé</button>
+      <button class="fbtn" onclick="filterOF(this,'COMPLETED')">Terminé</button>
+      <button class="fbtn" onclick="filterOF(this,'URGENT','p')">🔴 Urgent</button>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Opérateur</th><th>Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
+      <tbody id="orders-tb"><tr><td colspan="10"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- MONITOR -->
+<div class="page" id="page-monitor">
+  <div class="ph">
+    <div><div class="ph-title">MONITORING <span>PRODUCTION</span></div><div class="ph-sub">// CLIQUER SUR UNE ÉTAPE POUR AVANCER</div></div>
+    <button class="btn btn-ghost" onclick="loadMonitor()">↺ Actualiser</button>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">GLOBAL</span></div><div id="mon-stats" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)"></div></div>
+    <div class="pipeline">
+      <div class="stage"><div class="sb pending" id="mp-0">—</div><div class="stage-name">AutoCAD</div></div>
+      <div class="stage"><div class="sb pending" id="mp-1">—</div><div class="stage-name">Découpage</div></div>
+      <div class="stage"><div class="sb pending" id="mp-2">—</div><div class="stage-name">Pliage</div></div>
+      <div class="stage"><div class="sb pending" id="mp-3">—</div><div class="stage-name">Soudage</div></div>
+      <div class="stage"><div class="sb pending" id="mp-4">—</div><div class="stage-name">Ponçage</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>AutoCAD</th><th>Découpage</th><th>Pliage</th><th>Soudage</th><th>Ponçage</th><th>Opérateur</th></tr></thead>
+      <tbody id="monitor-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- MATERIALS -->
+<div class="page" id="page-materials">
+  <div class="ph">
+    <div><div class="ph-title">GESTION <span>MATÉRIAUX</span></div><div class="ph-sub">// STOCK ET MOUVEMENTS</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost" onclick="openModal('m-mv')">+ Mouvement</button>
+      <button class="btn" onclick="openModal('m-mat')">+ Matériau</button>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Code</th><th>Matériau</th><th>Stock</th><th>Min.</th><th>Unité</th><th>Fournisseur</th><th>État</th><th>Niveau</th></tr></thead>
+      <tbody id="mats-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">HISTORIQUE <span class="ac">MOUVEMENTS</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Date</th><th>Matériau</th><th>Type</th><th>Qté</th><th>Avant</th><th>Après</th><th>OF</th><th>Motif</th></tr></thead>
+      <tbody id="mvt-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- OPERATORS -->
+<div class="page" id="page-operators">
+  <div class="ph">
+    <div><div class="ph-title">GESTION <span>OPÉRATEURS</span></div><div class="ph-sub">// ÉQUIPE DE PRODUCTION</div></div>
+    <button class="btn" onclick="openModal('m-op')">+ Opérateur</button>
+  </div>
+  <div class="sec"><div id="ops-list"><div class="loading"><div class="spin"></div></div></div></div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="page" id="page-products">
+  <div class="ph">
+    <div><div class="ph-title">GESTION <span>PRODUITS</span></div><div class="ph-sub">// CATALOGUE SOFEM</div></div>
+    <button class="btn" onclick="openModal('m-prod')">+ Produit</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Code</th><th>Produit</th><th>Description</th><th>Unité</th></tr></thead>
+      <tbody id="prods-tb"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- USERS (Admin only) -->
+<div class="page" id="page-users">
+  <div class="ph">
+    <div><div class="ph-title">GESTION <span>UTILISATEURS</span></div><div class="ph-sub">// ACCÈS ET RÔLES — PINS</div></div>
+    <button class="btn" onclick="openModal('m-user')">+ Utilisateur</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Nom</th><th>Prénom</th><th>Rôle</th><th>Opérateur lié</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="users-tb"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- REPORTS -->
+<div class="page" id="page-reports">
+  <div class="ph"><div><div class="ph-title">RAPPORTS & <span>ANALYTIQUES</span></div><div class="ph-sub">// PERFORMANCE ET HISTORIQUE</div></div></div>
+  <div class="grid2">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">PRODUCTION <span class="ac">MENSUELLE</span></div></div>
+      <div class="chart" id="rep-chart" style="height:100px"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">ALERTES <span class="ac">STOCK</span></div></div>
+      <div id="rep-stock"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
+    <div id="rep-ops"><div class="loading"><div class="spin"></div></div></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<footer class="footer">
+  <div>SOFEM MES v2.0 · SMARTMOVE · Sfax</div>
+  <div id="footer-user">—</div>
+</footer>
+
+<!-- MODALS -->
+<div class="overlay" id="m-of">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEL ORDRE DE FABRICATION</div><button class="x" onclick="closeModal('m-of')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Produit *</label><select id="of-prod"></select></div>
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label><input type="number" id="of-qte" min="1" value="1"></div>
+        <div class="fg"><label>Priorité</label><select id="of-prio"><option value="LOW">Basse</option><option value="NORMAL" selected>Normale</option><option value="HIGH">Haute</option><option value="URGENT">URGENT</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Opérateur</label><select id="of-op"><option value="">— Non assigné —</option></select></div>
+        <div class="fg"><label>Atelier</label><input type="text" id="of-atelier" value="Atelier A"></div>
+      </div>
+      <div class="fg"><label>Date d'échéance *</label><input type="date" id="of-date"></div>
+      <div class="fg"><label>Notes</label><textarea id="of-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-of')">Annuler</button><button class="btn" onclick="createOF()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-mv">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">MOUVEMENT DE STOCK</div><button class="x" onclick="closeModal('m-mv')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Matériau *</label><select id="mv-mat"></select></div>
+      <div class="row2">
+        <div class="fg"><label>Type *</label><select id="mv-type"><option value="ENTREE">Entrée</option><option value="SORTIE">Sortie</option><option value="AJUSTEMENT">Ajustement</option></select></div>
+        <div class="fg"><label>Quantité *</label><input type="number" id="mv-qte" step="0.01" min="0.01" value="1"></div>
+      </div>
+      <div class="fg"><label>Motif</label><input type="text" id="mv-motif"></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mv')">Annuler</button><button class="btn btn-green" onclick="saveMouvement()">Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-mat">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEAU MATÉRIAU</div><button class="x" onclick="closeModal('m-mat')">✕</button></div>
+    <div class="modal-b">
+      <div class="row2"><div class="fg"><label>Code *</label><input type="text" id="mat-code"></div><div class="fg"><label>Unité *</label><input type="text" id="mat-unite"></div></div>
+      <div class="fg"><label>Nom *</label><input type="text" id="mat-nom"></div>
+      <div class="row2"><div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" value="0" step="0.01"></div><div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" value="0" step="0.01"></div></div>
+      <div class="fg"><label>Fournisseur</label><input type="text" id="mat-four"></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mat')">Annuler</button><button class="btn" onclick="saveMateriau()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-op">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEL OPÉRATEUR</div><button class="x" onclick="closeModal('m-op')">✕</button></div>
+    <div class="modal-b">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-nom"></div></div>
+      <div class="fg"><label>Spécialité *</label><select id="op-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
+      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-email"></div></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button><button class="btn" onclick="saveOperateur()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-prod">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEAU PRODUIT</div><button class="x" onclick="closeModal('m-prod')">✕</button></div>
+    <div class="modal-b">
+      <div class="row2"><div class="fg"><label>Code *</label><input type="text" id="prod-code"></div><div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div></div>
+      <div class="fg"><label>Nom *</label><input type="text" id="prod-nom"></div>
+      <div class="fg"><label>Description</label><textarea id="prod-desc" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-prod')">Annuler</button><button class="btn" onclick="saveProduit()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-user">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEL UTILISATEUR</div><button class="x" onclick="closeModal('m-user')">✕</button></div>
+    <div class="modal-b">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="usr-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="usr-nom"></div></div>
+      <div class="row2">
+        <div class="fg"><label>Rôle *</label><select id="usr-role"><option value="ADMIN">Admin</option><option value="MANAGER">Manager</option><option value="OPERATOR" selected>Opérateur</option></select></div>
+        <div class="fg"><label>PIN * (4 chiffres)</label><input type="password" id="usr-pin" maxlength="4" placeholder="••••"></div>
+      </div>
+      <div class="fg"><label>Opérateur lié (si rôle Opérateur)</label><select id="usr-op"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-user')">Annuler</button><button class="btn" onclick="saveUser()">Créer</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const API   = window.location.origin;
+const STAGES = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage'];
+const token  = localStorage.getItem('token');
+const role   = localStorage.getItem('role');
+const nom    = localStorage.getItem('nom');
+const prenom = localStorage.getItem('prenom');
+
+// Auth guard
+if (!token) window.location.href = '/';
+
+const $ = id => document.getElementById(id);
+const toast = (msg, type='ok') => {
+  const t=$('toast'); t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+};
+const loading = n => `<tr><td colspan="${n}"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr>`;
+const empty   = (n,m='Aucune donnée') => `<tr><td colspan="${n}"><div class="empty">${m}</div></td></tr>`;
+
+async function api(path, opts={}) {
+  const r = await fetch(API+path, {
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    ...opts
+  });
+  const data = await r.json();
+  if (r.status === 401) { logout(); return; }
+  if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+}
+
+// Init UI
+$('user-info').textContent = `${prenom} ${nom}`;
+$('footer-user').textContent = `${role} · ${prenom} ${nom}`;
+$('role-badge').textContent = role;
+
+// Hide users page for managers
+if (role === 'MANAGER') $('admin-only-nav').style.display = 'none';
+
+function tick(){ $('clock').textContent = new Date().toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).toUpperCase(); }
+tick(); setInterval(tick,1000);
+
+function logout() {
+  localStorage.clear();
+  window.location.href = '/';
+}
+
+function pBadge(p){const m={URGENT:'b-urgent',HIGH:'b-high',NORMAL:'b-normal',LOW:'b-low'};const l={URGENT:'URGENT',HIGH:'HAUTE',NORMAL:'NORMAL',LOW:'BASSE'};return `<span class="badge ${m[p]||'b-normal'}">${l[p]||p}</span>`;}
+function sBadge(s){const m={IN_PROGRESS:'b-inprogress',COMPLETED:'b-completed',DRAFT:'b-draft',APPROVED:'b-approved',CANCELLED:'b-cancelled'};const l={IN_PROGRESS:'En Cours',COMPLETED:'Terminé',DRAFT:'Brouillon',APPROVED:'Approuvé',CANCELLED:'Annulé'};return `<span class="badge ${m[s]||'b-draft'}">${l[s]||s}</span>`;}
+function dots(e){if(!e?.length)return'—';return`<div class="sdots">${STAGES.map(s=>{const x=e.find(v=>v.etape===s);const st=x?x.statut.toLowerCase().replace('_','_'):'pending';return`<div class="sd ${st}" title="${s}"></div>`;}).join('')}</div>`;}
+function dateTd(d){if(!d)return'—';const diff=(new Date(d)-new Date())/86400000;const c=diff<0?'color:var(--red);font-weight:600':diff<3?'color:var(--accent)':'color:var(--muted)';return`<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;${c}">${d}</span>`;}
+
+// Navigation
+const loaders={dashboard:loadDashboard,orders:loadOrders,monitor:loadMonitor,materials:loadMaterials,operators:loadOperators,products:loadProducts,users:loadUsers,reports:loadReports};
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    item.classList.add('active');
+    const p=item.dataset.p;
+    $(`page-${p}`).classList.add('active');
+    loaders[p]?.();
+  });
+});
+
+// DASHBOARD
+async function loadDashboard(){
+  try{
+    const [dash,ofs,mats,ops]=await Promise.all([api('/api/dashboard'),api('/api/of'),api('/api/materiaux'),api('/api/operateurs')]);
+    $('k-actifs').textContent=dash.ordres_actifs;$('k-urgents').textContent=dash.urgents;
+    $('k-taux').textContent=dash.taux_completion+'%';$('k-stock').textContent=dash.alertes_stock;$('k-retard').textContent=dash.en_retard;
+    $('chart-taux').textContent=dash.taux_completion+'% COMPLÉTION';
+    ofs.forEach(of=>{(of.etapes||[]).forEach(e=>{const i=STAGES.indexOf(e.etape);if(i<0)return;const el=$(`pip-${i}`);if(e.statut==='IN_PROGRESS'&&!el.classList.contains('active')){el.className='sb active';el.textContent='⬛';}else if(e.statut==='COMPLETED'&&el.classList.contains('pending')){el.className='sb done';el.textContent='✓';}});});
+    $('dash-ofs').innerHTML=ofs.length===0?empty(7,'Aucun OF'):ofs.slice(0,6).map(of=>`<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td><td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td><td>${dateTd(of.date_echeance)}</td></tr>`).join('');
+    const alertes=mats.filter(m=>parseFloat(m.stock_actuel)<parseFloat(m.stock_minimum));
+    $('stock-ct').textContent=alertes.length+' ALERTES';
+    $('dash-mats').innerHTML=mats.slice(0,5).map(m=>{const pct=Math.min(100,Math.round(m.pct_stock||0));const cls=pct<50?'d':pct<90?'w':'ok';return`<div class="mat-item"><div style="flex:1"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel}/${m.stock_minimum} ${m.unite}</div></div><div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div><div class="bar-pct ${cls}">${pct<100?pct+'%':'OK'}</div></div>`;}).join('');
+    const g=dash.graphique||[];const mx=Math.max(...g.map(x=>x.total),1);
+    $('dash-chart').innerHTML=g.map((m,i)=>`<div class="bc"><div class="bf${i===g.length-1?' cur':''}" style="height:${Math.round(m.total/mx*100)}%"></div><div class="bl">${(m.mois||'').split(' ')[0].toUpperCase()}</div></div>`).join('');
+    $('dash-ops').innerHTML=ops.slice(0,4).map(op=>{const init=(op.prenom[0]||'')+(op.nom[0]||'');const perf=op.performance||0;const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';return`<div class="op-item"><div class="op-av">${init}</div><div><div style="font-size:12px;font-weight:500">${op.prenom} ${op.nom}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite}</div></div><div class="op-score" style="color:${col}">${perf}%</div></div>`;}).join('');
+  }catch(e){toast('Erreur dashboard: '+e.message,'err');}
+}
+
+// ORDERS
+let ofFilter={statut:'',priorite:''};
+async function loadOrders(){
+  $('orders-tb').innerHTML=loading(10);
+  try{
+    let url='/api/of?limit=200';
+    if(ofFilter.statut) url+=`&statut=${ofFilter.statut}`;
+    if(ofFilter.priorite) url+=`&priorite=${ofFilter.priorite}`;
+    const ofs=await api(url);
+    $('orders-tb').innerHTML=ofs.length===0?empty(10,'Aucun OF'):ofs.map(of=>`<tr>
+      <td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td>
+      <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td>
+      <td style="font-size:10px">${of.operateur_nom||'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${of.atelier||'—'}</td>
+      <td>${dateTd(of.date_echeance)}</td>
+      <td><div style="display:flex;gap:4px">
+        ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
+        ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
+      </div></td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+function filterOF(btn,val,field=''){
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ofFilter={statut:'',priorite:''};
+  if(field==='p') ofFilter.priorite=val; else ofFilter.statut=val;
+  loadOrders();
+}
+async function advanceOF(id,current){
+  const next={DRAFT:'APPROVED',APPROVED:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[current];
+  if(!next)return;
+  try{await api(`/api/of/${id}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`OF → ${next} ✓`);loadOrders();}
+  catch(e){toast(e.message,'err');}
+}
+async function cancelOF(id){
+  if(!confirm('Annuler cet OF ?'))return;
+  try{await api(`/api/of/${id}`,{method:'DELETE'});toast('OF annulé');loadOrders();}
+  catch(e){toast(e.message,'err');}
+}
+
+// MONITOR
+async function loadMonitor(){
+  try{
+    const all=await api('/api/of');const active=all.filter(o=>o.statut==='IN_PROGRESS');
+    STAGES.forEach((s,i)=>{
+      const inp=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='IN_PROGRESS').length),0);
+      const done=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='COMPLETED').length),0);
+      const el=$(`mp-${i}`);el.textContent=inp>0?inp:done>0?'✓':'○';
+      el.className=`sb ${inp>0?'active':done>0?'done':'pending'}`;
+    });
+    $('mon-stats').textContent=`${active.length} ORDRES EN COURS`;
+    if(active.length===0){$('monitor-tb').innerHTML=empty(9,'Aucun ordre en cours');return;}
+    $('monitor-tb').innerHTML=active.map(of=>{
+      const cells=STAGES.map(s=>{
+        const e=(of.etapes||[]).find(x=>x.etape===s);const st=e?e.statut:'PENDING';
+        const cls=st==='COMPLETED'?'done':st==='IN_PROGRESS'?'in_progress':'pending';
+        const lbl=st==='COMPLETED'?'✓ '+s:st==='IN_PROGRESS'?'⬛ '+s:'○ '+s;
+        const nxt={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[st];
+        return`<td>${nxt?`<span class="ms ${cls}" onclick="advEtape(${of.id},'${s}','${st}')">${lbl}</span>`:`<span class="ms done">${lbl}</span>`}</td>`;
+      }).join('');
+      return`<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td>${cells}<td style="font-size:10px">${of.operateur_nom||'—'}</td></tr>`;
+    }).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+async function advEtape(ofId,etape,cur){
+  const next={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[cur];if(!next)return;
+  try{await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`${etape} → ${next} ✓`);loadMonitor();}
+  catch(e){toast(e.message,'err');}
+}
+
+// MATERIALS
+async function loadMaterials(){
+  try{
+    const [mats,mvts]=await Promise.all([api('/api/materiaux'),api('/api/materiaux/mouvements?limit=20')]);
+    $('mats-tb').innerHTML=mats.map(m=>{const pct=Math.min(100,Math.round(m.pct_stock||0));const cls=pct<50?'d':pct<90?'w':'ok';return`<tr><td><span class="of-num">${m.code}</span></td><td>${m.nom}</td><td style="font-family:'IBM Plex Mono',monospace">${m.stock_actuel}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${m.stock_minimum}</td><td style="color:var(--muted)">${m.unite}</td><td style="font-size:10px;color:var(--muted)">${m.fournisseur||'—'}</td><td>${m.alerte?'<span class="badge b-urgent">ALERTE</span>':'<span class="badge b-completed">OK</span>'}</td><td style="min-width:80px"><div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div></td></tr>`;}).join('');
+    $('mvt-tb').innerHTML=mvts.length===0?empty(8,'Aucun mouvement'):mvts.map(m=>{const col=m.type==='ENTREE'?'var(--green)':m.type==='SORTIE'?'var(--red)':'var(--accent)';return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${(m.created_at||'').slice(0,16)}</td><td>${m.materiau_nom}</td><td><span style="color:${col};font-family:'IBM Plex Mono',monospace;font-size:9px">${m.type}</span></td><td style="font-family:'IBM Plex Mono',monospace">${m.quantite}</td><td style="color:var(--muted);font-family:'IBM Plex Mono',monospace">${m.stock_avant||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">${m.stock_apres||'—'}</td><td><span class="of-num">${m.of_numero||'—'}</span></td><td style="font-size:10px;color:var(--muted)">${m.motif||'—'}</td></tr>`;}).join('');
+    $('mv-mat').innerHTML=mats.map(m=>`<option value="${m.id}">${m.nom} (${m.stock_actuel} ${m.unite})</option>`).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+
+// OPERATORS
+async function loadOperators(){
+  try{
+    const ops=await api('/api/operateurs');
+    $('ops-list').innerHTML=ops.length===0?'<div class="empty">Aucun opérateur</div>':ops.map(op=>{const init=(op.prenom[0]||'')+(op.nom[0]||'');const perf=op.performance||0;const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';return`<div class="op-item"><div class="op-av" style="width:38px;height:38px;font-size:12px">${init}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${op.prenom} ${op.nom}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite} · ${op.total_ofs||0} OFs · ${op.telephone||'—'}</div></div><div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:2px">PERFORMANCE</div><div class="op-score" style="font-size:24px;color:${col}">${perf}%</div></div></div>`;}).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+
+// PRODUCTS
+async function loadProducts(){
+  try{const prods=await api('/api/produits');$('prods-tb').innerHTML=prods.length===0?empty(4):prods.map(p=>`<tr><td><span class="of-num">${p.code}</span></td><td>${p.nom}</td><td style="color:var(--muted);font-size:10px">${p.description||'—'}</td><td style="color:var(--muted)">${p.unite}</td></tr>`).join('');}
+  catch(e){toast('Erreur: '+e.message,'err');}
+}
+
+// USERS
+async function loadUsers(){
+  try{
+    const users=await api('/api/auth/users');
+    const ops=await api('/api/operateurs');
+    $('users-tb').innerHTML=users.length===0?empty(6):users.map(u=>{
+      const op=ops.find(o=>o.id===u.operateur_id);
+      const rb={ADMIN:'b-admin',MANAGER:'b-manager',OPERATOR:'b-operator'}[u.role]||'b-draft';
+      return`<tr><td style="font-weight:500">${u.nom}</td><td>${u.prenom}</td><td><span class="badge ${rb}">${u.role}</span></td><td style="font-size:10px;color:var(--muted)">${op?`${op.prenom} ${op.nom}`:'—'}</td><td>${u.actif?'<span class="badge b-completed">ACTIF</span>':'<span class="badge b-cancelled">INACTIF</span>'}</td><td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deactivateUser(${u.id})">Désactiver</button></td></tr>`;
+    }).join('');
+    // fill operator select in modal
+    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom} (${o.specialite})</option>`).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+async function deactivateUser(id){
+  if(!confirm('Désactiver cet utilisateur ?'))return;
+  try{await api(`/api/auth/users/${id}`,{method:'PUT',body:JSON.stringify({actif:false})});toast('Utilisateur désactivé');loadUsers();}
+  catch(e){toast(e.message,'err');}
+}
+
+// REPORTS
+async function loadReports(){
+  try{
+    const [mois,ops,stock]=await Promise.all([api('/api/rapports/production-mensuelle'),api('/api/rapports/operateurs'),api('/api/rapports/stock-alertes')]);
+    const mx=Math.max(...mois.map(m=>m.total),1);
+    $('rep-chart').innerHTML=mois.slice(-8).map((m,i,arr)=>`<div class="bc"><div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1"><span style="font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--text);margin-bottom:2px">${m.total}</span><div class="bf${i===arr.length-1?' cur':''}" style="width:100%;height:${Math.round(m.total/mx*80)}%"></div></div><div class="bl">${(m.mois||'').slice(5)}</div></div>`).join('');
+    $('rep-stock').innerHTML=stock.length===0?'<div class="empty">✓ Tous les stocks OK</div>':stock.map(m=>{const pct=Math.min(100,Math.round(m.pct||0));return`<div class="mat-item"><div style="flex:1"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel}/${m.stock_minimum} ${m.unite}</div></div><div class="bar-w"><div class="bar-f d" style="width:${pct}%"></div></div><div class="bar-pct d">${pct}%</div></div>`;}).join('');
+    $('rep-ops').innerHTML=ops.map(op=>{const init=op.operateur.split(' ').map(n=>n[0]||'').join('');return`<div class="op-item"><div class="op-av">${init}</div><div style="flex:1"><div style="font-size:12px;font-weight:500">${op.operateur}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite} · ${op.total_ofs||0} OFs · ${op.etapes_completes||0} étapes · moy. ${op.duree_moy_min||'—'} min</div></div></div>`;}).join('');
+  }catch(e){toast('Erreur: '+e.message,'err');}
+}
+
+// MODALS
+async function openModal(id){
+  $(id).classList.add('open');
+  if(id==='m-of'){
+    const [prods,ops]=await Promise.all([api('/api/produits'),api('/api/operateurs')]);
+    $('of-prod').innerHTML=prods.map(p=>`<option value="${p.id}">${p.code} — ${p.nom}</option>`).join('');
+    $('of-op').innerHTML='<option value="">— Non assigné —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+    const d=new Date();d.setDate(d.getDate()+7);$('of-date').value=d.toISOString().split('T')[0];
+  }
+  if(id==='m-user'){
+    const ops=await api('/api/operateurs');
+    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+  }
+}
+function closeModal(id){$(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+async function createOF(){
+  if(!$('of-prod').value||!$('of-date').value){toast('Champs obligatoires manquants','err');return;}
+  try{const res=await api('/api/of',{method:'POST',body:JSON.stringify({produit_id:parseInt($('of-prod').value),quantite:parseInt($('of-qte').value),priorite:$('of-prio').value,operateur_id:$('of-op').value?parseInt($('of-op').value):null,atelier:$('of-atelier').value||'Atelier A',date_echeance:$('of-date').value,notes:$('of-notes').value||null})});toast(`${res.numero} créé ✓`);closeModal('m-of');loadDashboard();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveMouvement(){
+  try{const res=await api('/api/materiaux/mouvement',{method:'POST',body:JSON.stringify({materiau_id:parseInt($('mv-mat').value),type:$('mv-type').value,quantite:parseFloat($('mv-qte').value),motif:$('mv-motif').value||null})});toast(`Stock mis à jour ✓`);closeModal('m-mv');loadMaterials();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveMateriau(){
+  if(!$('mat-code').value||!$('mat-nom').value){toast('Champs obligatoires manquants','err');return;}
+  try{await api('/api/materiaux',{method:'POST',body:JSON.stringify({code:$('mat-code').value,nom:$('mat-nom').value,unite:$('mat-unite').value,stock_actuel:parseFloat($('mat-stock').value)||0,stock_minimum:parseFloat($('mat-min').value)||0,fournisseur:$('mat-four').value||null})});toast('Matériau créé ✓');closeModal('m-mat');loadMaterials();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveOperateur(){
+  if(!$('op-prenom').value||!$('op-nom').value){toast('Prénom et Nom requis','err');return;}
+  try{await api('/api/operateurs',{method:'POST',body:JSON.stringify({prenom:$('op-prenom').value,nom:$('op-nom').value,specialite:$('op-spec').value,telephone:$('op-tel').value||null,email:$('op-email').value||null})});toast('Opérateur créé ✓');closeModal('m-op');loadOperators();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveProduit(){
+  if(!$('prod-code').value||!$('prod-nom').value){toast('Code et Nom requis','err');return;}
+  try{await api('/api/produits',{method:'POST',body:JSON.stringify({code:$('prod-code').value,nom:$('prod-nom').value,description:$('prod-desc').value||null,unite:$('prod-unite').value||'pcs'})});toast('Produit créé ✓');closeModal('m-prod');loadProducts();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveUser(){
+  if(!$('usr-prenom').value||!$('usr-nom').value||!$('usr-pin').value){toast('Champs obligatoires manquants','err');return;}
+  if($('usr-pin').value.length!==4){toast('PIN doit être 4 chiffres','err');return;}
+  try{await api('/api/auth/users',{method:'POST',body:JSON.stringify({prenom:$('usr-prenom').value,nom:$('usr-nom').value,role:$('usr-role').value,pin:$('usr-pin').value,operateur_id:$('usr-op').value?parseInt($('usr-op').value):null})});toast('Utilisateur créé ✓');closeModal('m-user');loadUsers();}
+  catch(e){toast(e.message,'err');}
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
