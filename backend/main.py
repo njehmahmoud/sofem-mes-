@@ -78,6 +78,7 @@ def operator():
 def root():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
-# Serve static assets
-if FRONTEND_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="assets")
+# Serve static assets (only if folder exists)
+assets_dir = FRONTEND_DIR / "assets"
+if assets_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
