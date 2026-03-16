@@ -39,3 +39,13 @@ def update_operateur(op_id: int, data: OperateurUpdate, db=Depends(get_db)):
         params.append(op_id)
         exe(db, f"UPDATE operateurs SET {','.join(fields)} WHERE id=%s", params)
     return {"message": "Opérateur mis à jour"}
+
+@router.delete("/{op_id}", dependencies=[Depends(require_manager_or_admin)])
+def delete_operateur(op_id: int, db=Depends(get_db)):
+    # Check if operator has active OFs
+    active = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE operateur_id=%s AND statut IN ('DRAFT','APPROVED','IN_PROGRESS')", (op_id,), one=True)["n"]
+    if active > 0:
+        from fastapi import HTTPException
+        raise HTTPException(400, f"Impossible de supprimer: {active} ordre(s) actif(s) assigné(s)")
+    exe(db, "DELETE FROM operateurs WHERE id=%s", (op_id,))
+    return {"message": "Opérateur supprimé"}
