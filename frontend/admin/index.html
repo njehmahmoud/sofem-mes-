@@ -554,7 +554,23 @@ async function loadDashboard(){
     $('k-actifs').textContent=dash.ordres_actifs;$('k-urgents').textContent=dash.urgents;
     $('k-taux').textContent=dash.taux_completion+'%';$('k-stock').textContent=dash.alertes_stock;$('k-retard').textContent=dash.en_retard;
     $('chart-taux').textContent=dash.taux_completion+'% COMPLÉTION';
-    ofs.forEach(of=>{(of.etapes||[]).forEach(e=>{const i=STAGES.indexOf(e.etape);if(i<0)return;const el=$(`pip-${i}`);if(e.statut==='IN_PROGRESS'&&!el.classList.contains('active')){el.className='sb active';el.textContent='⬛';}else if(e.statut==='COMPLETED'&&el.classList.contains('pending')){el.className='sb done';el.textContent='✓';}});});
+
+    // Pipeline — reset first, then recalculate
+    STAGES.forEach((_,i) => {
+      const el = $(`pip-${i}`);
+      el.className = 'sb pending';
+      el.textContent = '○';
+    });
+    STAGES.forEach((stage, i) => {
+      const inprog = ofs.some(of => (of.etapes||[]).some(e => e.etape===stage && e.statut==='IN_PROGRESS'));
+      const done   = ofs.every(of => {
+        const e = (of.etapes||[]).find(x => x.etape===stage);
+        return !e || e.statut==='COMPLETED';
+      }) && ofs.length > 0;
+      const el = $(`pip-${i}`);
+      if (inprog) { el.className='sb active'; el.textContent='⬛'; }
+      else if (done) { el.className='sb done'; el.textContent='✓'; }
+    });
     $('dash-ofs').innerHTML=ofs.length===0?empty(7,'Aucun OF'):ofs.slice(0,6).map(of=>`<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td><td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td><td>${dateTd(of.date_echeance)}</td></tr>`).join('');
     const alertes=mats.filter(m=>parseFloat(m.stock_actuel)<parseFloat(m.stock_minimum));
     $('stock-ct').textContent=alertes.length+' ALERTES';
