@@ -20,6 +20,8 @@ from routes.operateurs  import router as operateurs_router
 from routes.produits    import router as produits_router
 from routes.rapports    import router as rapports_router
 from routes.facture     import router as facture_router
+from routes.bl          import router as bl_router
+from routes.achats      import router as achats_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sofem-mes")
@@ -59,6 +61,8 @@ app.include_router(operateurs_router)
 app.include_router(produits_router)
 app.include_router(rapports_router)
 app.include_router(facture_router)
+app.include_router(bl_router)
+app.include_router(achats_router)
 
 # ── HEALTH ────────────────────────────────
 @app.get("/api/health")

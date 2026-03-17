@@ -77,9 +77,22 @@ def create_of(data: OFCreate, db=Depends(get_db)):
         VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s)""",
         (numero, data.produit_id, data.quantite, data.priorite,
          data.operateur_id, data.atelier, data.date_echeance, data.notes))
+
+    # Create stages
     for etape in STAGES:
         exe(db, "INSERT INTO etapes_production (of_id,etape,statut) VALUES (%s,%s,'PENDING')", (of_id, etape))
-    return {"id": of_id, "numero": numero, "message": "OF créé"}
+
+    # Auto-create Bon de Livraison
+    try:
+        last_bl = q(db, "SELECT bl_numero FROM bons_livraison ORDER BY id DESC LIMIT 1", one=True)
+        try: bl_num_int = int(last_bl["bl_numero"].split("-")[-1]) + 1 if last_bl else 1
+        except: bl_num_int = 1
+        bl_numero = f"BL-{year}-{str(bl_num_int).zfill(3)}"
+        exe(db, """INSERT INTO bons_livraison (bl_numero,of_id,destinataire,adresse)
+            VALUES (%s,%s,'SOFEM','Route Sidi Salem 2.5KM, Sfax')""", (bl_numero, of_id))
+    except: bl_numero = None
+
+    return {"id": of_id, "numero": numero, "bl_numero": bl_numero, "message": "OF et BL créés"}
 
 @router.put("/{of_id}")
 def update_of(of_id: int, data: OFUpdate, user: dict = Depends(require_any_role), db=Depends(get_db)):
