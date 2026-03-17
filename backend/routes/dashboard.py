@@ -8,6 +8,11 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 @router.get("", dependencies=[Depends(require_any_role)])
 def dashboard(db=Depends(get_db)):
+    try:
+        _ = q(db, "SELECT 1 FROM of_operations LIMIT 1")
+    except Exception:
+        pass  # table may not exist yet — that's ok
+
     actifs   = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE statut IN ('DRAFT','APPROVED','IN_PROGRESS')", one=True)["n"]
     urgents  = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE priorite='URGENT' AND statut NOT IN ('COMPLETED','CANCELLED')", one=True)["n"]
     total_m  = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE MONTH(created_at)=MONTH(NOW()) AND YEAR(created_at)=YEAR(NOW())", one=True)["n"]

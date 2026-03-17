@@ -102,18 +102,21 @@ def list_of(statut: Optional[str]=None, priorite: Optional[str]=None,
     sql += f" ORDER BY o.created_at DESC LIMIT {int(limit)}"
     ofs = q(db, sql, params)
     for of in ofs:
-        of["operations"] = q(db, """
-            SELECT op.id, op.ordre, op.operation_nom, op.statut,
-                   op.debut, op.fin, op.duree_reelle, op.machine_id,
-                   m.nom machine_nom,
-                   GROUP_CONCAT(CONCAT(o2.prenom,' ',o2.nom) SEPARATOR ', ') operateurs_noms
-            FROM of_operations op
-            LEFT JOIN machines m ON m.id = op.machine_id
-            LEFT JOIN op_operateurs oo ON oo.operation_id = op.id
-            LEFT JOIN operateurs o2 ON o2.id = oo.operateur_id
-            WHERE op.of_id = %s
-            GROUP BY op.id ORDER BY op.ordre, op.id
-        """, (of["id"],))
+        try:
+            of["operations"] = q(db, """
+                SELECT op.id, op.ordre, op.operation_nom, op.statut,
+                       op.debut, op.fin, op.duree_reelle, op.machine_id,
+                       m.nom machine_nom,
+                       GROUP_CONCAT(CONCAT(o2.prenom,' ',o2.nom) SEPARATOR ', ') operateurs_noms
+                FROM of_operations op
+                LEFT JOIN machines m ON m.id = op.machine_id
+                LEFT JOIN op_operateurs oo ON oo.operation_id = op.id
+                LEFT JOIN operateurs o2 ON o2.id = oo.operateur_id
+                WHERE op.of_id = %s
+                GROUP BY op.id ORDER BY op.ordre, op.id
+            """, (of["id"],))
+        except Exception:
+            of["operations"] = []
     return serialize(ofs)
 
 
