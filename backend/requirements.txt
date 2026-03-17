@@ -5,3 +5,5 @@ pydantic==1.10.21
 python-multipart==0.0.9
 anyio==4.3.0
 starlette==0.36.3
+PyJWT==2.8.0
+reportlab==4.1.0

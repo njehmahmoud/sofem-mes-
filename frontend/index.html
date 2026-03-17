@@ -3,959 +3,163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOFEM MES v1.0</title>
+<title>SOFEM MES — Connexion</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{
-  --red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);
-  --bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;
-  --border:rgba(255,255,255,0.07);
-  --text:#E8E9EB;--muted:#6B7280;
-  --accent:#F5A623;--green:#22C55E;--blue:#3B82F6;
-}
+:root{--red:#D42B2B;--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--green:#22C55E}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:200}
-.brand{display:flex;align-items:center;gap:1rem}
-.brand-logo{width:36px;height:36px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:19px;position:relative;overflow:hidden;flex-shrink:0}
-.brand-logo::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.05) 4px,rgba(255,255,255,0.05) 8px)}
-.brand-name{font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:3px;color:#fff}
-.brand-sub{font-size:8px;letter-spacing:2px;color:var(--red);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;margin-top:2px}
-.divider-v{width:1px;height:28px;background:var(--border)}
-.mes-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
-.topbar-r{display:flex;align-items:center;gap:1.5rem}
-.api-status{display:flex;align-items:center;gap:6px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--green)}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.clock{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
-.layout{display:flex;flex:1;min-height:0}
-.sidebar{width:195px;background:var(--bg2);border-right:1px solid var(--border);padding:1.25rem 0;flex-shrink:0;display:flex;flex-direction:column}
-.nav-group{margin-bottom:1.75rem}
-.nav-group-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:0 1.25rem;margin-bottom:.4rem}
-.nav-item{display:flex;align-items:center;gap:9px;padding:.55rem 1.25rem;cursor:pointer;font-size:12.5px;color:var(--muted);border-left:2px solid transparent;transition:all .15s;user-select:none}
-.nav-item:hover{color:var(--text);background:rgba(255,255,255,.02)}
-.nav-item.active{color:#fff;background:var(--red-g);border-left-color:var(--red)}
-.nav-icon{font-size:14px;width:16px;text-align:center}
-.sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:1px solid var(--border)}
-.sidebar-ver{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px}
-.main{flex:1;padding:2rem;overflow-y:auto}
-.page{display:none}
-.page.active{display:block;animation:fadeUp .25s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:1rem}
-.ph-title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:3px;line-height:1}
-.ph-title span{color:var(--red)}
-.ph-sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px}
-.ph-actions{display:flex;gap:.5rem;flex-shrink:0}
-.btn{background:var(--red);color:#fff;border:none;padding:.55rem 1.1rem;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:background .15s;white-space:nowrap}
-.btn:hover{background:var(--red-d)}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.btn-ghost:hover{border-color:var(--red);color:#fff;background:var(--red-g)}
-.btn-green{background:#15803d}.btn-green:hover{background:#166534}
-.btn-sm{padding:.3rem .7rem;font-size:9px}
-.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.9rem;margin-bottom:1.75rem}
-.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
-.kpi.g::before{background:var(--green)}.kpi.a::before{background:var(--accent)}.kpi.b::before{background:var(--blue)}.kpi.o::before{background:#F97316}
-.kpi-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:.4rem}
-.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;color:#fff}
-.kpi-val.r{color:var(--red)}.kpi-val.g{color:var(--green)}.kpi-val.a{color:var(--accent)}.kpi-val.b{color:var(--blue)}.kpi-val.o{color:#F97316}
-.kpi-det{font-size:10px;color:var(--muted);margin-top:3px}
-.sec{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
-.sec-h{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem}
-.sec-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text)}
-.sec-title .ac{color:var(--red)}
-.pipeline{display:flex;align-items:center;padding:1.25rem}
-.stage{flex:1;text-align:center;position:relative}
-.stage::after{content:'→';position:absolute;right:-8px;top:38%;color:var(--muted);font-size:13px}
-.stage:last-child::after{display:none}
-.sb{width:42px;height:42px;border-radius:50%;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid transparent;transition:transform .2s}
-.sb.done{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
-.sb.active{background:var(--red-g);border-color:var(--red);color:var(--red);animation:ring 1.5s infinite}
-.sb.pending{background:var(--bg3);border-color:var(--border);color:var(--muted)}
-@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(212,43,43,.4)}50%{box-shadow:0 0 0 6px rgba(212,43,43,0)}}
-.stage-name{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-thead th{padding:.65rem 1rem;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
-tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
-tbody tr:hover{background:rgba(255,255,255,.02)}
-tbody tr:last-child{border-bottom:none}
-td{padding:.7rem 1rem;vertical-align:middle}
-.of-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red)}
-.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px;font-weight:600;text-transform:uppercase;white-space:nowrap}
-.b-urgent{background:rgba(212,43,43,.2);color:#F87171}
-.b-high{background:rgba(245,166,35,.2);color:var(--accent)}
-.b-normal{background:rgba(59,130,246,.2);color:#60A5FA}
-.b-low{background:rgba(107,114,128,.2);color:var(--muted)}
-.b-completed{background:rgba(34,197,94,.15);color:var(--green)}
-.b-inprogress{background:var(--red-g);color:#F87171}
-.b-draft{background:rgba(107,114,128,.15);color:var(--muted)}
-.b-approved{background:rgba(59,130,246,.15);color:#93C5FD}
-.b-cancelled{background:rgba(107,114,128,.1);color:#4B5563}
-.sdots{display:flex;gap:3px;align-items:center}
-.sd{width:9px;height:9px;border-radius:2px}
-.sd.done{background:var(--green)}
-.sd.in_progress{background:var(--red);animation:blink 1s infinite}
-.sd.pending{background:var(--bg3);border:1px solid var(--border)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-.fbar{display:flex;gap:.4rem;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.fbtn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
-.fbtn:hover,.fbtn.active{border-color:var(--red);color:#fff;background:var(--red-g)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
-.mat-item{display:flex;align-items:center;padding:.75rem 1.25rem;border-bottom:1px solid var(--border);gap:.75rem}
-.mat-item:last-child{border-bottom:none}
-.mat-name{font-size:12.5px;font-weight:500}
-.mat-ref{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:1px}
-.bar-w{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;min-width:50px}
-.bar-f{height:100%;border-radius:2px;transition:width .6s}
-.bar-f.d{background:var(--red)}.bar-f.w{background:var(--accent)}.bar-f.ok{background:var(--green)}
-.bar-pct{font-family:'IBM Plex Mono',monospace;font-size:10px;width:38px;text-align:right;flex-shrink:0}
-.bar-pct.d{color:var(--red)}.bar-pct.w{color:var(--accent)}.bar-pct.ok{color:var(--green)}
-.op-item{display:flex;align-items:center;gap:.75rem;padding:.8rem 1.25rem;border-bottom:1px solid var(--border)}
-.op-item:last-child{border-bottom:none}
-.op-av{width:34px;height:34px;border-radius:50%;background:var(--red-g);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--red);flex-shrink:0}
-.op-name{font-size:13px;font-weight:500}
-.op-role{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)}
-.op-score{font-family:'Bebas Neue',sans-serif;font-size:24px;margin-left:auto}
-.chart{display:flex;align-items:flex-end;gap:3px;padding:1rem 1.25rem;height:90px}
-.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end}
-.bf{width:100%;border-radius:2px 2px 0 0;background:var(--red);opacity:.55;transition:height .8s}
-.bf.cur{opacity:1}
-.bl{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--muted)}
-.ms{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:3px;font-size:9px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .15s;white-space:nowrap}
-.ms.done{background:rgba(34,197,94,.15);color:var(--green)}
-.ms.in_progress{background:var(--red-g);color:var(--red);animation:blink 1s infinite}
-.ms.pending{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
-.ms:hover{filter:brightness(1.2);transform:scale(1.05)}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:1rem}
-.overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:460px;max-width:100%;max-height:90vh;overflow-y:auto}
-.modal-h{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
-.modal-b{padding:1.25rem;display:flex;flex-direction:column;gap:.9rem}
-.modal-f{padding:.9rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:.6rem;justify-content:flex-end}
-.x{background:none;border:none;color:var(--muted);font-size:17px;cursor:pointer;line-height:1}
-.x:hover{color:#fff}
-.fg{display:flex;flex-direction:column;gap:5px}
-.fg label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
-.fg input,.fg select,.fg textarea{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.55rem .7rem;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;outline:none;transition:border-color .15s;width:100%}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--red)}
-.fg select option{background:var(--bg3)}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-.loading{display:flex;align-items:center;justify-content:center;padding:2.5rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px}
-.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin-right:.8rem}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:2.5rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px}
-.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.65rem 1.1rem;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;z-index:9999;transform:translateY(16px);opacity:0;transition:all .25s;max-width:300px}
-.toast.show{transform:translateY(0);opacity:1}
-.toast.ok{border-color:var(--green);color:var(--green)}
-.toast.err{border-color:var(--red);color:#F87171}
-.footer{background:var(--bg2);border-top:1px solid var(--border);padding:.65rem 2rem;display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
-.footer-b{color:var(--red);letter-spacing:2px}
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}.sidebar{width:170px}.mes-tag{display:none}}
-@media(max-width:640px){.sidebar{display:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem}}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2rem}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(212,43,43,0.015) 40px,rgba(212,43,43,0.015) 80px);pointer-events:none}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:340px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--red)}
+
+.logo{text-align:center;margin-bottom:2rem}
+.logo-icon{width:56px;height:56px;background:var(--red);border-radius:12px;margin:0 auto 0.75rem;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:28px;position:relative;overflow:hidden}
+.logo-icon::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.05) 4px,rgba(255,255,255,0.05) 8px)}
+.logo-name{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px}
+.logo-sub{font-size:9px;letter-spacing:2px;color:var(--red);font-family:'IBM Plex Mono',monospace;text-transform:uppercase}
+
+.pin-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:1.25rem}
+
+.pin-dots{display:flex;justify-content:center;gap:0.75rem;margin-bottom:1.75rem}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .2s}
+.pin-dot.filled{background:var(--red);border-color:var(--red);transform:scale(1.1)}
+
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem}
+.key{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:0.9rem;font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);cursor:pointer;text-align:center;transition:all .15s;user-select:none}
+.key:hover{background:rgba(212,43,43,0.15);border-color:var(--red);color:#fff}
+.key:active{transform:scale(0.94)}
+.key.del{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--muted)}
+.key.del:hover{color:var(--red)}
+.key.empty{background:transparent;border:none;cursor:default}
+.key.empty:hover{background:transparent;border:none}
+
+.btn-login{width:100%;background:var(--red);color:#fff;border:none;padding:0.8rem;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:8px;margin-top:0.75rem;transition:all .15s;opacity:0.4}
+.btn-login.ready{opacity:1}
+.btn-login.ready:hover{background:#A01F1F}
+
+.error{text-align:center;color:#F87171;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;margin-top:0.75rem;min-height:16px;animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.footer-txt{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-logo">S</div>
-    <div><div class="brand-name">SOFEM</div><div class="brand-sub">Partenaire des Briqueteries</div></div>
-    <div class="divider-v"></div>
-    <div class="mes-tag">MES · Manufacturing Execution System · v1.0</div>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">S</div>
+    <div class="logo-name">SOFEM</div>
+    <div class="logo-sub">MES v2.0 · Manufacturing Execution System</div>
   </div>
-  <div class="topbar-r">
-    <div class="api-status" id="api-status"><div class="live-dot"></div>CONNEXION...</div>
-    <div class="clock" id="clock">—</div>
-  </div>
-</header>
 
-<div class="layout">
-<nav class="sidebar">
-  <div class="nav-group">
-    <div class="nav-group-label">Principal</div>
-    <div class="nav-item active" data-p="dashboard"><span class="nav-icon">▣</span>Tableau de Bord</div>
-    <div class="nav-item" data-p="orders"><span class="nav-icon">📋</span>Ordres de Fab.</div>
-    <div class="nav-item" data-p="monitor"><span class="nav-icon">📡</span>Monitoring</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-group-label">Gestion</div>
-    <div class="nav-item" data-p="materials"><span class="nav-icon">📦</span>Matériaux</div>
-    <div class="nav-item" data-p="operators"><span class="nav-icon">👷</span>Opérateurs</div>
-    <div class="nav-item" data-p="products"><span class="nav-icon">⚙️</span>Produits</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-group-label">Analyse</div>
-    <div class="nav-item" data-p="reports"><span class="nav-icon">📊</span>Rapports</div>
-  </div>
-  <div class="sidebar-footer">
-    <div class="sidebar-ver">SOFEM MES v1.0<br>SMARTMOVE · 2025</div>
-  </div>
-</nav>
+  <div class="pin-label">Entrez votre code PIN</div>
 
-<main class="main">
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
 
-<!-- DASHBOARD -->
-<div class="page active" id="page-dashboard">
-  <div class="ph">
-    <div>
-      <div class="ph-title">TABLEAU DE <span>BORD</span></div>
-      <div class="ph-sub">// SOFEM · SFAX · ROUTE SIDI SALEM 2.5KM</div>
-    </div>
-    <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
+  <div class="numpad">
+    <div class="key" onclick="pressKey('1')">1</div>
+    <div class="key" onclick="pressKey('2')">2</div>
+    <div class="key" onclick="pressKey('3')">3</div>
+    <div class="key" onclick="pressKey('4')">4</div>
+    <div class="key" onclick="pressKey('5')">5</div>
+    <div class="key" onclick="pressKey('6')">6</div>
+    <div class="key" onclick="pressKey('7')">7</div>
+    <div class="key" onclick="pressKey('8')">8</div>
+    <div class="key" onclick="pressKey('9')">9</div>
+    <div class="key empty"></div>
+    <div class="key" onclick="pressKey('0')">0</div>
+    <div class="key del" onclick="deleteKey()">⌫</div>
   </div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">Ordres Actifs</div><div class="kpi-val r" id="k-actifs">—</div><div class="kpi-det">En production</div></div>
-    <div class="kpi a"><div class="kpi-lbl">Urgents</div><div class="kpi-val a" id="k-urgents">—</div><div class="kpi-det">Priorité critique</div></div>
-    <div class="kpi g"><div class="kpi-lbl">Taux Complétion</div><div class="kpi-val g" id="k-taux">—</div><div class="kpi-det">Ce mois</div></div>
-    <div class="kpi b"><div class="kpi-lbl">Alertes Stock</div><div class="kpi-val b" id="k-stock">—</div><div class="kpi-det">Réapprovisionnement</div></div>
-    <div class="kpi o"><div class="kpi-lbl">En Retard</div><div class="kpi-val o" id="k-retard">—</div><div class="kpi-det">Délai dépassé</div></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">·</span> ÉTAPES DE PRODUCTION</div></div>
-    <div class="pipeline">
-      <div class="stage"><div class="sb pending" id="pip-0">○</div><div class="stage-name">AutoCAD</div></div>
-      <div class="stage"><div class="sb pending" id="pip-1">○</div><div class="stage-name">Découpage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-2">○</div><div class="stage-name">Pliage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-3">○</div><div class="stage-name">Soudage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-4">○</div><div class="stage-name">Ponçage</div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">ORDRES <span class="ac">RÉCENTS</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Échéance</th></tr></thead>
-      <tbody id="dash-ofs"><tr><td colspan="7"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span class="badge b-urgent" id="stock-alerte-ct">— ALERTES</span></div>
-      <div id="dash-mats"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:1.25rem">
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)" id="chart-taux">— COMPLÉTION</div></div>
-        <div class="chart" id="dash-chart"><div class="loading"><div class="spin"></div></div></div>
-      </div>
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
-        <div id="dash-ops"><div class="loading"><div class="spin"></div></div></div>
-      </div>
-    </div>
-  </div>
+
+  <button class="btn-login" id="btn-login" onclick="doLogin()">CONNEXION</button>
+  <div class="error" id="error-msg"></div>
 </div>
 
-<!-- ORDERS -->
-<div class="page" id="page-orders">
-  <div class="ph">
-    <div><div class="ph-title">ORDRES DE <span>FABRICATION</span></div><div class="ph-sub">// GESTION COMPLÈTE DES OF</div></div>
-    <div class="ph-actions">
-      <button class="btn btn-ghost" onclick="loadOrders()">↺ Actualiser</button>
-      <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="fbar">
-      <button class="fbtn active" onclick="filterOF(this,'')">Tous</button>
-      <button class="fbtn" onclick="filterOF(this,'IN_PROGRESS')">En cours</button>
-      <button class="fbtn" onclick="filterOF(this,'DRAFT')">Brouillon</button>
-      <button class="fbtn" onclick="filterOF(this,'APPROVED')">Approuvé</button>
-      <button class="fbtn" onclick="filterOF(this,'COMPLETED')">Terminé</button>
-      <button class="fbtn" onclick="filterOF(this,'URGENT','priorite')">🔴 Urgent</button>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Opérateur</th><th>Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
-      <tbody id="orders-tb"><tr><td colspan="10"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- MONITOR -->
-<div class="page" id="page-monitor">
-  <div class="ph">
-    <div><div class="ph-title">MONITORING <span>PRODUCTION</span></div><div class="ph-sub">// CLIQUER SUR UNE ÉTAPE POUR AVANCER</div></div>
-    <button class="btn btn-ghost" onclick="loadMonitor()">↺ Actualiser</button>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">GLOBAL</span></div><div id="mon-stats" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)"></div></div>
-    <div class="pipeline">
-      <div class="stage"><div class="sb pending" id="mp-0">—</div><div class="stage-name">AutoCAD</div></div>
-      <div class="stage"><div class="sb pending" id="mp-1">—</div><div class="stage-name">Découpage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-2">—</div><div class="stage-name">Pliage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-3">—</div><div class="stage-name">Soudage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-4">—</div><div class="stage-name">Ponçage</div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">SUIVI <span class="ac">PAR ORDRE</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>AutoCAD</th><th>Découpage</th><th>Pliage</th><th>Soudage</th><th>Ponçage</th><th>Opérateur</th></tr></thead>
-      <tbody id="monitor-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- MATERIALS -->
-<div class="page" id="page-materials">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>MATÉRIAUX</span></div><div class="ph-sub">// STOCK ET MOUVEMENTS</div></div>
-    <div class="ph-actions">
-      <button class="btn btn-ghost" onclick="openModal('m-mv')">+ Mouvement</button>
-      <button class="btn" onclick="openModal('m-mat')">+ Matériau</button>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Matériau</th><th>Stock Actuel</th><th>Stock Min.</th><th>Unité</th><th>Fournisseur</th><th>État</th><th>Niveau</th></tr></thead>
-      <tbody id="mats-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">HISTORIQUE <span class="ac">MOUVEMENTS</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Date</th><th>Matériau</th><th>Type</th><th>Quantité</th><th>Avant</th><th>Après</th><th>OF</th><th>Motif</th></tr></thead>
-      <tbody id="mvt-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- OPERATORS -->
-<div class="page" id="page-operators">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>OPÉRATEURS</span></div><div class="ph-sub">// ÉQUIPE DE PRODUCTION SOFEM</div></div>
-    <button class="btn" onclick="openModal('m-op')">+ Opérateur</button>
-  </div>
-  <div class="sec"><div id="ops-list"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></div></div>
-</div>
-
-<!-- PRODUCTS -->
-<div class="page" id="page-products">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>PRODUITS</span></div><div class="ph-sub">// CATALOGUE SOFEM</div></div>
-    <button class="btn" onclick="openModal('m-prod')">+ Produit</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Produit</th><th>Description</th><th>Unité</th></tr></thead>
-      <tbody id="prods-tb"><tr><td colspan="4"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- REPORTS -->
-<div class="page" id="page-reports">
-  <div class="ph">
-    <div><div class="ph-title">RAPPORTS & <span>ANALYTIQUES</span></div><div class="ph-sub">// PERFORMANCE ET HISTORIQUE DE PRODUCTION</div></div>
-  </div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">PRODUCTION <span class="ac">MENSUELLE</span></div></div>
-      <div class="chart" id="rep-chart" style="height:110px"></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">ALERTES <span class="ac">STOCK</span></div></div>
-      <div id="rep-stock"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
-    <div id="rep-ops"><div class="loading"><div class="spin"></div></div></div>
-  </div>
-</div>
-
-</main>
-</div>
-
-<footer class="footer">
-  <div><span class="footer-b">SOFEM MES</span> · Partenaire des Briqueteries · Sfax, Route Sidi Salem 2.5KM · +216 74 469 181 · sofem-tn.com</div>
-  <div>v1.0 · LAN · SMARTMOVE · © 2025</div>
-</footer>
-
-<!-- MODALS -->
-<div class="overlay" id="m-of">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEL ORDRE DE FABRICATION</div><button class="x" onclick="closeModal('m-of')">✕</button></div>
-    <div class="modal-b">
-      <div class="fg"><label>Produit *</label><select id="of-prod"></select></div>
-      <div class="row2">
-        <div class="fg"><label>Quantité *</label><input type="number" id="of-qte" min="1" value="1"></div>
-        <div class="fg"><label>Priorité *</label>
-          <select id="of-prio"><option value="LOW">Basse</option><option value="NORMAL" selected>Normale</option><option value="HIGH">Haute</option><option value="URGENT">URGENT</option></select>
-        </div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label>Opérateur</label><select id="of-op"><option value="">— Non assigné —</option></select></div>
-        <div class="fg"><label>Atelier</label><input type="text" id="of-atelier" value="Atelier A"></div>
-      </div>
-      <div class="fg"><label>Date d'échéance *</label><input type="date" id="of-date"></div>
-      <div class="fg"><label>Notes</label><textarea id="of-notes" rows="2" placeholder="Observations..."></textarea></div>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-of')">Annuler</button>
-      <button class="btn" onclick="createOF()">Créer l'OF</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="m-mv">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">MOUVEMENT DE STOCK</div><button class="x" onclick="closeModal('m-mv')">✕</button></div>
-    <div class="modal-b">
-      <div class="fg"><label>Matériau *</label><select id="mv-mat"></select></div>
-      <div class="row2">
-        <div class="fg"><label>Type *</label>
-          <select id="mv-type"><option value="ENTREE">Entrée (réception)</option><option value="SORTIE">Sortie (consommation)</option><option value="AJUSTEMENT">Ajustement inventaire</option></select>
-        </div>
-        <div class="fg"><label>Quantité *</label><input type="number" id="mv-qte" step="0.01" min="0.01" value="1"></div>
-      </div>
-      <div class="fg"><label>Motif</label><input type="text" id="mv-motif" placeholder="Ex: Livraison fournisseur..."></div>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-mv')">Annuler</button>
-      <button class="btn btn-green" onclick="saveMouvement()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="m-mat">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEAU MATÉRIAU</div><button class="x" onclick="closeModal('m-mat')">✕</button></div>
-    <div class="modal-b">
-      <div class="row2">
-        <div class="fg"><label>Code *</label><input type="text" id="mat-code" placeholder="MAT-006"></div>
-        <div class="fg"><label>Unité *</label><input type="text" id="mat-unite" placeholder="kg / m / pcs"></div>
-      </div>
-      <div class="fg"><label>Nom *</label><input type="text" id="mat-nom"></div>
-      <div class="row2">
-        <div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" step="0.01" value="0"></div>
-        <div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" step="0.01" value="0"></div>
-      </div>
-      <div class="fg"><label>Fournisseur</label><input type="text" id="mat-four"></div>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-mat')">Annuler</button>
-      <button class="btn" onclick="saveMateriau()">Créer</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="m-op">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEL OPÉRATEUR</div><button class="x" onclick="closeModal('m-op')">✕</button></div>
-    <div class="modal-b">
-      <div class="row2">
-        <div class="fg"><label>Prénom *</label><input type="text" id="op-prenom"></div>
-        <div class="fg"><label>Nom *</label><input type="text" id="op-nom"></div>
-      </div>
-      <div class="fg"><label>Spécialité *</label>
-        <select id="op-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select>
-      </div>
-      <div class="row2">
-        <div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div>
-        <div class="fg"><label>Email</label><input type="email" id="op-email"></div>
-      </div>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button>
-      <button class="btn" onclick="saveOperateur()">Créer</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="m-prod">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEAU PRODUIT</div><button class="x" onclick="closeModal('m-prod')">✕</button></div>
-    <div class="modal-b">
-      <div class="row2">
-        <div class="fg"><label>Code *</label><input type="text" id="prod-code" placeholder="XX-001"></div>
-        <div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div>
-      </div>
-      <div class="fg"><label>Nom *</label><input type="text" id="prod-nom"></div>
-      <div class="fg"><label>Description</label><textarea id="prod-desc" rows="2"></textarea></div>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-prod')">Annuler</button>
-      <button class="btn" onclick="saveProduit()">Créer</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+<div class="footer-txt">SMARTMOVE · Mahmoud Njeh · © 2025</div>
 
 <script>
-'use strict';
 const API = window.location.origin;
-const STAGES = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage'];
-const $ = id => document.getElementById(id);
-const toast = (msg, type='ok') => {
-  const t = $('toast'); t.textContent = msg; t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3200);
-};
-const loading = cols => `<tr><td colspan="${cols}"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr>`;
-const empty = (cols, msg='Aucune donnée') => `<tr><td colspan="${cols}"><div class="empty">${msg}</div></td></tr>`;
+let pin = '';
 
-async function api(path, opts={}) {
-  const r = await fetch(API + path, {headers:{'Content-Type':'application/json'}, ...opts});
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
-  return data;
-}
-
-function pBadge(p) {
-  const m={URGENT:'b-urgent',HIGH:'b-high',NORMAL:'b-normal',LOW:'b-low'};
-  const l={URGENT:'URGENT',HIGH:'HAUTE',NORMAL:'NORMAL',LOW:'BASSE'};
-  return `<span class="badge ${m[p]||'b-normal'}">${l[p]||p}</span>`;
-}
-function sBadge(s) {
-  const m={IN_PROGRESS:'b-inprogress',COMPLETED:'b-completed',DRAFT:'b-draft',APPROVED:'b-approved',CANCELLED:'b-cancelled'};
-  const l={IN_PROGRESS:'En Cours',COMPLETED:'Terminé',DRAFT:'Brouillon',APPROVED:'Approuvé',CANCELLED:'Annulé'};
-  return `<span class="badge ${m[s]||'b-draft'}">${l[s]||s}</span>`;
-}
-function dots(etapes) {
-  if (!etapes?.length) return '—';
-  return `<div class="sdots">${STAGES.map(s=>{
-    const e=etapes.find(x=>x.etape===s);
-    const st=e?e.statut.toLowerCase().replace('_','_'):'pending';
-    return `<div class="sd ${st}" title="${s}: ${e?e.statut:'PENDING'}"></div>`;
-  }).join('')}</div>`;
-}
-function dateTd(d) {
-  if (!d) return '—';
-  const diff=(new Date(d)-new Date())/86400000;
-  const style=diff<0?'color:var(--red);font-weight:600':diff<3?'color:var(--accent)':'color:var(--muted)';
-  return `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;${style}">${d}</span>`;
-}
-
-// Clock
-function tick(){ $('clock').textContent=new Date().toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).toUpperCase(); }
-tick(); setInterval(tick,1000);
-
-// ── MOCK DATA ──────────────────────────────
-const MOCK = {
-  dashboard:{
-    ordres_actifs:3,urgents:1,taux_completion:87,alertes_stock:2,en_retard:1,
-    graphique:[
-      {mois:'Oct 2024',total:8},{mois:'Nov 2024',total:10},{mois:'Déc 2024',total:6},
-      {mois:'Jan 2025',total:12},{mois:'Fév 2025',total:9},{mois:'Mar 2025',total:5}
-    ]
-  },
-  ofs:[
-    {id:1,numero:'OF-2025-042',produit_nom:'Bracket Assembly',quantite:50,priorite:'URGENT',statut:'IN_PROGRESS',operateur_nom:'Jean Dupont',atelier:'Atelier A',date_echeance:'2025-02-28',
-     etapes:[{etape:'AutoCAD',statut:'COMPLETED'},{etape:'Découpage',statut:'COMPLETED'},{etape:'Pliage',statut:'IN_PROGRESS'},{etape:'Soudage',statut:'PENDING'},{etape:'Ponçage',statut:'PENDING'}]},
-    {id:2,numero:'OF-2025-041',produit_nom:'Shaft Coupling',quantite:120,priorite:'NORMAL',statut:'IN_PROGRESS',operateur_nom:'Marc Robert',atelier:'Atelier B',date_echeance:'2025-03-05',
-     etapes:[{etape:'AutoCAD',statut:'COMPLETED'},{etape:'Découpage',statut:'COMPLETED'},{etape:'Pliage',statut:'COMPLETED'},{etape:'Soudage',statut:'IN_PROGRESS'},{etape:'Ponçage',statut:'PENDING'}]},
-    {id:3,numero:'OF-2025-040',produit_nom:'Gear Housing',quantite:30,priorite:'HIGH',statut:'IN_PROGRESS',operateur_nom:'Sofia Lambert',atelier:'Atelier A',date_echeance:'2025-03-10',
-     etapes:[{etape:'AutoCAD',statut:'COMPLETED'},{etape:'Découpage',statut:'IN_PROGRESS'},{etape:'Pliage',statut:'PENDING'},{etape:'Soudage',statut:'PENDING'},{etape:'Ponçage',statut:'PENDING'}]},
-    {id:4,numero:'OF-2025-039',produit_nom:'Flange Plate',quantite:200,priorite:'LOW',statut:'COMPLETED',operateur_nom:'Karim Benzara',atelier:'Atelier B',date_echeance:'2025-03-15',
-     etapes:[{etape:'AutoCAD',statut:'COMPLETED'},{etape:'Découpage',statut:'COMPLETED'},{etape:'Pliage',statut:'COMPLETED'},{etape:'Soudage',statut:'COMPLETED'},{etape:'Ponçage',statut:'COMPLETED'}]},
-    {id:5,numero:'OF-2025-038',produit_nom:'Cam Shaft',quantite:75,priorite:'NORMAL',statut:'DRAFT',operateur_nom:null,atelier:'Atelier A',date_echeance:'2025-03-20',
-     etapes:[{etape:'AutoCAD',statut:'PENDING'},{etape:'Découpage',statut:'PENDING'},{etape:'Pliage',statut:'PENDING'},{etape:'Soudage',statut:'PENDING'},{etape:'Ponçage',statut:'PENDING'}]},
-    {id:6,numero:'OF-2025-037',produit_nom:'Bracket Assembly',quantite:25,priorite:'HIGH',statut:'APPROVED',operateur_nom:'Jean Dupont',atelier:'Atelier A',date_echeance:'2025-03-25',
-     etapes:[{etape:'AutoCAD',statut:'PENDING'},{etape:'Découpage',statut:'PENDING'},{etape:'Pliage',statut:'PENDING'},{etape:'Soudage',statut:'PENDING'},{etape:'Ponçage',statut:'PENDING'}]},
-  ],
-  materiaux:[
-    {id:1,code:'MAT-001',nom:'Tôle Acier S235 3mm',unite:'m²',stock_actuel:3.2,stock_minimum:10.0,fournisseur:'Aciers du Nord',alerte:1,pct_stock:32},
-    {id:2,code:'MAT-002',nom:'Fil Soudure ER70S',unite:'kg',stock_actuel:42,stock_minimum:50.0,fournisseur:'SoudeTech',alerte:1,pct_stock:84},
-    {id:3,code:'MAT-003',nom:'Profilé Aluminium 40x40',unite:'m',stock_actuel:25,stock_minimum:8.0,fournisseur:'AlumPro',alerte:0,pct_stock:100},
-    {id:4,code:'MAT-004',nom:'Acier Rond Ø40',unite:'m',stock_actuel:4.5,stock_minimum:8.0,fournisseur:'Aciers du Nord',alerte:1,pct_stock:56},
-    {id:5,code:'MAT-005',nom:'Visserie M8',unite:'pcs',stock_actuel:850,stock_minimum:200,fournisseur:'Fixalia',alerte:0,pct_stock:100},
-  ],
-  operateurs:[
-    {id:1,nom:'Dupont',prenom:'Jean',specialite:'Soudage',telephone:'+216 90 000 001',total_ofs:18,performance:94},
-    {id:2,nom:'Robert',prenom:'Marc',specialite:'Pliage',telephone:'+216 90 000 002',total_ofs:14,performance:86},
-    {id:3,nom:'Lambert',prenom:'Sofia',specialite:'Découpage',telephone:'+216 90 000 003',total_ofs:11,performance:82},
-    {id:4,nom:'Benzara',prenom:'Karim',specialite:'Ponçage',telephone:'+216 90 000 004',total_ofs:16,performance:100},
-  ],
-  produits:[
-    {id:1,code:'BA-004',nom:'Bracket Assembly',description:'Support de fixation pour briqueteries',unite:'pcs'},
-    {id:2,code:'SC-001',nom:'Shaft Coupling',description:"Accouplement d'arbre mécanique",unite:'pcs'},
-    {id:3,code:'GH-002',nom:'Gear Housing',description:"Carter d'engrenage",unite:'pcs'},
-    {id:4,code:'FP-003',nom:'Flange Plate',description:'Plaque à brides',unite:'pcs'},
-    {id:5,code:'CS-005',nom:'Cam Shaft',description:'Arbre à cames',unite:'pcs'},
-  ],
-  mouvements:[
-    {materiau_nom:'Tôle Acier S235 3mm',unite:'m²',type:'ENTREE',quantite:5,stock_avant:3.2,stock_apres:8.2,of_numero:null,motif:'Livraison fournisseur',created_at:'2025-02-20 09:15'},
-    {materiau_nom:'Fil Soudure ER70S',unite:'kg',type:'SORTIE',quantite:8,stock_avant:50,stock_apres:42,of_numero:'OF-2025-042',motif:'Consommation production',created_at:'2025-02-21 14:30'},
-    {materiau_nom:'Visserie M8',unite:'pcs',type:'ENTREE',quantite:500,stock_avant:350,stock_apres:850,of_numero:null,motif:'Réapprovisionnement',created_at:'2025-02-22 10:00'},
-    {materiau_nom:'Acier Rond Ø40',unite:'m',type:'SORTIE',quantite:2,stock_avant:6.5,stock_apres:4.5,of_numero:'OF-2025-041',motif:'Consommation atelier B',created_at:'2025-02-23 11:45'},
-  ],
-  rapport_mensuel:[
-    {mois:'2024-10',total:8,completes:7},{mois:'2024-11',total:10,completes:9},
-    {mois:'2024-12',total:6,completes:5},{mois:'2025-01',total:12,completes:10},
-    {mois:'2025-02',total:9,completes:8},{mois:'2025-03',total:5,completes:4},
-  ],
-  rapport_operateurs:[
-    {operateur:'Jean Dupont',specialite:'Soudage',total_ofs:18,etapes_completes:72,duree_moy_min:45},
-    {operateur:'Karim Benzara',specialite:'Ponçage',total_ofs:16,etapes_completes:64,duree_moy_min:38},
-    {operateur:'Marc Robert',specialite:'Pliage',total_ofs:14,etapes_completes:52,duree_moy_min:52},
-    {operateur:'Sofia Lambert',specialite:'Découpage',total_ofs:11,etapes_completes:40,duree_moy_min:41},
-  ],
-  rapport_stock:[
-    {nom:'Tôle Acier S235 3mm',stock_actuel:3.2,stock_minimum:10.0,unite:'m²',pct:32},
-    {nom:'Acier Rond Ø40',stock_actuel:4.5,stock_minimum:8.0,unite:'m',pct:56},
-    {nom:'Fil Soudure ER70S',stock_actuel:42,stock_minimum:50,unite:'kg',pct:84},
-  ]
-};
-
-let USE_MOCK = false;
-
-async function smartFetch(path, mockKey) {
-  if (USE_MOCK) return MOCK[mockKey];
-  try { return await api(path); }
-  catch { USE_MOCK=true; return MOCK[mockKey]; }
-}
-
-// API Status
-async function checkStatus() {
-  const el=$('api-status');
-  try {
-    await api('/api/health');
-    USE_MOCK=false;
-    el.innerHTML='<div class="live-dot"></div>SYSTÈME ACTIF'; el.style.color='var(--green)';
-  } catch {
-    USE_MOCK=true;
-    el.innerHTML='<div class="live-dot" style="background:var(--accent)"></div>MODE DÉMO'; el.style.color='var(--accent)';
+function pressKey(k) {
+  if (pin.length >= 4) return;
+  pin += k;
+  updateDots();
+  if (pin.length === 4) {
+    document.getElementById('btn-login').classList.add('ready');
+    setTimeout(doLogin, 300); // auto-submit on 4 digits
   }
 }
-checkStatus(); setInterval(checkStatus,30000);
 
-// Navigation
-const loaders={dashboard:loadDashboard,orders:loadOrders,monitor:loadMonitor,materials:loadMaterials,operators:loadOperators,products:loadProducts,reports:loadReports};
-document.querySelectorAll('.nav-item').forEach(item=>{
-  item.addEventListener('click',()=>{
-    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    item.classList.add('active');
-    const p=item.dataset.p;
-    $(`page-${p}`).classList.add('active');
-    loaders[p]?.();
-  });
-});
-
-// ── DASHBOARD ──
-async function loadDashboard() {
-  try {
-    const [dash,ofs,mats,ops]=await Promise.all([
-      smartFetch('/api/dashboard','dashboard'),
-      smartFetch('/api/of','ofs'),
-      smartFetch('/api/materiaux','materiaux'),
-      smartFetch('/api/operateurs','operateurs')
-    ]);
-    $('k-actifs').textContent=dash.ordres_actifs;
-    $('k-urgents').textContent=dash.urgents;
-    $('k-taux').textContent=dash.taux_completion+'%';
-    $('k-stock').textContent=dash.alertes_stock;
-    $('k-retard').textContent=dash.en_retard;
-    $('chart-taux').textContent=dash.taux_completion+'% COMPLÉTION';
-    // Pipeline
-    ofs.forEach(of=>{
-      (of.etapes||[]).forEach(e=>{
-        const i=STAGES.indexOf(e.etape); if(i<0)return;
-        const el=$(`pip-${i}`);
-        if(e.statut==='IN_PROGRESS'&&!el.classList.contains('active')){el.className='sb active';el.textContent='⬛';}
-        else if(e.statut==='COMPLETED'&&el.classList.contains('pending')){el.className='sb done';el.textContent='✓';}
-      });
-    });
-    // OF table
-    $('dash-ofs').innerHTML=ofs.length===0?empty(7,'Aucun ordre de fabrication')
-      :ofs.slice(0,6).map(of=>`<tr>
-        <td><span class="of-num">${of.numero}</span></td>
-        <td>${of.produit_nom}</td><td>${of.quantite}</td>
-        <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td>
-        <td>${dots(of.etapes)}</td><td>${dateTd(of.date_echeance)}</td>
-      </tr>`).join('');
-    // Materials
-    const alertes=mats.filter(m=>parseFloat(m.stock_actuel)<parseFloat(m.stock_minimum));
-    $('stock-alerte-ct').textContent=alertes.length+' ALERTES';
-    $('dash-mats').innerHTML=mats.slice(0,5).map(m=>{
-      const pct=Math.min(100,Math.round(m.pct_stock||0));
-      const cls=pct<50?'d':pct<90?'w':'ok';
-      return `<div class="mat-item">
-        <div style="flex:1;min-width:0"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel} / ${m.stock_minimum} ${m.unite} min.</div></div>
-        <div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div>
-        <div class="bar-pct ${cls}">${pct<100?pct+'%':'OK'}</div>
-      </div>`;
-    }).join('');
-    // Chart
-    const g=dash.graphique||[];
-    const mx=Math.max(...g.map(x=>x.total),1);
-    $('dash-chart').innerHTML=g.map((m,i)=>`<div class="bc">
-      <div class="bf${i===g.length-1?' cur':''}" style="height:${Math.round(m.total/mx*100)}%"></div>
-      <div class="bl">${(m.mois||'').split(' ')[0].toUpperCase()}</div>
-    </div>`).join('');
-    // Operators
-    $('dash-ops').innerHTML=ops.slice(0,4).map(op=>{
-      const init=(op.prenom[0]||'')+(op.nom[0]||'');
-      const perf=op.performance||0;
-      const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';
-      return `<div class="op-item">
-        <div class="op-av">${init}</div>
-        <div><div class="op-name">${op.prenom} ${op.nom}</div><div class="op-role">${op.specialite}</div></div>
-        <div class="op-score" style="color:${col}">${perf}%</div>
-      </div>`;
-    }).join('');
-  } catch(e){toast('Erreur dashboard: '+e.message,'err');}
+function deleteKey() {
+  pin = pin.slice(0, -1);
+  updateDots();
+  document.getElementById('btn-login').classList.remove('ready');
+  document.getElementById('error-msg').textContent = '';
 }
 
-// ── ORDERS ──
-let ofFilter={statut:'',priorite:''};
-async function loadOrders() {
-  $('orders-tb').innerHTML=loading(10);
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById(`d${i}`);
+    d.classList.toggle('filled', i < pin.length);
+  }
+}
+
+async function doLogin() {
+  if (pin.length !== 4) return;
+  const btn = document.getElementById('btn-login');
+  const err = document.getElementById('error-msg');
+  btn.textContent = '...';
   try {
-    let ofs;
-    if(USE_MOCK){
-      ofs=MOCK.ofs.filter(o=>{
-        if(ofFilter.statut&&o.statut!==ofFilter.statut)return false;
-        if(ofFilter.priorite&&o.priorite!==ofFilter.priorite)return false;
-        return true;
-      });
+    const r = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pin})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'PIN incorrect');
+
+    // Save token and user info
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('role', data.role);
+    localStorage.setItem('nom', data.nom);
+    localStorage.setItem('prenom', data.prenom);
+    localStorage.setItem('operateur_id', data.operateur_id || '');
+
+    // Small delay to ensure localStorage is written before redirect
+    await new Promise(r => setTimeout(r, 100));
+
+    // Redirect based on role
+    if (data.role === 'ADMIN' || data.role === 'MANAGER') {
+      window.location.replace('/admin');
     } else {
-      let url='/api/of?limit=200';
-      if(ofFilter.statut) url+=`&statut=${ofFilter.statut}`;
-      if(ofFilter.priorite) url+=`&priorite=${ofFilter.priorite}`;
-      ofs=await api(url).catch(()=>{USE_MOCK=true;return MOCK.ofs;});
+      window.location.replace('/operator');
     }
-    $('orders-tb').innerHTML=ofs.length===0?empty(10,'Aucun ordre trouvé')
-      :ofs.map(of=>`<tr>
-        <td><span class="of-num">${of.numero}</span></td>
-        <td>${of.produit_nom}</td><td>${of.quantite}</td>
-        <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td>
-        <td>${dots(of.etapes)}</td>
-        <td style="font-size:11px">${of.operateur_nom||'—'}</td>
-        <td style="font-size:11px;color:var(--muted)">${of.atelier||'—'}</td>
-        <td>${dateTd(of.date_echeance)}</td>
-        <td><div style="display:flex;gap:4px">
-          ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
-          ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
-        </div></td>
-      </tr>`).join('');
-  } catch(e){toast('Erreur: '+e.message,'err');}
-}
-function filterOF(btn,val,field='statut'){
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  ofFilter={statut:'',priorite:''};
-  if(field==='statut') ofFilter.statut=val;
-  if(field==='priorite') ofFilter.priorite=val;
-  loadOrders();
-}
-async function advanceOF(id,current){
-  const next={DRAFT:'APPROVED',APPROVED:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[current];
-  if(!next)return;
-  try{await api(`/api/of/${id}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`OF → ${next} ✓`);loadOrders();}
-  catch(e){toast(e.message,'err');}
-}
-async function cancelOF(id){
-  if(!confirm('Annuler cet OF ?'))return;
-  try{await api(`/api/of/${id}`,{method:'DELETE'});toast('OF annulé');loadOrders();}
-  catch(e){toast(e.message,'err');}
-}
-
-// ── MONITOR ──
-async function loadMonitor(){
-  try{
-    const all=await smartFetch('/api/of','ofs');
-    const active=all.filter(o=>o.statut==='IN_PROGRESS');
-    STAGES.forEach((s,i)=>{
-      const inprog=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='IN_PROGRESS').length),0);
-      const done=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='COMPLETED').length),0);
-      const el=$(`mp-${i}`);
-      el.textContent=inprog>0?inprog:done>0?'✓':'○';
-      el.className=`sb ${inprog>0?'active':done>0?'done':'pending'}`;
-    });
-    $('mon-stats').textContent=`${active.length} ORDRES EN COURS`;
-    const tbody=$('monitor-tb');
-    if(active.length===0){tbody.innerHTML=empty(9,'Aucun ordre en cours');return;}
-    tbody.innerHTML=active.map(of=>{
-      const cells=STAGES.map(s=>{
-        const e=(of.etapes||[]).find(x=>x.etape===s);
-        const st=e?e.statut:'PENDING';
-        const cls=st==='COMPLETED'?'done':st==='IN_PROGRESS'?'in_progress':'pending';
-        const lbl=st==='COMPLETED'?'✓ '+s:st==='IN_PROGRESS'?'⬛ '+s:'○ '+s;
-        const nextSt={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[st];
-        return `<td>${nextSt?`<span class="ms ${cls}" onclick="advanceEtape(${of.id},'${s}','${st}')">${lbl}</span>`:`<span class="ms done">${lbl}</span>`}</td>`;
-      }).join('');
-      return `<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td>${cells}<td style="font-size:11px">${of.operateur_nom||'—'}</td></tr>`;
-    }).join('');
-  }catch(e){toast('Erreur monitor: '+e.message,'err');}
-}
-async function advanceEtape(ofId,etape,current){
-  const next={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[current];
-  if(!next)return;
-  try{await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`${etape} → ${next} ✓`);loadMonitor();}
-  catch(e){toast(e.message,'err');}
-}
-
-// ── MATERIALS ──
-async function loadMaterials(){
-  try{
-    const mats=await smartFetch('/api/materiaux','materiaux');
-    const mvts=await smartFetch('/api/materiaux/mouvements?limit=20','mouvements');
-    $('mats-tb').innerHTML=mats.length===0?empty(8):mats.map(m=>{
-      const pct=Math.min(100,Math.round(m.pct_stock||0));
-      const cls=pct<50?'d':pct<90?'w':'ok';
-      return `<tr>
-        <td><span class="of-num">${m.code}</span></td><td>${m.nom}</td>
-        <td style="font-family:'IBM Plex Mono',monospace">${m.stock_actuel}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${m.stock_minimum}</td>
-        <td style="color:var(--muted)">${m.unite}</td>
-        <td style="font-size:11px;color:var(--muted)">${m.fournisseur||'—'}</td>
-        <td>${m.alerte?'<span class="badge b-urgent">ALERTE</span>':'<span class="badge b-completed">OK</span>'}</td>
-        <td style="min-width:80px"><div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div></td>
-      </tr>`;
-    }).join('');
-    $('mvt-tb').innerHTML=mvts.length===0?empty(8,'Aucun mouvement enregistré'):mvts.map(m=>{
-      const col=m.type==='ENTREE'?'var(--green)':m.type==='SORTIE'?'var(--red)':'var(--accent)';
-      return `<tr>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(m.created_at||'').slice(0,16)}</td>
-        <td>${m.materiau_nom}</td>
-        <td><span style="color:${col};font-family:'IBM Plex Mono',monospace;font-size:10px">${m.type}</span></td>
-        <td style="font-family:'IBM Plex Mono',monospace">${m.quantite} ${m.unite}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${m.stock_avant||'—'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace">${m.stock_apres||'—'}</td>
-        <td><span class="of-num">${m.of_numero||'—'}</span></td>
-        <td style="font-size:11px;color:var(--muted)">${m.motif||'—'}</td>
-      </tr>`;
-    }).join('');
-    $('mv-mat').innerHTML=mats.map(m=>`<option value="${m.id}">${m.nom} (${m.stock_actuel} ${m.unite})</option>`).join('');
-  }catch(e){toast('Erreur matériaux: '+e.message,'err');}
-}
-
-// ── OPERATORS ──
-async function loadOperators(){
-  try{
-    const ops=await smartFetch('/api/operateurs','operateurs');
-    $('ops-list').innerHTML=ops.length===0?'<div class="empty">Aucun opérateur</div>'
-      :ops.map(op=>{
-        const init=(op.prenom[0]||'')+(op.nom[0]||'');
-        const perf=op.performance||0;
-        const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';
-        return `<div class="op-item">
-          <div class="op-av" style="width:40px;height:40px;font-size:13px">${init}</div>
-          <div style="flex:1"><div class="op-name">${op.prenom} ${op.nom}</div><div class="op-role">${op.specialite} · ${op.total_ofs||0} OFs · ${op.telephone||'—'}</div></div>
-          <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:2px">PERFORMANCE</div>
-          <div class="op-score" style="font-size:26px;color:${col}">${perf}%</div></div>
-        </div>`;
-      }).join('');
-  }catch(e){toast('Erreur opérateurs: '+e.message,'err');}
-}
-
-// ── PRODUCTS ──
-async function loadProducts(){
-  try{
-    const prods=await smartFetch('/api/produits','produits');
-    $('prods-tb').innerHTML=prods.length===0?empty(4):prods.map(p=>`<tr>
-      <td><span class="of-num">${p.code}</span></td><td>${p.nom}</td>
-      <td style="color:var(--muted);font-size:11px">${p.description||'—'}</td>
-      <td style="color:var(--muted)">${p.unite}</td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur produits: '+e.message,'err');}
-}
-
-// ── REPORTS ──
-async function loadReports(){
-  try{
-    const mois=await smartFetch('/api/rapports/production-mensuelle','rapport_mensuel');
-    const ops=await smartFetch('/api/rapports/operateurs','rapport_operateurs');
-    const stock=await smartFetch('/api/rapports/stock-alertes','rapport_stock');
-    const mx=Math.max(...mois.map(m=>m.total),1);
-    $('rep-chart').innerHTML=mois.slice(-8).map((m,i,arr)=>`<div class="bc">
-      <div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1">
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text);margin-bottom:2px">${m.total}</span>
-        <div class="bf${i===arr.length-1?' cur':''}" style="width:100%;height:${Math.round(m.total/mx*80)}%"></div>
-      </div>
-      <div class="bl">${(m.mois||'').slice(5)}</div>
-    </div>`).join('');
-    $('rep-stock').innerHTML=stock.length===0?'<div class="empty">✓ Tous les stocks sont suffisants</div>'
-      :stock.map(m=>{const pct=Math.min(100,Math.round(m.pct||0));return`<div class="mat-item">
-        <div style="flex:1"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</div></div>
-        <div class="bar-w"><div class="bar-f d" style="width:${pct}%"></div></div>
-        <div class="bar-pct d">${pct}%</div>
-      </div>`;}).join('');
-    $('rep-ops').innerHTML=ops.map(op=>{
-      const init=op.operateur.split(' ').map(n=>n[0]||'').join('');
-      return `<div class="op-item">
-        <div class="op-av">${init}</div>
-        <div style="flex:1"><div class="op-name">${op.operateur}</div><div class="op-role">${op.specialite} · ${op.total_ofs||0} OFs · ${op.etapes_completes||0} étapes · moy. ${op.duree_moy_min||'—'} min/étape</div></div>
-      </div>`;
-    }).join('');
-  }catch(e){toast('Erreur rapports: '+e.message,'err');}
-}
-
-// ── MODALS ──
-async function openModal(id){
-  $(id).classList.add('open');
-  if(id==='m-of'){
-    const prods=await smartFetch('/api/produits','produits');
-    const ops=await smartFetch('/api/operateurs','operateurs');
-    $('of-prod').innerHTML=prods.map(p=>`<option value="${p.id}">${p.code} — ${p.nom}</option>`).join('');
-    $('of-op').innerHTML='<option value="">— Non assigné —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom} (${o.specialite})</option>`).join('');
-    const d=new Date();d.setDate(d.getDate()+7);$('of-date').value=d.toISOString().split('T')[0];
+  } catch(e) {
+    err.textContent = e.message;
+    pin = '';
+    updateDots();
+    btn.textContent = 'CONNEXION';
+    btn.classList.remove('ready');
+    // shake animation reset
+    err.style.animation = 'none';
+    setTimeout(() => err.style.animation = '', 10);
   }
 }
-function closeModal(id){$(id).classList.remove('open');}
-document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
-async function createOF(){
-  const prod=$('of-prod').value,qte=$('of-qte').value,date=$('of-date').value;
-  if(!prod||!qte||!date){toast('Remplissez les champs obligatoires *','err');return;}
-  try{
-    const res=await api('/api/of',{method:'POST',body:JSON.stringify({
-      produit_id:parseInt(prod),quantite:parseInt(qte),priorite:$('of-prio').value,
-      operateur_id:$('of-op').value?parseInt($('of-op').value):null,
-      atelier:$('of-atelier').value||'Atelier A',date_echeance:date,notes:$('of-notes').value||null
-    })});
-    toast(`${res.numero} créé ✓`);closeModal('m-of');
-    const p=document.querySelector('.nav-item.active')?.dataset.p;
-    if(p==='dashboard')loadDashboard();else if(p==='orders')loadOrders();
-  }catch(e){toast(e.message,'err');}
-}
-async function saveMouvement(){
-  try{
-    const res=await api('/api/materiaux/mouvement',{method:'POST',body:JSON.stringify({
-      materiau_id:parseInt($('mv-mat').value),type:$('mv-type').value,
-      quantite:parseFloat($('mv-qte').value),motif:$('mv-motif').value||null
-    })});
-    toast(`Stock: ${res.stock_avant} → ${res.stock_apres} ✓`);closeModal('m-mv');loadMaterials();
-  }catch(e){toast(e.message,'err');}
-}
-async function saveMateriau(){
-  if(!$('mat-code').value||!$('mat-nom').value||!$('mat-unite').value){toast('Remplissez les champs obligatoires *','err');return;}
-  try{
-    await api('/api/materiaux',{method:'POST',body:JSON.stringify({
-      code:$('mat-code').value,nom:$('mat-nom').value,unite:$('mat-unite').value,
-      stock_actuel:parseFloat($('mat-stock').value)||0,stock_minimum:parseFloat($('mat-min').value)||0,
-      fournisseur:$('mat-four').value||null
-    })});
-    toast('Matériau créé ✓');closeModal('m-mat');loadMaterials();
-  }catch(e){toast(e.message,'err');}
-}
-async function saveOperateur(){
-  if(!$('op-prenom').value||!$('op-nom').value){toast('Prénom et Nom obligatoires','err');return;}
-  try{
-    await api('/api/operateurs',{method:'POST',body:JSON.stringify({
-      prenom:$('op-prenom').value,nom:$('op-nom').value,specialite:$('op-spec').value,
-      telephone:$('op-tel').value||null,email:$('op-email').value||null
-    })});
-    toast('Opérateur créé ✓');closeModal('m-op');loadOperators();
-  }catch(e){toast(e.message,'err');}
-}
-async function saveProduit(){
-  if(!$('prod-code').value||!$('prod-nom').value){toast('Code et Nom obligatoires','err');return;}
-  try{
-    await api('/api/produits',{method:'POST',body:JSON.stringify({
-      code:$('prod-code').value,nom:$('prod-nom').value,
-      description:$('prod-desc').value||null,unite:$('prod-unite').value||'pcs'
-    })});
-    toast('Produit créé ✓');closeModal('m-prod');loadProducts();
-  }catch(e){toast(e.message,'err');}
-}
-
-loadDashboard();
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+  if (e.key === 'Backspace') deleteKey();
+  if (e.key === 'Enter' && pin.length === 4) doLogin();
+});
 </script>
 </body>
 </html>
