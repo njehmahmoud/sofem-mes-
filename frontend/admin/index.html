@@ -166,6 +166,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="nav-item active" data-p="dashboard">▣ Tableau de Bord</div>
     <div class="nav-item" data-p="orders">📋 Ordres de Fab.</div>
     <div class="nav-item" data-p="monitor">📡 Monitoring</div>
+    <div class="nav-item" data-p="bl">🚚 Bons de Livraison</div>
   </div>
   <div class="nav-group">
     <div class="nav-lbl">Gestion</div>
@@ -173,12 +174,19 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="nav-item" data-p="operators">👷 Opérateurs</div>
     <div class="nav-item" data-p="products">⚙️ Produits</div>
   </div>
+  <div class="nav-group">
+    <div class="nav-lbl">Achats</div>
+    <div class="nav-item" data-p="da">📝 Demandes Achat</div>
+    <div class="nav-item" data-p="bc">🛒 Bons Commande</div>
+    <div class="nav-item" data-p="br">📥 Bons Réception</div>
+    <div class="nav-item" data-p="fa">💳 Factures Achat</div>
+  </div>
   <div class="nav-group" id="admin-only-nav">
     <div class="nav-lbl">Admin</div>
     <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
     <div class="nav-item" data-p="reports">📊 Rapports</div>
   </div>
-  <div class="sidebar-footer">SOFEM MES v2.0<br>SMARTMOVE · 2025</div>
+  <div class="sidebar-footer">SOFEM MES v3.0<br>SMARTMOVE · 2025</div>
 </nav>
 
 <main class="main">
@@ -255,16 +263,20 @@ td{padding:.65rem 1rem;vertical-align:middle}
         <input id="search-date" type="date" oninput="searchOF()"
           style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:10px;outline:none;transition:border-color .15s"
           onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
-        <button class="fbtn" onclick="clearSearch()" style="color:var(--muted)">✕ Reset</button>
+        <button class="fbtn" onclick="clearSearch()">✕ Reset</button>
       </div>
     </div>
-    <div style="padding:.4rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+    <div style="padding:.4rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <span id="search-count">—</span>
-      <span>Cliquer 🖨️ pour imprimer la facture d'un OF terminé</span>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <span style="color:var(--muted)">Sélectionner OFs terminés pour facture groupée :</span>
+        <button class="btn btn-ghost btn-sm" style="color:var(--blue)" onclick="selectAllCompleted()">✓ Sélectionner terminés</button>
+        <button class="btn btn-sm" style="background:var(--blue)" onclick="printGroupedInvoice()">📄 Facture Groupée</button>
+      </div>
     </div>
     <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Opérateur</th><th>Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
-      <tbody id="orders-tb"><tr><td colspan="10"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+      <thead><tr><th><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)"></th><th>N° OF</th><th>BL</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Opérateur</th><th>Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
+      <tbody id="orders-tb"><tr><td colspan="12"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
 </div>
@@ -376,15 +388,153 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
     <div id="rep-ops"><div class="loading"><div class="spin"></div></div></div>
   </div>
+<!-- BONS DE LIVRAISON -->
+<div class="page" id="page-bl">
+  <div class="ph">
+    <div><div class="ph-title">BONS DE <span>LIVRAISON</span></div><div class="ph-sub">// GÉNÉRÉS AUTOMATIQUEMENT À CHAQUE OF</div></div>
+    <button class="btn btn-ghost" onclick="loadBL()">↺ Actualiser</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° BL</th><th>N° OF</th><th>Produit</th><th>Qté</th><th>Destinataire</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="bl-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- DEMANDES D'ACHAT -->
+<div class="page" id="page-da">
+  <div class="ph">
+    <div><div class="ph-title">DEMANDES <span>D'ACHAT</span></div><div class="ph-sub">// CRÉÉES PAR LES OPÉRATEURS — VALIDÉES PAR MANAGER</div></div>
+    <button class="btn" onclick="openModal('m-da')">+ Demande</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° DA</th><th>Description</th><th>Matériau</th><th>Qté</th><th>Urgence</th><th>Statut</th><th>Demandeur</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="da-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- BONS DE COMMANDE -->
+<div class="page" id="page-bc">
+  <div class="ph">
+    <div><div class="ph-title">BONS DE <span>COMMANDE</span></div><div class="ph-sub">// COMMANDES FOURNISSEURS</div></div>
+    <button class="btn" onclick="openModal('m-bc')">+ Bon Commande</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° BC</th><th>Fournisseur</th><th>Montant HT</th><th>TVA 19%</th><th>Total TTC</th><th>Statut</th><th>DA lié</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="bc-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- BONS DE RECEPTION -->
+<div class="page" id="page-br">
+  <div class="ph">
+    <div><div class="ph-title">BONS DE <span>RÉCEPTION</span></div><div class="ph-sub">// RÉCEPTION MARCHANDISES — STOCK MIS À JOUR AUTOMATIQUEMENT</div></div>
+    <button class="btn" onclick="openModal('m-br')">+ Réception</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° BR</th><th>BC lié</th><th>Fournisseur</th><th>Date Réception</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody id="br-tb"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- FACTURES D'ACHAT -->
+<div class="page" id="page-fa">
+  <div class="ph">
+    <div><div class="ph-title">FACTURES <span>D'ACHAT</span></div><div class="ph-sub">// FACTURES FOURNISSEURS</div></div>
+    <button class="btn" onclick="openModal('m-fa')">+ Facture Achat</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>N° FA</th><th>Fournisseur</th><th>BC lié</th><th>Montant HT</th><th>TVA</th><th>Total TTC</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="fa-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
 </div>
 
 </main>
 </div>
 
 <footer class="footer">
-  <div>SOFEM MES v2.0 · SMARTMOVE · Sfax</div>
+  <div>SOFEM MES v3.0 · SMARTMOVE · Sfax</div>
   <div id="footer-user">—</div>
 </footer>
+
+<!-- MODALS: Demande Achat -->
+<div class="overlay" id="m-da">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVELLE DEMANDE D'ACHAT</div><button class="x" onclick="closeModal('m-da')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Description *</label><input type="text" id="da-desc" placeholder="Ex: Tôle acier 2mm..."></div>
+      <div class="fg"><label>Matériau lié (optionnel)</label><select id="da-mat"><option value="">— Aucun —</option></select></div>
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label><input type="number" id="da-qte" min="0.01" step="0.01" value="1"></div>
+        <div class="fg"><label>Unité</label><input type="text" id="da-unite" value="pcs"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Urgence</label><select id="da-urgence"><option value="NORMAL">Normal</option><option value="URGENT">URGENT</option></select></div>
+        <div class="fg"><label>Demandeur</label><select id="da-demandeur"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="da-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-da')">Annuler</button><button class="btn" onclick="saveDA()">Créer</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Bon Commande -->
+<div class="overlay" id="m-bc">
+  <div class="modal" style="width:560px">
+    <div class="modal-h"><div class="modal-title">NOUVEAU BON DE COMMANDE</div><button class="x" onclick="closeModal('m-bc')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Fournisseur *</label><input type="text" id="bc-four" placeholder="Nom du fournisseur"></div>
+      <div class="fg"><label>DA lié (optionnel)</label><select id="bc-da"><option value="">— Aucun —</option></select></div>
+      <div class="fg"><label>Notes</label><textarea id="bc-notes" rows="1"></textarea></div>
+      <div style="border-top:1px solid var(--border);padding-top:.75rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <div class="sec-title">LIGNES</div>
+          <button class="btn btn-ghost btn-sm" onclick="addBCLine()">+ Ligne</button>
+        </div>
+        <div id="bc-lines"></div>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-bc')">Annuler</button><button class="btn" onclick="saveBC()">Créer BC</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Bon Réception -->
+<div class="overlay" id="m-br">
+  <div class="modal" style="width:540px">
+    <div class="modal-h"><div class="modal-title">NOUVEAU BON DE RÉCEPTION</div><button class="x" onclick="closeModal('m-br')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Bon de Commande *</label><select id="br-bc" onchange="loadBCLines()"><option value="">— Sélectionner BC —</option></select></div>
+      <div class="fg"><label>Date de Réception *</label><input type="date" id="br-date"></div>
+      <div class="fg"><label>Statut</label><select id="br-statut"><option value="COMPLET">Complet</option><option value="PARTIEL">Partiel</option></select></div>
+      <div id="br-lines" style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem"></div>
+      <div class="fg"><label>Notes</label><textarea id="br-notes" rows="1"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-br')">Annuler</button><button class="btn btn-green" onclick="saveBR()">Créer BR + Mettre à jour stock</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Facture Achat -->
+<div class="overlay" id="m-fa">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVELLE FACTURE D'ACHAT</div><button class="x" onclick="closeModal('m-fa')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Bon de Commande *</label><select id="fa-bc"><option value="">— Sélectionner BC —</option></select></div>
+      <div class="fg"><label>Fournisseur *</label><input type="text" id="fa-four"></div>
+      <div class="fg"><label>Date Facture *</label><input type="date" id="fa-date"></div>
+      <div class="fg"><label>Notes</label><textarea id="fa-notes" rows="1"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-fa')">Annuler</button><button class="btn" onclick="saveFA()">Créer</button></div>
+  </div>
+</div>
 
 <!-- MODALS -->
 <div class="overlay" id="m-of">
@@ -549,15 +699,20 @@ function sBadge(s){const m={IN_PROGRESS:'b-inprogress',COMPLETED:'b-completed',D
 function dots(e){if(!e?.length)return'—';return`<div class="sdots">${STAGES.map(s=>{const x=e.find(v=>v.etape===s);const st=x?x.statut.toLowerCase().replace('_','_'):'pending';return`<div class="sd ${st}" title="${s}"></div>`;}).join('')}</div>`;}
 function dateTd(d){if(!d)return'—';const diff=(new Date(d)-new Date())/86400000;const c=diff<0?'color:var(--red);font-weight:600':diff<3?'color:var(--accent)':'color:var(--muted)';return`<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;${c}">${d}</span>`;}
 
-// Navigation
-const loaders={dashboard:loadDashboard,orders:loadOrders,monitor:loadMonitor,materials:loadMaterials,operators:loadOperators,products:loadProducts,users:loadUsers,reports:loadReports};
+const loaders={
+  dashboard:loadDashboard, orders:loadOrders, monitor:loadMonitor,
+  materials:loadMaterials, operators:loadOperators, products:loadProducts,
+  users:loadUsers, reports:loadReports,
+  bl:loadBL, da:loadDA, bc:loadBC, br:loadBR, fa:loadFA
+};
+
 document.querySelectorAll('.nav-item').forEach(item=>{
   item.addEventListener('click',()=>{
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     item.classList.add('active');
     const p=item.dataset.p;
-    $(`page-${p}`).classList.add('active');
+    $(`page-${p}`)?.classList.add('active');
     loaders[p]?.();
   });
 });
@@ -843,19 +998,7 @@ async function loadReports(){
 }
 
 // MODALS
-async function openModal(id){
-  $(id).classList.add('open');
-  if(id==='m-of'){
-    const [prods,ops]=await Promise.all([api('/api/produits'),api('/api/operateurs')]);
-    $('of-prod').innerHTML=prods.map(p=>`<option value="${p.id}">${p.code} — ${p.nom}</option>`).join('');
-    $('of-op').innerHTML='<option value="">— Non assigné —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-    const d=new Date();d.setDate(d.getDate()+7);$('of-date').value=d.toISOString().split('T')[0];
-  }
-  if(id==='m-user'){
-    const ops=await api('/api/operateurs');
-    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-  }
-}
+// openModal defined below with full modal support
 function closeModal(id){$(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
@@ -888,6 +1031,317 @@ async function saveUser(){
   if($('usr-pin').value.length!==4){toast('PIN doit être 4 chiffres','err');return;}
   try{await api('/api/auth/users',{method:'POST',body:JSON.stringify({prenom:$('usr-prenom').value,nom:$('usr-nom').value,role:$('usr-role').value,pin:$('usr-pin').value,operateur_id:$('usr-op').value?parseInt($('usr-op').value):null})});toast('Utilisateur créé ✓');closeModal('m-user');loadUsers();}
   catch(e){toast(e.message,'err');}
+}
+
+// ── CHECKBOXES & GROUPED INVOICE ──────────────────────────
+function toggleAllChk(el) {
+  document.querySelectorAll('.of-chk').forEach(c => c.checked = el.checked);
+}
+function selectAllCompleted() {
+  document.querySelectorAll('.of-chk').forEach(c => {
+    const row = c.closest('tr');
+    const isCompleted = row && row.querySelector('.b-completed');
+    c.checked = !!isCompleted;
+  });
+}
+async function printGroupedInvoice() {
+  const ids = [...document.querySelectorAll('.of-chk:checked')].map(c => parseInt(c.value));
+  if (!ids.length) { toast('Sélectionnez au moins un OF terminé', 'err'); return; }
+  toast(`Génération facture groupée (${ids.length} OFs)...`, 'ok');
+  const r = await fetch(`${API}/api/facture/grouped`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`},
+    body: JSON.stringify({of_ids: ids})
+  });
+  if (!r.ok) { const d=await r.json(); toast(d.detail||'Erreur','err'); return; }
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+// ── UPDATED renderOrders with BL button and checkbox ─────
+function renderOrders(ofs){
+  $('search-count').textContent = `${ofs.length} ordre(s)`;
+  $('orders-tb').innerHTML = ofs.length===0 ? empty(12,'Aucun OF trouvé')
+    : ofs.map(of=>`<tr>
+        <td><input type="checkbox" class="of-chk" value="${of.id}" ${of.statut!=='COMPLETED'?'disabled':''}
+          style="accent-color:var(--red);cursor:pointer"></td>
+        <td><span class="of-num">${of.numero}</span></td>
+        <td><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue)"
+          onclick="printBL(${of.id})" title="Imprimer BL" style="cursor:pointer">🚚 BL</span></td>
+        <td>${of.produit_nom}</td><td>${of.quantite}</td>
+        <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td>
+        <td style="font-size:10px">${of.operateur_nom||'—'}</td>
+        <td style="font-size:10px;color:var(--muted)">${of.atelier||'—'}</td>
+        <td>${dateTd(of.date_echeance)}</td>
+        <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+          ${of.statut==='COMPLETED'?`
+            <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px" onclick="printFacture(${of.id},'interne')">🖨️ Int.</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--blue);font-size:8px" onclick="printFacture(${of.id},'client')">📄 Cli.</button>
+          `:''}
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent);font-size:8px" onclick="printBL(${of.id})" title="BL">🚚</button>
+          ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
+          ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
+        </div></td>
+      </tr>`).join('');
+}
+
+async function printBL(ofId) {
+  // Find or create BL for this OF
+  try {
+    const bls = await api('/api/bl');
+    const bl = bls.find(b => b.of_id === ofId);
+    if (bl) {
+      window.open(`${API}/api/bl/${bl.id}/pdf`, '_blank');
+    } else {
+      const res = await api('/api/bl', {method:'POST', body:JSON.stringify({of_id:ofId})});
+      toast(`BL ${res.bl_numero} créé ✓`);
+      window.open(`${API}/api/bl/${res.id}/pdf`, '_blank');
+    }
+  } catch(e){ toast(e.message,'err'); }
+}
+
+// ── BONS DE LIVRAISON ─────────────────────────────────────
+async function loadBL(){
+  try{
+    const bls = await api('/api/bl');
+    if(!bls) return;
+    $('bl-tb').innerHTML = bls.length===0 ? empty(8,'Aucun BL') : bls.map(bl=>`<tr>
+      <td><span class="of-num">${bl.bl_numero}</span></td>
+      <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red)">${bl.of_numero}</span></td>
+      <td>${bl.produit_nom||'—'}</td>
+      <td>${bl.quantite||'—'}</td>
+      <td>${bl.destinataire}</td>
+      <td><span class="badge ${bl.statut==='LIVRE'?'b-completed':bl.statut==='EMIS'?'b-approved':'b-draft'}">${bl.statut}</span></td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(bl.created_at||'').slice(0,10)}</td>
+      <td><button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="window.open('${API}/api/bl/${bl.id}/pdf','_blank')">🖨️ PDF</button></td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur BL: '+e.message,'err');}
+}
+
+// ── DEMANDES D'ACHAT ──────────────────────────────────────
+async function loadDA(){
+  try{
+    const das = await api('/api/achats/da');
+    if(!das) return;
+    $('da-tb').innerHTML = das.length===0 ? empty(9,'Aucune demande') : das.map(da=>`<tr>
+      <td><span class="of-num">${da.da_numero}</span></td>
+      <td>${da.description}</td>
+      <td style="font-size:10px;color:var(--muted)">${da.materiau_nom||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">${da.quantite} ${da.unite}</td>
+      <td><span class="badge ${da.urgence==='URGENT'?'b-urgent':'b-normal'}">${da.urgence}</span></td>
+      <td><span class="badge ${da.statut==='APPROVED'?'b-completed':da.statut==='REJECTED'?'b-cancelled':da.statut==='ORDERED'?'b-approved':'b-draft'}">${da.statut}</span></td>
+      <td style="font-size:10px">${da.demandeur_nom||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(da.created_at||'').slice(0,10)}</td>
+      <td><div style="display:flex;gap:4px">
+        ${da.statut==='PENDING'?`
+          <button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')">✓ Valider</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="updateDA(${da.id},'REJECTED')">✕ Rejeter</button>
+        `:''}
+      </div></td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur DA: '+e.message,'err');}
+}
+async function updateDA(id, statut){
+  try{await api(`/api/achats/da/${id}`,{method:'PUT',body:JSON.stringify({statut})});toast(`DA → ${statut} ✓`);loadDA();}
+  catch(e){toast(e.message,'err');}
+}
+async function saveDA(){
+  if(!$('da-desc').value){toast('Description requise','err');return;}
+  try{
+    await api('/api/achats/da',{method:'POST',body:JSON.stringify({
+      description:$('da-desc').value,
+      materiau_id:$('da-mat').value?parseInt($('da-mat').value):null,
+      quantite:parseFloat($('da-qte').value),
+      unite:$('da-unite').value||'pcs',
+      urgence:$('da-urgence').value,
+      demandeur_id:$('da-demandeur').value?parseInt($('da-demandeur').value):null,
+      notes:$('da-notes').value||null
+    })});
+    toast('Demande créée ✓');closeModal('m-da');loadDA();
+  }catch(e){toast(e.message,'err');}
+}
+
+// ── BONS DE COMMANDE ──────────────────────────────────────
+let bcLines = [];
+function addBCLine(){
+  bcLines.push({id:Date.now()});
+  renderBCLines();
+}
+function removeBCLine(id){ bcLines=bcLines.filter(l=>l.id!==id); renderBCLines(); }
+function renderBCLines(){
+  $('bc-lines').innerHTML = bcLines.length===0
+    ? '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:11px">Aucune ligne — cliquez + Ligne</div>'
+    : bcLines.map(l=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem;align-items:center">
+        <input type="text" placeholder="Description *" id="bcl-desc-${l.id}" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
+        <input type="number" placeholder="Qté" id="bcl-qte-${l.id}" value="1" min="0.01" step="0.01" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
+        <input type="text" placeholder="Unité" id="bcl-unite-${l.id}" value="pcs" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
+        <input type="number" placeholder="Prix HT" id="bcl-prix-${l.id}" value="0" min="0" step="0.001" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="removeBCLine(${l.id})">✕</button>
+      </div>`).join('');
+}
+async function loadBC(){
+  try{
+    const bcs = await api('/api/achats/bc');
+    if(!bcs) return;
+    $('bc-tb').innerHTML = bcs.length===0 ? empty(9,'Aucun BC') : bcs.map(bc=>`<tr>
+      <td><span class="of-num">${bc.bc_numero}</span></td>
+      <td>${bc.fournisseur}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">${(bc.montant_ht||0).toFixed(3)} TND</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${(bc.montant_tva||0).toFixed(3)} TND</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green)">${(bc.montant_ttc||0).toFixed(3)} TND</td>
+      <td><span class="badge ${bc.statut==='RECU'?'b-completed':bc.statut==='ENVOYE'?'b-approved':bc.statut==='ANNULE'?'b-cancelled':'b-draft'}">${bc.statut}</span></td>
+      <td style="font-size:10px;color:var(--muted)">${bc.da_numero||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(bc.created_at||'').slice(0,10)}</td>
+      <td><button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="window.open('${API}/api/achats/bc/${bc.id}/pdf','_blank')">🖨️</button></td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur BC: '+e.message,'err');}
+}
+async function saveBC(){
+  if(!$('bc-four').value){toast('Fournisseur requis','err');return;}
+  const lignes = bcLines.map(l=>({
+    description: document.getElementById(`bcl-desc-${l.id}`)?.value||'',
+    quantite: parseFloat(document.getElementById(`bcl-qte-${l.id}`)?.value||1),
+    unite: document.getElementById(`bcl-unite-${l.id}`)?.value||'pcs',
+    prix_unitaire: parseFloat(document.getElementById(`bcl-prix-${l.id}`)?.value||0)
+  })).filter(l=>l.description);
+  try{
+    const res=await api('/api/achats/bc',{method:'POST',body:JSON.stringify({
+      fournisseur:$('bc-four').value,
+      da_id:$('bc-da').value?parseInt($('bc-da').value):null,
+      notes:$('bc-notes').value||null,
+      lignes
+    })});
+    toast(`BC ${res.bc_numero} créé ✓`);closeModal('m-bc');bcLines=[];loadBC();
+  }catch(e){toast(e.message,'err');}
+}
+
+// ── BONS DE RECEPTION ─────────────────────────────────────
+async function loadBCLines(){
+  const bcId = $('br-bc').value;
+  if(!bcId){$('br-lines').innerHTML='';return;}
+  try{
+    const bcs = await api('/api/achats/bc');
+    const bc = bcs.find(b=>b.id===parseInt(bcId));
+    if(!bc||!bc.lignes){$('br-lines').innerHTML='';return;}
+    $('br-lines').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:1px">Quantités reçues</div>`
+      + bc.lignes.map(l=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;align-items:center">
+          <span style="font-size:12px">${l.materiau_nom||l.description}</span>
+          <span style="font-size:10px;color:var(--muted)">${l.quantite} ${l.unite} commandés</span>
+          <input type="number" id="brl-${l.id}" value="${l.quantite}" min="0" step="0.01"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem;color:var(--text);font-size:11px;outline:none"
+            data-bc-ligne="${l.id}">
+        </div>`).join('');
+  }catch(e){toast(e.message,'err');}
+}
+async function loadBR(){
+  try{
+    const brs = await api('/api/achats/br');
+    if(!brs) return;
+    $('br-tb').innerHTML = brs.length===0 ? empty(6,'Aucun BR') : brs.map(br=>`<tr>
+      <td><span class="of-num">${br.br_numero}</span></td>
+      <td style="font-size:10px;color:var(--muted)">${br.bc_numero}</td>
+      <td>${br.fournisseur||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.date_reception||'—'}</td>
+      <td><span class="badge ${br.statut==='COMPLET'?'b-completed':'b-approved'}">${br.statut}</span></td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(br.created_at||'').slice(0,10)}</td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur BR: '+e.message,'err');}
+}
+async function saveBR(){
+  const bcId=$('br-bc').value; const date=$('br-date').value;
+  if(!bcId||!date){toast('BC et date requis','err');return;}
+  const inputs=document.querySelectorAll('[data-bc-ligne]');
+  const lignes=[...inputs].map(inp=>({bc_ligne_id:parseInt(inp.dataset.bcLigne),quantite_recue:parseFloat(inp.value||0)})).filter(l=>l.quantite_recue>0);
+  try{
+    const res=await api('/api/achats/br',{method:'POST',body:JSON.stringify({
+      bc_id:parseInt(bcId),date_reception:date,statut:$('br-statut').value,
+      notes:$('br-notes').value||null,lignes
+    })});
+    toast(`${res.br_numero} créé — stock mis à jour ✓`);closeModal('m-br');loadBR();
+  }catch(e){toast(e.message,'err');}
+}
+
+// ── FACTURES ACHAT ────────────────────────────────────────
+async function loadFA(){
+  try{
+    const fas = await api('/api/achats/fa');
+    if(!fas) return;
+    $('fa-tb').innerHTML = fas.length===0 ? empty(9,'Aucune facture') : fas.map(fa=>`<tr>
+      <td><span class="of-num">${fa.fa_numero}</span></td>
+      <td>${fa.fournisseur}</td>
+      <td style="font-size:10px;color:var(--muted)">${fa.bc_numero||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">${parseFloat(fa.montant_ht||0).toFixed(3)} TND</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${parseFloat(fa.tva||0).toFixed(3)} TND</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green)">${parseFloat(fa.montant_ttc||0).toFixed(3)} TND</td>
+      <td><span class="badge ${fa.statut==='PAYEE'?'b-completed':fa.statut==='ANNULEE'?'b-cancelled':'b-draft'}">${fa.statut}</span></td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.date_facture||'—'}</td>
+      <td><div style="display:flex;gap:4px">
+        ${fa.statut==='PENDING'?`<button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="payerFA(${fa.id})">💳 Payer</button>`:''}
+      </div></td>
+    </tr>`).join('');
+  }catch(e){toast('Erreur FA: '+e.message,'err');}
+}
+async function saveFA(){
+  if(!$('fa-bc').value||!$('fa-four').value||!$('fa-date').value){toast('Champs requis','err');return;}
+  try{
+    const res=await api('/api/achats/fa',{method:'POST',body:JSON.stringify({
+      bc_id:parseInt($('fa-bc').value),fournisseur:$('fa-four').value,
+      date_facture:$('fa-date').value,notes:$('fa-notes').value||null
+    })});
+    toast(`${res.fa_numero} créé · TTC: ${res.montant_ttc} TND ✓`);closeModal('m-fa');loadFA();
+  }catch(e){toast(e.message,'err');}
+}
+async function payerFA(id){
+  try{await api(`/api/achats/fa/${id}/payer`,{method:'PUT'});toast('Facture marquée payée ✓');loadFA();}
+  catch(e){toast(e.message,'err');}
+}
+
+// Update navigation loaders — defined above
+
+// Update openModal to fill selects for new modals
+async function openModal(id){
+  $(id)?.classList.add('open');
+  if(id==='m-of'){
+    const [prods,ops]=await Promise.all([api('/api/produits'),api('/api/operateurs')]);
+    if(!prods||!ops) return;
+    $('of-prod').innerHTML=prods.map(p=>`<option value="${p.id}">${p.code} — ${p.nom}</option>`).join('');
+    $('of-op').innerHTML='<option value="">— Non assigné —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+    const d=new Date();d.setDate(d.getDate()+7);$('of-date').value=d.toISOString().split('T')[0];
+  }
+  if(id==='m-user'){
+    const ops=await api('/api/operateurs');
+    if(!ops) return;
+    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+  }
+  if(id==='m-da'){
+    const [mats,ops]=await Promise.all([api('/api/materiaux'),api('/api/operateurs')]);
+    if(!mats||!ops) return;
+    $('da-mat').innerHTML='<option value="">— Aucun —</option>'+mats.map(m=>`<option value="${m.id}">${m.nom}</option>`).join('');
+    $('da-demandeur').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+  }
+  if(id==='m-bc'){
+    bcLines=[];renderBCLines();
+    const das=await api('/api/achats/da');
+    if(!das) return;
+    const pending=das.filter(d=>d.statut==='APPROVED');
+    $('bc-da').innerHTML='<option value="">— Aucun —</option>'+pending.map(d=>`<option value="${d.id}">${d.da_numero} — ${d.description}</option>`).join('');
+  }
+  if(id==='m-br'){
+    const bcs=await api('/api/achats/bc');
+    if(!bcs) return;
+    const open=bcs.filter(b=>['DRAFT','ENVOYE','RECU_PARTIEL'].includes(b.statut));
+    $('br-bc').innerHTML='<option value="">— Sélectionner BC —</option>'+open.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
+    const d=new Date();$('br-date').value=d.toISOString().split('T')[0];
+    $('br-lines').innerHTML='';
+  }
+  if(id==='m-fa'){
+    const bcs=await api('/api/achats/bc');
+    if(!bcs) return;
+    const received=bcs.filter(b=>['RECU','RECU_PARTIEL'].includes(b.statut));
+    $('fa-bc').innerHTML='<option value="">— Sélectionner BC —</option>'+received.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
+    const d=new Date();$('fa-date').value=d.toISOString().split('T')[0];
+  }
 }
 
 loadDashboard();
