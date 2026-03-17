@@ -66,3 +66,6 @@ def require_any_role(user: dict = Depends(get_current_user)) -> dict:
     if user["role"] not in ("ADMIN", "MANAGER", "OPERATOR"):
         raise HTTPException(403, "Accès non autorisé")
     return user
+
+# Backwards-compatibility aliases
+require_role = require_any_role

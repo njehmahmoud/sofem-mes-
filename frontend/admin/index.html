@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOFEM MES — Admin</title>
+<title>SOFEM MES v6.0 — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
@@ -143,9 +143,9 @@ td{padding:.65rem 1rem;vertical-align:middle}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}.sidebar{width:160px}}
 @media(max-width:640px){.sidebar{display:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem}}
 </style>
+
 </head>
 <body>
-
 <header class="topbar">
   <div class="brand">
     <div class="brand-logo">S</div>
@@ -158,6 +158,8 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <button class="btn-logout" onclick="logout()">DÉCONNEXION</button>
   </div>
 </header>
+
+<div class="layout">
 
 <div class="layout">
 <nav class="sidebar">
@@ -173,6 +175,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="nav-item" data-p="materials">📦 Matériaux</div>
     <div class="nav-item" data-p="operators">👷 Opérateurs</div>
     <div class="nav-item" data-p="products">⚙️ Produits</div>
+    <div class="nav-item" data-p="clients">🏢 Clients</div>
   </div>
   <div class="nav-group">
     <div class="nav-lbl">Achats</div>
@@ -181,21 +184,50 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="nav-item" data-p="br">📥 Bons Réception</div>
     <div class="nav-item" data-p="fa">💳 Factures Achat</div>
   </div>
+  <div class="nav-group">
+    <div class="nav-lbl">Qualité</div>
+    <div class="nav-item" data-p="qualite">✅ Contrôle Qualité</div>
+    <div class="nav-item" data-p="nc">⚠️ Non-Conformités</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-lbl">Équipements</div>
+    <div class="nav-item" data-p="machines">🏭 Machines</div>
+    <div class="nav-item" data-p="maintenance">🔧 Maintenance</div>
+    <div class="nav-item" data-p="planning">📅 Planification</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-lbl">Fournisseurs</div>
+    <div class="nav-item" data-p="fournisseurs">🤝 Fournisseurs</div>
+  </div>
   <div class="nav-group" id="admin-only-nav">
     <div class="nav-lbl">Admin</div>
     <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
     <div class="nav-item" data-p="reports">📊 Rapports</div>
   </div>
-  <div class="sidebar-footer">SOFEM MES v3.0<br>SMARTMOVE · 2025</div>
+  <div class="sidebar-footer">SOFEM MES v6.0<br>SMARTMOVE · 2025</div>
 </nav>
-
 <main class="main">
+
+<!-- CLIENTS -->
+<div class="page" id="page-clients">
+  <div class="sec-header">
+    <span class="sec-title">🏢 Clients</span>
+    <button class="btn" onclick="newClient()">+ Nouveau Client</button>
+  </div>
+  <div class="card mt">
+    <table><thead><tr>
+      <th>Code</th><th>Nom</th><th>MF</th><th>Téléphone</th><th>Email</th><th>Ville</th><th>Actions</th>
+    </tr></thead>
+    <tbody id="clients-tb"></tbody></table>
+  </div>
+</div>
+
 
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
   <div class="ph">
     <div><div class="ph-title">TABLEAU DE <span>BORD</span></div><div class="ph-sub">// SOFEM · SFAX · ROUTE SIDI SALEM 2.5KM</div></div>
-    <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
+    <button class="btn" onclick="openOFModal()">+ Nouvel OF</button>
   </div>
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-lbl">Ordres Actifs</div><div class="kpi-val r" id="k-actifs">—</div><div class="kpi-det">En production</div></div>
@@ -245,7 +277,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div><div class="ph-title">ORDRES DE <span>FABRICATION</span></div><div class="ph-sub">// GESTION COMPLÈTE</div></div>
     <div class="ph-actions">
       <button class="btn btn-ghost" onclick="loadOrders()">↺</button>
-      <button class="btn" onclick="openModal('m-of')">+ Nouvel OF</button>
+      <button class="btn" onclick="openOFModal()">+ Nouvel OF</button>
     </div>
   </div>
   <div class="sec">
@@ -346,14 +378,27 @@ td{padding:.65rem 1rem;vertical-align:middle}
 <!-- PRODUCTS -->
 <div class="page" id="page-products">
   <div class="ph">
-    <div><div class="ph-title">GESTION <span>PRODUITS</span></div><div class="ph-sub">// CATALOGUE SOFEM</div></div>
+    <div><div class="ph-title">GESTION <span>PRODUITS</span></div><div class="ph-sub">// CATALOGUE SOFEM · CODES AUTO-GÉNÉRÉS</div></div>
     <button class="btn" onclick="openModal('m-prod')">+ Produit</button>
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Produit</th><th>Description</th><th>Unité</th></tr></thead>
-      <tbody id="prods-tb"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+      <thead><tr><th>Code</th><th>Produit</th><th>Unité</th><th>BOM (Matériaux)</th><th>Actions</th></tr></thead>
+      <tbody id="prods-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
+  </div>
+  <!-- BOM Editor Panel (shown inline below product row) -->
+  <div id="bom-editor-panel" style="display:none" class="sec">
+    <div class="sec-h">
+      <div class="sec-title">NOMENCLATURE <span class="ac" id="bom-prod-title"></span></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeBOMEditor()">✕ Fermer</button>
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.75rem">
+      <div class="fg" style="min-width:200px"><label>Matériau</label><select id="bom-mat-sel"></select></div>
+      <div class="fg" style="width:120px"><label>Qté / unité produit</label><input type="number" id="bom-qty" step="0.001" min="0.001" value="1"></div>
+      <button class="btn" onclick="addBOMLine()">+ Ajouter</button>
+    </div>
+    <div id="bom-lines-table"></div>
   </div>
 </div>
 
@@ -396,7 +441,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>N° BL</th><th>N° OF</th><th>Produit</th><th>Qté</th><th>Destinataire</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+      <thead><tr><th>N° BL</th><th>N° OF</th><th>Produit</th><th>Qté</th><th>Destinataire</th><th>Statut</th><th>Date Livraison</th><th>Actions</th></tr></thead>
       <tbody id="bl-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -458,15 +503,354 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-</main>
+<!-- MACHINES -->
+<div class="page" id="page-machines">
+  <div class="sec-header"><span class="sec-title">🏭 Machines & Équipements</span>
+    <button class="btn" onclick="openModal('modal-machine')">+ Nouvelle Machine</button>
+  </div>
+  <div class="kpi-grid" id="machines-kpis"></div>
+  <div class="card mt"><div id="machines-table"></div></div>
 </div>
 
-<footer class="footer">
-  <div>SOFEM MES v3.0 · SMARTMOVE · Sfax</div>
-  <div id="footer-user">—</div>
-</footer>
+<!-- MAINTENANCE -->
+<div class="page" id="page-maintenance">
+  <div class="sec-header"><span class="sec-title">🔧 Ordres de Maintenance</span>
+    <button class="btn" onclick="openModal('modal-maintenance')">+ Nouvel Ordre</button>
+  </div>
+  <div class="kpi-grid" id="maintenance-kpis"></div>
+  <div class="card mt"><div id="maintenance-table"></div></div>
+</div>
 
-<!-- MODALS: Demande Achat -->
+<!-- PLANIFICATION -->
+<div class="page" id="page-planning">
+  <div class="sec-header"><span class="sec-title">📅 Planification Production</span>
+    <button class="btn" onclick="openModal('modal-planning')">+ Nouveau Créneau</button>
+  </div>
+  <div class="card mt"><div id="planning-gantt"></div></div>
+  <div class="card mt"><div id="planning-table"></div></div>
+</div>
+
+<!-- QUALITE -->
+<div class="page" id="page-qualite">
+  <div class="sec-header"><span class="sec-title">✅ Contrôle Qualité</span>
+    <button class="btn" onclick="openModal('modal-qualite')">+ Nouveau Contrôle</button>
+  </div>
+  <div class="kpi-grid" id="qualite-kpis"></div>
+  <div class="card mt"><div id="qualite-table"></div></div>
+</div>
+
+<!-- NON-CONFORMITES -->
+<div class="page" id="page-nc">
+  <div class="sec-header"><span class="sec-title">⚠️ Non-Conformités</span>
+    <button class="btn" onclick="openModal('modal-nc')">+ Nouvelle NC</button>
+  </div>
+  <div class="card mt"><div id="nc-table"></div></div>
+</div>
+
+<!-- FOURNISSEURS -->
+<div class="page" id="page-fournisseurs">
+  <div class="sec-header"><span class="sec-title">🤝 Fournisseurs</span>
+    <button class="btn" onclick="openModal('modal-fournisseur')">+ Nouveau Fournisseur</button>
+  </div>
+  <div class="card mt"><div id="fournisseurs-table"></div></div>
+</div>
+
+<!-- MODALS v4 -->
+<div class="modal-overlay" id="modal-machine" onclick="if(event.target===this)closeModal('modal-machine')">
+  <div class="modal-box">
+    <div class="modal-title">Nouvelle Machine</div>
+    <div class="fg"><label>Nom *</label><input id="m-nom" placeholder="Ex: Tour CNC 1"></div>
+    <div class="fg"><label>Code</label><input id="m-code" placeholder="Auto si vide"></div>
+    <div class="frow">
+      <div class="fg"><label>Type</label><input id="m-type" placeholder="Ex: Tour CNC"></div>
+      <div class="fg"><label>Atelier</label>
+        <select id="m-atelier"><option>Atelier A</option><option>Atelier B</option><option>Atelier C</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Marque</label><input id="m-marque"></div>
+      <div class="fg"><label>Modèle</label><input id="m-modele"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>N° Série</label><input id="m-serie"></div>
+      <div class="fg"><label>Date Acquisition</label><input type="date" id="m-date"></div>
+    </div>
+    <div class="fg"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-machine')">Annuler</button>
+      <button class="btn" onclick="saveMachine()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-maintenance" onclick="if(event.target===this)closeModal('modal-maintenance')">
+  <div class="modal-box">
+    <div class="modal-title">Nouvel Ordre de Maintenance</div>
+    <div class="fg"><label>Titre *</label><input id="om-titre" placeholder="Description courte"></div>
+    <div class="frow">
+      <div class="fg"><label>Machine *</label><select id="om-machine"></select></div>
+      <div class="fg"><label>Type</label>
+        <select id="om-type"><option value="CORRECTIVE">Corrective</option><option value="PREVENTIVE">Préventive</option><option value="URGENCE">Urgence</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Priorité</label>
+        <select id="om-priorite"><option value="NORMAL">Normal</option><option value="HAUTE">Haute</option><option value="URGENT">Urgent</option><option value="BASSE">Basse</option></select>
+      </div>
+      <div class="fg"><label>Technicien</label><select id="om-tech"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Date Planifiée</label><input type="date" id="om-date"></div>
+      <div class="fg"><label>Durée estimée (min)</label><input type="number" id="om-duree" value="60"></div>
+    </div>
+    <div class="fg"><label>Description</label><textarea id="om-desc" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-maintenance')">Annuler</button>
+      <button class="btn" onclick="saveMaintenance()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-planning" onclick="if(event.target===this)closeModal('modal-planning')">
+  <div class="modal-box">
+    <div class="modal-title">Nouveau Créneau Planning</div>
+    <div class="fg"><label>Ordre de Fabrication *</label><select id="pl-of"></select></div>
+    <div class="frow">
+      <div class="fg"><label>Machine</label><select id="pl-machine"><option value="">— Aucune —</option></select></div>
+      <div class="fg"><label>Opérateur</label><select id="pl-op"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Début *</label><input type="datetime-local" id="pl-debut"></div>
+      <div class="fg"><label>Fin *</label><input type="datetime-local" id="pl-fin"></div>
+    </div>
+    <div class="fg"><label>Notes</label><textarea id="pl-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-planning')">Annuler</button>
+      <button class="btn" onclick="savePlanning()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-qualite" onclick="if(event.target===this)closeModal('modal-qualite')">
+  <div class="modal-box">
+    <div class="modal-title">Nouveau Contrôle Qualité</div>
+    <div class="frow">
+      <div class="fg"><label>OF lié</label><select id="cq-of"><option value="">— Aucun —</option></select></div>
+      <div class="fg"><label>Type</label>
+        <select id="cq-type"><option value="FINAL">Final</option><option value="EN_COURS">En cours</option><option value="RECEPTION">Réception</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Opérateur</label><select id="cq-op"><option value="">— Aucun —</option></select></div>
+      <div class="fg"><label>Date Contrôle *</label><input type="date" id="cq-date"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Qté Contrôlée</label><input type="number" id="cq-total" value="0"></div>
+      <div class="fg"><label>Qté Conforme</label><input type="number" id="cq-ok" value="0"></div>
+      <div class="fg"><label>Qté Rebut</label><input type="number" id="cq-rebut" value="0"></div>
+    </div>
+    <div class="fg"><label>Notes</label><textarea id="cq-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-qualite')">Annuler</button>
+      <button class="btn" onclick="saveControle()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-nc" onclick="if(event.target===this)closeModal('modal-nc')">
+  <div class="modal-box">
+    <div class="modal-title">Nouvelle Non-Conformité</div>
+    <div class="fg"><label>Type de défaut *</label><input id="nc-defaut" placeholder="Ex: Dimension hors tolérance"></div>
+    <div class="frow">
+      <div class="fg"><label>Gravité</label>
+        <select id="nc-gravite"><option value="MINEURE">Mineure</option><option value="MAJEURE">Majeure</option><option value="CRITIQUE">Critique</option></select>
+      </div>
+      <div class="fg"><label>OF lié</label><select id="nc-of"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="fg"><label>Description</label><textarea id="nc-desc" rows="2"></textarea></div>
+    <div class="fg"><label>Action Corrective</label><textarea id="nc-action" rows="2"></textarea></div>
+    <div class="fg"><label>Responsable</label><select id="nc-resp"><option value="">— Aucun —</option></select></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-nc')">Annuler</button>
+      <button class="btn" onclick="saveNC()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-fournisseur" onclick="if(event.target===this)closeModal('modal-fournisseur')">
+  <div class="modal-box">
+    <div class="modal-title">Nouveau Fournisseur</div>
+    <div class="frow">
+      <div class="fg"><label>Nom *</label><input id="f-nom" placeholder="Raison sociale"></div>
+      <div class="fg"><label>Code</label><input id="f-code" placeholder="Auto si vide"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Contact</label><input id="f-contact"></div>
+      <div class="fg"><label>Téléphone</label><input id="f-tel"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Email</label><input id="f-email" type="email"></div>
+      <div class="fg"><label>Ville</label><input id="f-ville" value="Sfax"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Pays</label><input id="f-pays" value="Tunisie"></div>
+      <div class="fg"><label>Matricule Fiscal</label><input id="f-mf"></div>
+    </div>
+    <div class="fg"><label>Adresse</label><textarea id="f-adresse" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="fbtn" onclick="closeModal('modal-fournisseur')">Annuler</button>
+      <button class="btn" onclick="saveFournisseur()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+</main>
+</div>
+  <div>SOFEM MES v4.0 · SMARTMOVE · Sfax</div>
+  <div id="footer-user">—</div>
+
+
+<div class="overlay" id="m-of">
+  <div class="modal" style="max-width:700px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEL ORDRE DE FABRICATION</div>
+      <button class="x" onclick="closeModal('m-of')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="row2">
+        <div class="fg"><label>Produit *</label>
+          <select id="of-prod" onchange="onOFProductChange()"></select></div>
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="of-qte" min="1" value="1" oninput="onOFQtyChange()"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Client</label><select id="of-client"></select></div>
+        <div class="fg"><label>Chef Atelier</label><select id="of-chef"></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Priorité</label>
+          <select id="of-prio">
+            <option value="LOW">Basse</option>
+            <option value="NORMAL" selected>Normale</option>
+            <option value="HIGH">Haute</option>
+            <option value="URGENT">URGENT</option>
+          </select></div>
+        <div class="fg"><label>Atelier</label>
+          <input type="text" id="of-atelier" value="Atelier A"></div>
+        <div class="fg"><label>Date échéance *</label>
+          <input type="date" id="of-date"></div>
+      </div>
+      <div class="fg"><label>Plan N°</label>
+        <input type="text" id="of-plan" placeholder="Référence plan / dessin"></div>
+      <div style="margin-top:.75rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Opérations de Production</span>
+          <button class="btn" style="font-size:9px;padding:2px 8px" onclick="addOFOperation()">+ Ajouter</button>
+        </div>
+        <div id="of-ops-list"></div>
+      </div>
+      <div style="margin-top:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">
+          Matériaux BOM
+          <span id="bom-stock-warn" style="margin-left:.5rem;font-size:9px"></span>
+        </div>
+        <div id="of-bom-preview"><span style="color:var(--muted);font-size:11px">— Sélectionnez un produit —</span></div>
+      </div>
+      <div style="margin-top:.6rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">Sous-Traitance (optionnel)</div>
+        <div class="row2">
+          <div class="fg"><label>Sous-traitant</label><input type="text" id="of-st-nom"></div>
+          <div class="fg"><label>Opération</label><input type="text" id="of-st-op"></div>
+          <div class="fg"><label>Coût (TND)</label><input type="number" id="of-st-cout" value="0" step="0.001"></div>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:.5rem"><label>Notes</label>
+        <textarea id="of-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-of')">Annuler</button>
+      <button class="btn" onclick="createOF()">Créer OF + BL</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-client">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">CLIENT</div>
+      <button class="x" onclick="closeModal('m-client')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="client-edit-id">
+      <div class="row2">
+        <div class="fg"><label>Nom *</label><input type="text" id="client-nom"></div>
+        <div class="fg"><label>Matricule Fiscal</label><input type="text" id="client-mf" placeholder="MF..."></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Téléphone</label><input type="text" id="client-tel"></div>
+        <div class="fg"><label>Email</label><input type="email" id="client-email"></div>
+        <div class="fg"><label>Ville</label><input type="text" id="client-ville" value="Sfax"></div>
+      </div>
+      <div class="fg"><label>Adresse</label><textarea id="client-adresse" rows="2"></textarea></div>
+      <div class="fg"><label>Notes</label><textarea id="client-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-client')">Annuler</button>
+      <button class="btn" onclick="saveClient()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-op">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">OPÉRATEUR</div>
+      <button class="x" onclick="closeModal('m-op')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="op-edit-id">
+      <div class="row2">
+        <div class="fg"><label>Prénom *</label><input type="text" id="op-prenom"></div>
+        <div class="fg"><label>Nom *</label><input type="text" id="op-nom"></div>
+      </div>
+      <div class="fg"><label>Spécialité</label>
+        <input type="text" id="op-spec" placeholder="Ex: Ponçage, Fraisage, AutoCAD..."></div>
+      <div class="row2">
+        <div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div>
+        <div class="fg"><label>Email</label><input type="email" id="op-email"></div>
+      </div>
+      <div class="fg"><label>Type Taux</label>
+        <select id="op-taux-type" onchange="onTauxTypeChange()">
+          <option value="HORAIRE">Taux Horaire</option>
+          <option value="PIECE">Taux à la Pièce</option>
+          <option value="BOTH">Les Deux</option>
+        </select></div>
+      <div id="taux-h-row" class="fg"><label>Taux Horaire (TND/h)</label>
+        <input type="number" id="op-taux-h" value="0" min="0" step="0.001"></div>
+      <div id="taux-p-row" class="fg" style="display:none"><label>Taux Pièce (TND/pcs)</label>
+        <input type="number" id="op-taux-p" value="0" min="0" step="0.001"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button>
+      <button class="btn" onclick="saveOperateur()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-op-edit">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">MODIFIER OPÉRATEUR</div><button class="x" onclick="closeModal('m-op-edit')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="op-edit-id">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-edit-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-edit-nom"></div></div>
+      <div class="fg"><label>Spécialité *</label><select id="op-edit-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
+      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-edit-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-edit-email"></div></div>
+      <div class="fg"><label>Statut</label><select id="op-edit-actif"><option value="1">Actif</option><option value="0">Inactif</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op-edit')">Annuler</button><button class="btn" onclick="updateOperateur()">Enregistrer</button></div>
+  </div>
+</div>
+
+
+
 <div class="overlay" id="m-da">
   <div class="modal">
     <div class="modal-h"><div class="modal-title">NOUVELLE DEMANDE D'ACHAT</div><button class="x" onclick="closeModal('m-da')">✕</button></div>
@@ -488,6 +872,8 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </div>
 
 <!-- MODAL: Bon Commande -->
+
+
 <div class="overlay" id="m-bc">
   <div class="modal" style="width:560px">
     <div class="modal-h"><div class="modal-title">NOUVEAU BON DE COMMANDE</div><button class="x" onclick="closeModal('m-bc')">✕</button></div>
@@ -508,6 +894,8 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </div>
 
 <!-- MODAL: Bon Réception -->
+
+
 <div class="overlay" id="m-br">
   <div class="modal" style="width:540px">
     <div class="modal-h"><div class="modal-title">NOUVEAU BON DE RÉCEPTION</div><button class="x" onclick="closeModal('m-br')">✕</button></div>
@@ -523,6 +911,8 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </div>
 
 <!-- MODAL: Facture Achat -->
+
+
 <div class="overlay" id="m-fa">
   <div class="modal">
     <div class="modal-h"><div class="modal-title">NOUVELLE FACTURE D'ACHAT</div><button class="x" onclick="closeModal('m-fa')">✕</button></div>
@@ -537,25 +927,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </div>
 
 <!-- MODALS -->
-<div class="overlay" id="m-of">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEL ORDRE DE FABRICATION</div><button class="x" onclick="closeModal('m-of')">✕</button></div>
-    <div class="modal-b">
-      <div class="fg"><label>Produit *</label><select id="of-prod"></select></div>
-      <div class="row2">
-        <div class="fg"><label>Quantité *</label><input type="number" id="of-qte" min="1" value="1"></div>
-        <div class="fg"><label>Priorité</label><select id="of-prio"><option value="LOW">Basse</option><option value="NORMAL" selected>Normale</option><option value="HIGH">Haute</option><option value="URGENT">URGENT</option></select></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label>Opérateur</label><select id="of-op"><option value="">— Non assigné —</option></select></div>
-        <div class="fg"><label>Atelier</label><input type="text" id="of-atelier" value="Atelier A"></div>
-      </div>
-      <div class="fg"><label>Date d'échéance *</label><input type="date" id="of-date"></div>
-      <div class="fg"><label>Notes</label><textarea id="of-notes" rows="2"></textarea></div>
-    </div>
-    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-of')">Annuler</button><button class="btn" onclick="createOF()">Créer</button></div>
-  </div>
-</div>
+
 
 <div class="overlay" id="m-mv">
   <div class="modal">
@@ -572,6 +944,8 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
+
+
 <div class="overlay" id="m-mat">
   <div class="modal">
     <div class="modal-h"><div class="modal-title">NOUVEAU MATÉRIAU</div><button class="x" onclick="closeModal('m-mat')">✕</button></div>
@@ -585,44 +959,53 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-<div class="overlay" id="m-op">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEL OPÉRATEUR</div><button class="x" onclick="closeModal('m-op')">✕</button></div>
-    <div class="modal-b">
-      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-nom"></div></div>
-      <div class="fg"><label>Spécialité *</label><select id="op-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
-      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-email"></div></div>
-    </div>
-    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button><button class="btn" onclick="saveOperateur()">Créer</button></div>
-  </div>
-</div>
 
-<!-- Edit Operator Modal -->
-<div class="overlay" id="m-op-edit">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title">MODIFIER OPÉRATEUR</div><button class="x" onclick="closeModal('m-op-edit')">✕</button></div>
-    <div class="modal-b">
-      <input type="hidden" id="op-edit-id">
-      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-edit-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-edit-nom"></div></div>
-      <div class="fg"><label>Spécialité *</label><select id="op-edit-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
-      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-edit-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-edit-email"></div></div>
-      <div class="fg"><label>Statut</label><select id="op-edit-actif"><option value="1">Actif</option><option value="0">Inactif</option></select></div>
-    </div>
-    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op-edit')">Annuler</button><button class="btn" onclick="updateOperateur()">Enregistrer</button></div>
-  </div>
-</div>
 
 <div class="overlay" id="m-prod">
   <div class="modal">
-    <div class="modal-h"><div class="modal-title">NOUVEAU PRODUIT</div><button class="x" onclick="closeModal('m-prod')">✕</button></div>
+    <div class="modal-h"><div class="modal-title">NOUVEAU PRODUIT</div>
+      <button class="x" onclick="closeModal('m-prod')">✕</button></div>
     <div class="modal-b">
-      <div class="row2"><div class="fg"><label>Code *</label><input type="text" id="prod-code"></div><div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div></div>
+      <div class="fg" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="prod-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">SOFEM-XXX</div>
+      </div>
       <div class="fg"><label>Nom *</label><input type="text" id="prod-nom"></div>
+      <div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div>
       <div class="fg"><label>Description</label><textarea id="prod-desc" rows="2"></textarea></div>
     </div>
-    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-prod')">Annuler</button><button class="btn" onclick="saveProduit()">Créer</button></div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-prod')">Annuler</button>
+      <button class="btn" onclick="saveProduit()">Créer</button>
+    </div>
   </div>
 </div>
+
+<div class="overlay" id="m-bl-livrer">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">📦 MARQUER COMME LIVRÉ</div><button class="x" onclick="closeModal('m-bl-livrer')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="bl-livrer-id">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem;margin-bottom:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Bon de Livraison</div>
+        <div id="bl-livrer-num" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">—</div>
+      </div>
+      <div class="fg"><label>Destinataire *</label><input type="text" id="bl-dest" placeholder="Nom du client / destinataire"></div>
+      <div class="fg"><label>Adresse de livraison *</label><textarea id="bl-adresse" rows="2" placeholder="Adresse complète"></textarea></div>
+      <div class="fg"><label>Date de livraison *</label><input type="date" id="bl-date-liv"></div>
+      <div class="fg"><label>Notes</label><textarea id="bl-liv-notes" rows="2"></textarea></div>
+      <div style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.25);border-radius:6px;padding:.6rem .75rem;font-size:11px;color:var(--muted)">
+        ⚠️ Cette action va <strong style="color:var(--text)">clôturer l'OF associé</strong> et générer le PDF de livraison.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bl-livrer')">Annuler</button>
+      <button class="btn" style="background:var(--green)" onclick="confirmLivraison()">✓ Confirmer Livraison + PDF</button>
+    </div>
+  </div>
+</div>
+
+
 
 <div class="overlay" id="m-user">
   <div class="modal">
@@ -643,708 +1026,82 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 <script>
 'use strict';
-const API   = window.location.origin;
-const STAGES = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage'];
-const token  = localStorage.getItem('token');
-const role   = localStorage.getItem('role');
-const nom    = localStorage.getItem('nom');
-const prenom = localStorage.getItem('prenom');
 
-// Auth guard
-if (!token) window.location.href = '/';
 
-const $ = id => document.getElementById(id);
-const toast = (msg, type='ok') => {
-  const t=$('toast'); t.textContent=msg; t.className=`toast ${type} show`;
-  setTimeout(()=>t.classList.remove('show'),3000);
+<div class="overlay" id="m-bom">
+  <div class="modal" style="max-width:540px;width:96vw">
+    <div class="modal-h">
+      <div class="modal-title">BOM — <span id="bom-prod-title" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-bom')">✕</button>
+    </div>
+    <div class="modal-b">
+      <table style="width:100%">
+        <thead><tr><th>Matériau</th><th>Qté/unité produit</th><th>Unité</th><th></th></tr></thead>
+        <tbody id="bom-lines-body"></tbody>
+      </table>
+      <div style="display:flex;gap:.5rem;margin-top:.75rem;align-items:center">
+        <select id="bom-add-mat" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px"></select>
+        <button class="btn" style="white-space:nowrap" onclick="bomAddLine()">+ Ajouter</button>
+      </div>
+      <div style="margin-top:.4rem;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
+        Quantités <strong style="color:var(--text)">par unité produite</strong> — multipliées par la qté OF.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bom')">Annuler</button>
+      <button class="btn" onclick="saveBOM()">💾 Sauvegarder BOM</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/core.js"></script>
+<script src="/admin/js/dashboard.js"></script>
+<script src="/admin/js/of.js"></script>
+<script src="/admin/js/monitor.js"></script>
+<script src="/admin/js/clients.js"></script>
+<script src="/admin/js/operators.js"></script>
+<script src="/admin/js/products.js"></script>
+<script src="/admin/js/bl.js"></script>
+<script src="/admin/js/achats.js"></script>
+<script src="/admin/js/materials.js"></script>
+<script src="/admin/js/machines.js"></script>
+<script src="/admin/js/maintenance.js"></script>
+<script src="/admin/js/planning.js"></script>
+<script src="/admin/js/qualite.js"></script>
+<script src="/admin/js/nc.js"></script>
+<script src="/admin/js/fournisseurs.js"></script>
+<script src="/admin/js/reports.js"></script>
+<script src="/admin/js/users.js"></script>
+<script>
+window.pageLoaders = {
+  dashboard:    loadDashboard,
+  orders:       loadOrders,
+  monitor:      loadMonitor,
+  bl:           loadBL,
+  materials:    loadMaterials,
+  operators:    loadOperators,
+  products:     loadProducts,
+  clients:      loadClients,
+  da:           loadDA,
+  bc:           loadBC,
+  br:           loadBR,
+  fa:           loadFA,
+  qualite:      loadQualite,
+  nc:           loadNC,
+  machines:     loadMachines,
+  maintenance:  loadMaintenance,
+  planning:     loadPlanning,
+  fournisseurs: loadFournisseurs,
+  users:        loadUsers,
+  reports:      loadReports,
 };
-const loading = n => `<tr><td colspan="${n}"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr>`;
-const empty   = (n,m='Aucune donnée') => `<tr><td colspan="${n}"><div class="empty">${m}</div></td></tr>`;
-
-async function api(path, opts={}) {
-  const currentToken = localStorage.getItem('token');
-  if (!currentToken) { logout(); return null; }
-  const r = await fetch(API+path, {
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
-    ...opts
-  });
-  const data = await r.json();
-  if (r.status === 401 || r.status === 403) {
-    console.error('Auth error on', path, data.detail);
-    logout();
-    return null;
-  }
-  if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
-  return data;
-}
-
-// Init UI
-$('user-info').textContent = `${prenom} ${nom}`;
-$('footer-user').textContent = `${role} · ${prenom} ${nom}`;
-$('role-badge').textContent = role;
-
-// Hide users page for managers
-if (role === 'MANAGER') $('admin-only-nav').style.display = 'none';
-
-function tick(){ $('clock').textContent = new Date().toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).toUpperCase(); }
-tick(); setInterval(tick,1000);
-
-function logout() {
-  localStorage.clear();
-  window.location.href = '/';
-}
-
-function pBadge(p){const m={URGENT:'b-urgent',HIGH:'b-high',NORMAL:'b-normal',LOW:'b-low'};const l={URGENT:'URGENT',HIGH:'HAUTE',NORMAL:'NORMAL',LOW:'BASSE'};return `<span class="badge ${m[p]||'b-normal'}">${l[p]||p}</span>`;}
-function sBadge(s){const m={IN_PROGRESS:'b-inprogress',COMPLETED:'b-completed',DRAFT:'b-draft',APPROVED:'b-approved',CANCELLED:'b-cancelled'};const l={IN_PROGRESS:'En Cours',COMPLETED:'Terminé',DRAFT:'Brouillon',APPROVED:'Approuvé',CANCELLED:'Annulé'};return `<span class="badge ${m[s]||'b-draft'}">${l[s]||s}</span>`;}
-function dots(e){if(!e?.length)return'—';return`<div class="sdots">${STAGES.map(s=>{const x=e.find(v=>v.etape===s);const st=x?x.statut.toLowerCase().replace('_','_'):'pending';return`<div class="sd ${st}" title="${s}"></div>`;}).join('')}</div>`;}
-function dateTd(d){if(!d)return'—';const diff=(new Date(d)-new Date())/86400000;const c=diff<0?'color:var(--red);font-weight:600':diff<3?'color:var(--accent)':'color:var(--muted)';return`<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;${c}">${d}</span>`;}
-
-const loaders={
-  dashboard:loadDashboard, orders:loadOrders, monitor:loadMonitor,
-  materials:loadMaterials, operators:loadOperators, products:loadProducts,
-  users:loadUsers, reports:loadReports,
-  bl:loadBL, da:loadDA, bc:loadBC, br:loadBR, fa:loadFA
-};
-
-document.querySelectorAll('.nav-item').forEach(item=>{
-  item.addEventListener('click',()=>{
-    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    item.classList.add('active');
-    const p=item.dataset.p;
-    $(`page-${p}`)?.classList.add('active');
-    loaders[p]?.();
-  });
-});
-
-// DASHBOARD
-async function loadDashboard(){
-  try{
-    const dash = await api('/api/dashboard');
-    if (!dash) return;
-    const ofs  = await api('/api/of');
-    if (!ofs) return;
-    const mats = await api('/api/materiaux');
-    if (!mats) return;
-    const ops  = await api('/api/operateurs');
-    if (!ops) return;
-    $('k-actifs').textContent=dash.ordres_actifs;$('k-urgents').textContent=dash.urgents;
-    $('k-taux').textContent=dash.taux_completion+'%';$('k-stock').textContent=dash.alertes_stock;$('k-retard').textContent=dash.en_retard;
-    $('chart-taux').textContent=dash.taux_completion+'% COMPLÉTION';
-
-    // Pipeline — reset first, then recalculate
-    STAGES.forEach((_,i) => {
-      const el = $(`pip-${i}`);
-      el.className = 'sb pending';
-      el.textContent = '○';
-    });
-    STAGES.forEach((stage, i) => {
-      const inprog = ofs.some(of => (of.etapes||[]).some(e => e.etape===stage && e.statut==='IN_PROGRESS'));
-      const done   = ofs.every(of => {
-        const e = (of.etapes||[]).find(x => x.etape===stage);
-        return !e || e.statut==='COMPLETED';
-      }) && ofs.length > 0;
-      const el = $(`pip-${i}`);
-      if (inprog) { el.className='sb active'; el.textContent='⬛'; }
-      else if (done) { el.className='sb done'; el.textContent='✓'; }
-    });
-    $('dash-ofs').innerHTML=ofs.length===0?empty(7,'Aucun OF'):ofs.slice(0,6).map(of=>`<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td><td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td><td>${dateTd(of.date_echeance)}</td></tr>`).join('');
-    const alertes=mats.filter(m=>parseFloat(m.stock_actuel)<parseFloat(m.stock_minimum));
-    $('stock-ct').textContent=alertes.length+' ALERTES';
-    $('dash-mats').innerHTML=mats.slice(0,5).map(m=>{const pct=Math.min(100,Math.round(m.pct_stock||0));const cls=pct<50?'d':pct<90?'w':'ok';return`<div class="mat-item"><div style="flex:1"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel}/${m.stock_minimum} ${m.unite}</div></div><div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div><div class="bar-pct ${cls}">${pct<100?pct+'%':'OK'}</div></div>`;}).join('');
-    const g=dash.graphique||[];const mx=Math.max(...g.map(x=>x.total),1);
-    $('dash-chart').innerHTML=g.map((m,i)=>`<div class="bc"><div class="bf${i===g.length-1?' cur':''}" style="height:${Math.round(m.total/mx*100)}%"></div><div class="bl">${(m.mois||'').split(' ')[0].toUpperCase()}</div></div>`).join('');
-    $('dash-ops').innerHTML=ops.slice(0,4).map(op=>{const init=(op.prenom[0]||'')+(op.nom[0]||'');const perf=op.performance||0;const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';return`<div class="op-item"><div class="op-av">${init}</div><div><div style="font-size:12px;font-weight:500">${op.prenom} ${op.nom}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite}</div></div><div class="op-score" style="color:${col}">${perf}%</div></div>`;}).join('');
-  }catch(e){toast('Erreur dashboard: '+e.message,'err');}
-}
-
-// ORDERS
-let ofFilter={statut:'',priorite:''};
-let allOFs = [];
-
-async function loadOrders(){
-  $('orders-tb').innerHTML=loading(10);
-  try{
-    let url='/api/of?limit=500';
-    if(ofFilter.statut) url+=`&statut=${ofFilter.statut}`;
-    if(ofFilter.priorite) url+=`&priorite=${ofFilter.priorite}`;
-    allOFs = await api(url);
-    renderOrders(allOFs);
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-
-function renderOrders(ofs){
-  $('search-count').textContent = `${ofs.length} ordre(s) affiché(s)`;
-  $('orders-tb').innerHTML=ofs.length===0?empty(10,'Aucun OF trouvé'):ofs.map(of=>`<tr>
-    <td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td>
-    <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td>
-    <td style="font-size:10px">${of.operateur_nom||'—'}</td>
-    <td style="font-size:10px;color:var(--muted)">${of.atelier||'—'}</td>
-    <td>${dateTd(of.date_echeance)}</td>
-    <td><div style="display:flex;gap:4px">
-      ${of.statut==='COMPLETED'?`
-        <div style="display:flex;flex-direction:column;gap:2px">
-          <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px" onclick="printFacture(${of.id},'interne')" title="Rapport interne complet">🖨️ Interne</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--blue);font-size:8px" onclick="printFacture(${of.id},'client')" title="Facture client">📄 Client</button>
-        </div>`:''}
-      ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
-      ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
-    </div></td>
-  </tr>`).join('');
-}
-
-function searchOF(){
-  const txt = ($('search-of').value||'').toLowerCase().trim();
-  const date = $('search-date').value;
-  let filtered = allOFs.filter(of => {
-    const matchTxt = !txt ||
-      of.numero.toLowerCase().includes(txt) ||
-      of.produit_nom.toLowerCase().includes(txt) ||
-      (of.operateur_nom||'').toLowerCase().includes(txt) ||
-      (of.atelier||'').toLowerCase().includes(txt);
-    const matchDate = !date || (of.date_echeance && of.date_echeance.startsWith(date));
-    return matchTxt && matchDate;
-  });
-  renderOrders(filtered);
-}
-
-function clearSearch(){
-  $('search-of').value='';
-  $('search-date').value='';
-  renderOrders(allOFs);
-}
-
-function filterOF(btn,val,field=''){
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  ofFilter={statut:'',priorite:''};
-  if(field==='p') ofFilter.priorite=val; else ofFilter.statut=val;
-  $('search-of').value='';$('search-date').value='';
-  loadOrders();
-}
-
-async function advanceOF(id,current){
-  const next={DRAFT:'APPROVED',APPROVED:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[current];
-  if(!next)return;
-  try{await api(`/api/of/${id}`,{method:'PUT',body:JSON.stringify({statut:next})});toast(`OF → ${next} ✓`);loadOrders();}
-  catch(e){toast(e.message,'err');}
-}
-
-async function cancelOF(id){
-  if(!confirm('Annuler cet OF ?'))return;
-  try{await api(`/api/of/${id}`,{method:'DELETE'});toast('OF annulé');loadOrders();}
-  catch(e){toast(e.message,'err');}
-}
-
-// ── FACTURE ────────────────────────────────────────────────
-async function printFacture(ofId, type='interne') {
-  toast(type === 'client' ? 'Génération facture client...' : 'Génération rapport interne...', 'ok');
-  window.open(`${API}/api/facture/${ofId}?type=${type}`, '_blank');
-}
-
-// MONITOR
-async function loadMonitor(){
-  try{
-    const all=await api('/api/of');const active=all.filter(o=>o.statut==='IN_PROGRESS');
-    STAGES.forEach((s,i)=>{
-      const inp=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='IN_PROGRESS').length),0);
-      const done=all.reduce((n,of)=>n+((of.etapes||[]).filter(e=>e.etape===s&&e.statut==='COMPLETED').length),0);
-      const el=$(`mp-${i}`);el.textContent=inp>0?inp:done>0?'✓':'○';
-      el.className=`sb ${inp>0?'active':done>0?'done':'pending'}`;
-    });
-    $('mon-stats').textContent=`${active.length} ORDRES EN COURS`;
-    if(active.length===0){$('monitor-tb').innerHTML=empty(9,'Aucun ordre en cours');return;}
-    $('monitor-tb').innerHTML=active.map(of=>{
-      const cells=STAGES.map(s=>{
-        const e=(of.etapes||[]).find(x=>x.etape===s);const st=e?e.statut:'PENDING';
-        const cls=st==='COMPLETED'?'done':st==='IN_PROGRESS'?'in_progress':'pending';
-        const lbl=st==='COMPLETED'?'✓ '+s:st==='IN_PROGRESS'?'⬛ '+s:'○ '+s;
-        const nxt={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[st];
-        return`<td>${nxt?`<span class="ms ${cls}" onclick="advEtape(${of.id},'${s}','${st}')">${lbl}</span>`:`<span class="ms done">${lbl}</span>`}</td>`;
-      }).join('');
-      return`<tr><td><span class="of-num">${of.numero}</span></td><td>${of.produit_nom}</td><td>${of.quantite}</td>${cells}<td style="font-size:10px">${of.operateur_nom||'—'}</td></tr>`;
-    }).join('');
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-async function advEtape(ofId,etape,cur){
-  const next={PENDING:'IN_PROGRESS',IN_PROGRESS:'COMPLETED'}[cur];if(!next)return;
-  // Get operateur_id from token if available
-  const opId = localStorage.getItem('operateur_id') ? parseInt(localStorage.getItem('operateur_id')) : null;
-  try{await api(`/api/of/${ofId}/etape/${encodeURIComponent(etape)}`,{method:'PUT',body:JSON.stringify({statut:next, operateur_id:opId})});toast(`${etape} → ${next} ✓`);loadMonitor();}
-  catch(e){toast(e.message,'err');}
-}
-
-// MATERIALS
-async function loadMaterials(){
-  try{
-    const [mats,mvts]=await Promise.all([api('/api/materiaux'),api('/api/materiaux/mouvements?limit=20')]);
-    $('mats-tb').innerHTML=mats.map(m=>{const pct=Math.min(100,Math.round(m.pct_stock||0));const cls=pct<50?'d':pct<90?'w':'ok';return`<tr><td><span class="of-num">${m.code}</span></td><td>${m.nom}</td><td style="font-family:'IBM Plex Mono',monospace">${m.stock_actuel}</td><td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${m.stock_minimum}</td><td style="color:var(--muted)">${m.unite}</td><td style="font-size:10px;color:var(--muted)">${m.fournisseur||'—'}</td><td>${m.alerte?'<span class="badge b-urgent">ALERTE</span>':'<span class="badge b-completed">OK</span>'}</td><td style="min-width:80px"><div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div></td></tr>`;}).join('');
-    $('mvt-tb').innerHTML=mvts.length===0?empty(8,'Aucun mouvement'):mvts.map(m=>{const col=m.type==='ENTREE'?'var(--green)':m.type==='SORTIE'?'var(--red)':'var(--accent)';return`<tr><td style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${(m.created_at||'').slice(0,16)}</td><td>${m.materiau_nom}</td><td><span style="color:${col};font-family:'IBM Plex Mono',monospace;font-size:9px">${m.type}</span></td><td style="font-family:'IBM Plex Mono',monospace">${m.quantite}</td><td style="color:var(--muted);font-family:'IBM Plex Mono',monospace">${m.stock_avant||'—'}</td><td style="font-family:'IBM Plex Mono',monospace">${m.stock_apres||'—'}</td><td><span class="of-num">${m.of_numero||'—'}</span></td><td style="font-size:10px;color:var(--muted)">${m.motif||'—'}</td></tr>`;}).join('');
-    $('mv-mat').innerHTML=mats.map(m=>`<option value="${m.id}">${m.nom} (${m.stock_actuel} ${m.unite})</option>`).join('');
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-
-// OPERATORS
-async function loadOperators(){
-  try{
-    const ops = await api('/api/operateurs');
-    if(!ops) return;
-    $('ops-tb').innerHTML = ops.length===0 ? `<tr><td colspan="9"><div class="empty">Aucun opérateur</div></td></tr>`
-      : ops.map(op=>{
-          const init=(op.prenom[0]||'')+(op.nom[0]||'');
-          const perf=op.performance||0;
-          const col=perf>=95?'var(--green)':perf>=80?'var(--accent)':'var(--red)';
-          return `<tr>
-            <td><div class="op-av">${init}</div></td>
-            <td style="font-weight:500">${op.prenom}</td>
-            <td style="font-weight:500">${op.nom}</td>
-            <td><span class="badge b-normal" style="font-size:9px">${op.specialite}</span></td>
-            <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${op.telephone||'—'}</td>
-            <td style="font-family:'IBM Plex Mono',monospace;text-align:center">${op.total_ofs||0}</td>
-            <td><span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${col}">${perf}%</span></td>
-            <td>${op.actif?'<span class="badge b-completed">ACTIF</span>':'<span class="badge b-cancelled">INACTIF</span>'}</td>
-            <td>
-              <div style="display:flex;gap:4px">
-                <button class="btn btn-ghost btn-sm" onclick="openEditOp(${op.id},'${op.prenom}','${op.nom}','${op.specialite}','${op.telephone||''}','${op.email||''}',${op.actif?1:0})" title="Modifier">✏️</button>
-                <button class="btn btn-ghost btn-sm" style="color:${op.actif?'var(--red)':'var(--green)'}" onclick="toggleOp(${op.id},${op.actif?0:1})" title="${op.actif?'Désactiver':'Activer'}">${op.actif?'⏸':'▶'}</button>
-                <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteOp(${op.id},'${op.prenom} ${op.nom}')" title="Supprimer">🗑️</button>
-              </div>
-            </td>
-          </tr>`;
-        }).join('');
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-
-function openEditOp(id, prenom, nom, spec, tel, email, actif) {
-  $('op-edit-id').value    = id;
-  $('op-edit-prenom').value = prenom;
-  $('op-edit-nom').value    = nom;
-  $('op-edit-spec').value   = spec;
-  $('op-edit-tel').value    = tel;
-  $('op-edit-email').value  = email;
-  $('op-edit-actif').value  = actif;
-  openModal('m-op-edit');
-}
-
-async function updateOperateur() {
-  const id = $('op-edit-id').value;
-  if(!$('op-edit-prenom').value||!$('op-edit-nom').value){toast('Prénom et Nom requis','err');return;}
-  try{
-    await api(`/api/operateurs/${id}`,{method:'PUT',body:JSON.stringify({
-      prenom:     $('op-edit-prenom').value,
-      nom:        $('op-edit-nom').value,
-      specialite: $('op-edit-spec').value,
-      telephone:  $('op-edit-tel').value||null,
-      email:      $('op-edit-email').value||null,
-      actif:      $('op-edit-actif').value === '1'
-    })});
-    toast('Opérateur mis à jour ✓');
-    closeModal('m-op-edit');
-    loadOperators();
-  }catch(e){toast(e.message,'err');}
-}
-
-async function toggleOp(id, actif) {
-  try{
-    await api(`/api/operateurs/${id}`,{method:'PUT',body:JSON.stringify({actif: actif===1})});
-    toast(actif===1 ? 'Opérateur activé ✓' : 'Opérateur désactivé');
-    loadOperators();
-  }catch(e){toast(e.message,'err');}
-}
-
-async function deleteOp(id, name) {
-  if(!confirm(`Supprimer définitivement ${name} ?\n\nAttention: cette action est irréversible.`))return;
-  try{
-    await api(`/api/operateurs/${id}`,{method:'DELETE'});
-    toast(`${name} supprimé`);
-    loadOperators();
-  }catch(e){toast(e.message,'err');}
-}
-
-// PRODUCTS
-async function loadProducts(){
-  try{const prods=await api('/api/produits');$('prods-tb').innerHTML=prods.length===0?empty(4):prods.map(p=>`<tr><td><span class="of-num">${p.code}</span></td><td>${p.nom}</td><td style="color:var(--muted);font-size:10px">${p.description||'—'}</td><td style="color:var(--muted)">${p.unite}</td></tr>`).join('');}
-  catch(e){toast('Erreur: '+e.message,'err');}
-}
-
-// USERS
-async function loadUsers(){
-  try{
-    const users=await api('/api/auth/users');
-    const ops=await api('/api/operateurs');
-    $('users-tb').innerHTML=users.length===0?empty(6):users.map(u=>{
-      const op=ops.find(o=>o.id===u.operateur_id);
-      const rb={ADMIN:'b-admin',MANAGER:'b-manager',OPERATOR:'b-operator'}[u.role]||'b-draft';
-      return`<tr><td style="font-weight:500">${u.nom}</td><td>${u.prenom}</td><td><span class="badge ${rb}">${u.role}</span></td><td style="font-size:10px;color:var(--muted)">${op?`${op.prenom} ${op.nom}`:'—'}</td><td>${u.actif?'<span class="badge b-completed">ACTIF</span>':'<span class="badge b-cancelled">INACTIF</span>'}</td><td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deactivateUser(${u.id})">Désactiver</button></td></tr>`;
-    }).join('');
-    // fill operator select in modal
-    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom} (${o.specialite})</option>`).join('');
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-async function deactivateUser(id){
-  if(!confirm('Désactiver cet utilisateur ?'))return;
-  try{await api(`/api/auth/users/${id}`,{method:'PUT',body:JSON.stringify({actif:false})});toast('Utilisateur désactivé');loadUsers();}
-  catch(e){toast(e.message,'err');}
-}
-
-// REPORTS
-async function loadReports(){
-  try{
-    const [mois,ops,stock]=await Promise.all([api('/api/rapports/production-mensuelle'),api('/api/rapports/operateurs'),api('/api/rapports/stock-alertes')]);
-    const mx=Math.max(...mois.map(m=>m.total),1);
-    $('rep-chart').innerHTML=mois.slice(-8).map((m,i,arr)=>`<div class="bc"><div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1"><span style="font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--text);margin-bottom:2px">${m.total}</span><div class="bf${i===arr.length-1?' cur':''}" style="width:100%;height:${Math.round(m.total/mx*80)}%"></div></div><div class="bl">${(m.mois||'').slice(5)}</div></div>`).join('');
-    $('rep-stock').innerHTML=stock.length===0?'<div class="empty">✓ Tous les stocks OK</div>':stock.map(m=>{const pct=Math.min(100,Math.round(m.pct||0));return`<div class="mat-item"><div style="flex:1"><div class="mat-name">${m.nom}</div><div class="mat-ref">${m.stock_actuel}/${m.stock_minimum} ${m.unite}</div></div><div class="bar-w"><div class="bar-f d" style="width:${pct}%"></div></div><div class="bar-pct d">${pct}%</div></div>`;}).join('');
-    $('rep-ops').innerHTML=ops.map(op=>{const init=op.operateur.split(' ').map(n=>n[0]||'').join('');return`<div class="op-item"><div class="op-av">${init}</div><div style="flex:1"><div style="font-size:12px;font-weight:500">${op.operateur}</div><div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${op.specialite} · ${op.total_ofs||0} OFs · ${op.etapes_completes||0} étapes · moy. ${op.duree_moy_min||'—'} min</div></div></div>`;}).join('');
-  }catch(e){toast('Erreur: '+e.message,'err');}
-}
-
-// MODALS
-// openModal defined below with full modal support
-function closeModal(id){$(id).classList.remove('open');}
-document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
-
-async function createOF(){
-  if(!$('of-prod').value||!$('of-date').value){toast('Champs obligatoires manquants','err');return;}
-  try{const res=await api('/api/of',{method:'POST',body:JSON.stringify({produit_id:parseInt($('of-prod').value),quantite:parseInt($('of-qte').value),priorite:$('of-prio').value,operateur_id:$('of-op').value?parseInt($('of-op').value):null,atelier:$('of-atelier').value||'Atelier A',date_echeance:$('of-date').value,notes:$('of-notes').value||null})});toast(`${res.numero} créé ✓`);closeModal('m-of');loadDashboard();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveMouvement(){
-  try{const res=await api('/api/materiaux/mouvement',{method:'POST',body:JSON.stringify({materiau_id:parseInt($('mv-mat').value),type:$('mv-type').value,quantite:parseFloat($('mv-qte').value),motif:$('mv-motif').value||null})});toast(`Stock mis à jour ✓`);closeModal('m-mv');loadMaterials();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveMateriau(){
-  if(!$('mat-code').value||!$('mat-nom').value){toast('Champs obligatoires manquants','err');return;}
-  try{await api('/api/materiaux',{method:'POST',body:JSON.stringify({code:$('mat-code').value,nom:$('mat-nom').value,unite:$('mat-unite').value,stock_actuel:parseFloat($('mat-stock').value)||0,stock_minimum:parseFloat($('mat-min').value)||0,fournisseur:$('mat-four').value||null})});toast('Matériau créé ✓');closeModal('m-mat');loadMaterials();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveOperateur(){
-  if(!$('op-prenom').value||!$('op-nom').value){toast('Prénom et Nom requis','err');return;}
-  try{await api('/api/operateurs',{method:'POST',body:JSON.stringify({prenom:$('op-prenom').value,nom:$('op-nom').value,specialite:$('op-spec').value,telephone:$('op-tel').value||null,email:$('op-email').value||null})});toast('Opérateur créé ✓');closeModal('m-op');loadOperators();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveProduit(){
-  if(!$('prod-code').value||!$('prod-nom').value){toast('Code et Nom requis','err');return;}
-  try{await api('/api/produits',{method:'POST',body:JSON.stringify({code:$('prod-code').value,nom:$('prod-nom').value,description:$('prod-desc').value||null,unite:$('prod-unite').value||'pcs'})});toast('Produit créé ✓');closeModal('m-prod');loadProducts();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveUser(){
-  if(!$('usr-prenom').value||!$('usr-nom').value||!$('usr-pin').value){toast('Champs obligatoires manquants','err');return;}
-  if($('usr-pin').value.length!==4){toast('PIN doit être 4 chiffres','err');return;}
-  try{await api('/api/auth/users',{method:'POST',body:JSON.stringify({prenom:$('usr-prenom').value,nom:$('usr-nom').value,role:$('usr-role').value,pin:$('usr-pin').value,operateur_id:$('usr-op').value?parseInt($('usr-op').value):null})});toast('Utilisateur créé ✓');closeModal('m-user');loadUsers();}
-  catch(e){toast(e.message,'err');}
-}
-
-// ── CHECKBOXES & GROUPED INVOICE ──────────────────────────
-function toggleAllChk(el) {
-  document.querySelectorAll('.of-chk').forEach(c => c.checked = el.checked);
-}
-function selectAllCompleted() {
-  document.querySelectorAll('.of-chk').forEach(c => {
-    const row = c.closest('tr');
-    const isCompleted = row && row.querySelector('.b-completed');
-    c.checked = !!isCompleted;
-  });
-}
-async function printGroupedInvoice() {
-  const ids = [...document.querySelectorAll('.of-chk:checked')].map(c => parseInt(c.value));
-  if (!ids.length) { toast('Sélectionnez au moins un OF terminé', 'err'); return; }
-  toast(`Génération facture groupée (${ids.length} OFs)...`, 'ok');
-  const r = await fetch(`${API}/api/facture/grouped`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`},
-    body: JSON.stringify({of_ids: ids})
-  });
-  if (!r.ok) { const d=await r.json(); toast(d.detail||'Erreur','err'); return; }
-  const blob = await r.blob();
-  const url  = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-}
-
-// ── UPDATED renderOrders with BL button and checkbox ─────
-function renderOrders(ofs){
-  $('search-count').textContent = `${ofs.length} ordre(s)`;
-  $('orders-tb').innerHTML = ofs.length===0 ? empty(12,'Aucun OF trouvé')
-    : ofs.map(of=>`<tr>
-        <td><input type="checkbox" class="of-chk" value="${of.id}" ${of.statut!=='COMPLETED'?'disabled':''}
-          style="accent-color:var(--red);cursor:pointer"></td>
-        <td><span class="of-num">${of.numero}</span></td>
-        <td><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue)"
-          onclick="printBL(${of.id})" title="Imprimer BL" style="cursor:pointer">🚚 BL</span></td>
-        <td>${of.produit_nom}</td><td>${of.quantite}</td>
-        <td>${pBadge(of.priorite)}</td><td>${sBadge(of.statut)}</td><td>${dots(of.etapes)}</td>
-        <td style="font-size:10px">${of.operateur_nom||'—'}</td>
-        <td style="font-size:10px;color:var(--muted)">${of.atelier||'—'}</td>
-        <td>${dateTd(of.date_echeance)}</td>
-        <td><div style="display:flex;gap:3px;flex-wrap:wrap">
-          ${of.statut==='COMPLETED'?`
-            <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px" onclick="printFacture(${of.id},'interne')">🖨️ Int.</button>
-            <button class="btn btn-ghost btn-sm" style="color:var(--blue);font-size:8px" onclick="printFacture(${of.id},'client')">📄 Cli.</button>
-          `:''}
-          <button class="btn btn-ghost btn-sm" style="color:var(--accent);font-size:8px" onclick="printBL(${of.id})" title="BL">🚚</button>
-          ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED'?`<button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>`:''}
-          ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED'?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>`:''}
-        </div></td>
-      </tr>`).join('');
-}
-
-async function printBL(ofId) {
-  // Find or create BL for this OF
-  try {
-    const bls = await api('/api/bl');
-    const bl = bls.find(b => b.of_id === ofId);
-    if (bl) {
-      window.open(`${API}/api/bl/${bl.id}/pdf`, '_blank');
-    } else {
-      const res = await api('/api/bl', {method:'POST', body:JSON.stringify({of_id:ofId})});
-      toast(`BL ${res.bl_numero} créé ✓`);
-      window.open(`${API}/api/bl/${res.id}/pdf`, '_blank');
-    }
-  } catch(e){ toast(e.message,'err'); }
-}
-
-// ── BONS DE LIVRAISON ─────────────────────────────────────
-async function loadBL(){
-  try{
-    const bls = await api('/api/bl');
-    if(!bls) return;
-    $('bl-tb').innerHTML = bls.length===0 ? empty(8,'Aucun BL') : bls.map(bl=>`<tr>
-      <td><span class="of-num">${bl.bl_numero}</span></td>
-      <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red)">${bl.of_numero}</span></td>
-      <td>${bl.produit_nom||'—'}</td>
-      <td>${bl.quantite||'—'}</td>
-      <td>${bl.destinataire}</td>
-      <td><span class="badge ${bl.statut==='LIVRE'?'b-completed':bl.statut==='EMIS'?'b-approved':'b-draft'}">${bl.statut}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(bl.created_at||'').slice(0,10)}</td>
-      <td><button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="window.open('${API}/api/bl/${bl.id}/pdf','_blank')">🖨️ PDF</button></td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur BL: '+e.message,'err');}
-}
-
-// ── DEMANDES D'ACHAT ──────────────────────────────────────
-async function loadDA(){
-  try{
-    const das = await api('/api/achats/da');
-    if(!das) return;
-    $('da-tb').innerHTML = das.length===0 ? empty(9,'Aucune demande') : das.map(da=>`<tr>
-      <td><span class="of-num">${da.da_numero}</span></td>
-      <td>${da.description}</td>
-      <td style="font-size:10px;color:var(--muted)">${da.materiau_nom||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace">${da.quantite} ${da.unite}</td>
-      <td><span class="badge ${da.urgence==='URGENT'?'b-urgent':'b-normal'}">${da.urgence}</span></td>
-      <td><span class="badge ${da.statut==='APPROVED'?'b-completed':da.statut==='REJECTED'?'b-cancelled':da.statut==='ORDERED'?'b-approved':'b-draft'}">${da.statut}</span></td>
-      <td style="font-size:10px">${da.demandeur_nom||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(da.created_at||'').slice(0,10)}</td>
-      <td><div style="display:flex;gap:4px">
-        ${da.statut==='PENDING'?`
-          <button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')">✓ Valider</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="updateDA(${da.id},'REJECTED')">✕ Rejeter</button>
-        `:''}
-      </div></td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur DA: '+e.message,'err');}
-}
-async function updateDA(id, statut){
-  try{await api(`/api/achats/da/${id}`,{method:'PUT',body:JSON.stringify({statut})});toast(`DA → ${statut} ✓`);loadDA();}
-  catch(e){toast(e.message,'err');}
-}
-async function saveDA(){
-  if(!$('da-desc').value){toast('Description requise','err');return;}
-  try{
-    await api('/api/achats/da',{method:'POST',body:JSON.stringify({
-      description:$('da-desc').value,
-      materiau_id:$('da-mat').value?parseInt($('da-mat').value):null,
-      quantite:parseFloat($('da-qte').value),
-      unite:$('da-unite').value||'pcs',
-      urgence:$('da-urgence').value,
-      demandeur_id:$('da-demandeur').value?parseInt($('da-demandeur').value):null,
-      notes:$('da-notes').value||null
-    })});
-    toast('Demande créée ✓');closeModal('m-da');loadDA();
-  }catch(e){toast(e.message,'err');}
-}
-
-// ── BONS DE COMMANDE ──────────────────────────────────────
-let bcLines = [];
-function addBCLine(){
-  bcLines.push({id:Date.now()});
-  renderBCLines();
-}
-function removeBCLine(id){ bcLines=bcLines.filter(l=>l.id!==id); renderBCLines(); }
-function renderBCLines(){
-  $('bc-lines').innerHTML = bcLines.length===0
-    ? '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:11px">Aucune ligne — cliquez + Ligne</div>'
-    : bcLines.map(l=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:.4rem;margin-bottom:.4rem;align-items:center">
-        <input type="text" placeholder="Description *" id="bcl-desc-${l.id}" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
-        <input type="number" placeholder="Qté" id="bcl-qte-${l.id}" value="1" min="0.01" step="0.01" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
-        <input type="text" placeholder="Unité" id="bcl-unite-${l.id}" value="pcs" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
-        <input type="number" placeholder="Prix HT" id="bcl-prix-${l.id}" value="0" min="0" step="0.001" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;color:var(--text);font-size:11px;outline:none">
-        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="removeBCLine(${l.id})">✕</button>
-      </div>`).join('');
-}
-async function loadBC(){
-  try{
-    const bcs = await api('/api/achats/bc');
-    if(!bcs) return;
-    $('bc-tb').innerHTML = bcs.length===0 ? empty(9,'Aucun BC') : bcs.map(bc=>`<tr>
-      <td><span class="of-num">${bc.bc_numero}</span></td>
-      <td>${bc.fournisseur}</td>
-      <td style="font-family:'IBM Plex Mono',monospace">${(bc.montant_ht||0).toFixed(3)} TND</td>
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${(bc.montant_tva||0).toFixed(3)} TND</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green)">${(bc.montant_ttc||0).toFixed(3)} TND</td>
-      <td><span class="badge ${bc.statut==='RECU'?'b-completed':bc.statut==='ENVOYE'?'b-approved':bc.statut==='ANNULE'?'b-cancelled':'b-draft'}">${bc.statut}</span></td>
-      <td style="font-size:10px;color:var(--muted)">${bc.da_numero||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(bc.created_at||'').slice(0,10)}</td>
-      <td><button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="window.open('${API}/api/achats/bc/${bc.id}/pdf','_blank')">🖨️</button></td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur BC: '+e.message,'err');}
-}
-async function saveBC(){
-  if(!$('bc-four').value){toast('Fournisseur requis','err');return;}
-  const lignes = bcLines.map(l=>({
-    description: document.getElementById(`bcl-desc-${l.id}`)?.value||'',
-    quantite: parseFloat(document.getElementById(`bcl-qte-${l.id}`)?.value||1),
-    unite: document.getElementById(`bcl-unite-${l.id}`)?.value||'pcs',
-    prix_unitaire: parseFloat(document.getElementById(`bcl-prix-${l.id}`)?.value||0)
-  })).filter(l=>l.description);
-  try{
-    const res=await api('/api/achats/bc',{method:'POST',body:JSON.stringify({
-      fournisseur:$('bc-four').value,
-      da_id:$('bc-da').value?parseInt($('bc-da').value):null,
-      notes:$('bc-notes').value||null,
-      lignes
-    })});
-    toast(`BC ${res.bc_numero} créé ✓`);closeModal('m-bc');bcLines=[];loadBC();
-  }catch(e){toast(e.message,'err');}
-}
-
-// ── BONS DE RECEPTION ─────────────────────────────────────
-async function loadBCLines(){
-  const bcId = $('br-bc').value;
-  if(!bcId){$('br-lines').innerHTML='';return;}
-  try{
-    const bcs = await api('/api/achats/bc');
-    const bc = bcs.find(b=>b.id===parseInt(bcId));
-    if(!bc||!bc.lignes){$('br-lines').innerHTML='';return;}
-    $('br-lines').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:1px">Quantités reçues</div>`
-      + bc.lignes.map(l=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;align-items:center">
-          <span style="font-size:12px">${l.materiau_nom||l.description}</span>
-          <span style="font-size:10px;color:var(--muted)">${l.quantite} ${l.unite} commandés</span>
-          <input type="number" id="brl-${l.id}" value="${l.quantite}" min="0" step="0.01"
-            style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.4rem;color:var(--text);font-size:11px;outline:none"
-            data-bc-ligne="${l.id}">
-        </div>`).join('');
-  }catch(e){toast(e.message,'err');}
-}
-async function loadBR(){
-  try{
-    const brs = await api('/api/achats/br');
-    if(!brs) return;
-    $('br-tb').innerHTML = brs.length===0 ? empty(6,'Aucun BR') : brs.map(br=>`<tr>
-      <td><span class="of-num">${br.br_numero}</span></td>
-      <td style="font-size:10px;color:var(--muted)">${br.bc_numero}</td>
-      <td>${br.fournisseur||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.date_reception||'—'}</td>
-      <td><span class="badge ${br.statut==='COMPLET'?'b-completed':'b-approved'}">${br.statut}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${(br.created_at||'').slice(0,10)}</td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur BR: '+e.message,'err');}
-}
-async function saveBR(){
-  const bcId=$('br-bc').value; const date=$('br-date').value;
-  if(!bcId||!date){toast('BC et date requis','err');return;}
-  const inputs=document.querySelectorAll('[data-bc-ligne]');
-  const lignes=[...inputs].map(inp=>({bc_ligne_id:parseInt(inp.dataset.bcLigne),quantite_recue:parseFloat(inp.value||0)})).filter(l=>l.quantite_recue>0);
-  try{
-    const res=await api('/api/achats/br',{method:'POST',body:JSON.stringify({
-      bc_id:parseInt(bcId),date_reception:date,statut:$('br-statut').value,
-      notes:$('br-notes').value||null,lignes
-    })});
-    toast(`${res.br_numero} créé — stock mis à jour ✓`);closeModal('m-br');loadBR();
-  }catch(e){toast(e.message,'err');}
-}
-
-// ── FACTURES ACHAT ────────────────────────────────────────
-async function loadFA(){
-  try{
-    const fas = await api('/api/achats/fa');
-    if(!fas) return;
-    $('fa-tb').innerHTML = fas.length===0 ? empty(9,'Aucune facture') : fas.map(fa=>`<tr>
-      <td><span class="of-num">${fa.fa_numero}</span></td>
-      <td>${fa.fournisseur}</td>
-      <td style="font-size:10px;color:var(--muted)">${fa.bc_numero||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace">${parseFloat(fa.montant_ht||0).toFixed(3)} TND</td>
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${parseFloat(fa.tva||0).toFixed(3)} TND</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green)">${parseFloat(fa.montant_ttc||0).toFixed(3)} TND</td>
-      <td><span class="badge ${fa.statut==='PAYEE'?'b-completed':fa.statut==='ANNULEE'?'b-cancelled':'b-draft'}">${fa.statut}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.date_facture||'—'}</td>
-      <td><div style="display:flex;gap:4px">
-        ${fa.statut==='PENDING'?`<button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="payerFA(${fa.id})">💳 Payer</button>`:''}
-      </div></td>
-    </tr>`).join('');
-  }catch(e){toast('Erreur FA: '+e.message,'err');}
-}
-async function saveFA(){
-  if(!$('fa-bc').value||!$('fa-four').value||!$('fa-date').value){toast('Champs requis','err');return;}
-  try{
-    const res=await api('/api/achats/fa',{method:'POST',body:JSON.stringify({
-      bc_id:parseInt($('fa-bc').value),fournisseur:$('fa-four').value,
-      date_facture:$('fa-date').value,notes:$('fa-notes').value||null
-    })});
-    toast(`${res.fa_numero} créé · TTC: ${res.montant_ttc} TND ✓`);closeModal('m-fa');loadFA();
-  }catch(e){toast(e.message,'err');}
-}
-async function payerFA(id){
-  try{await api(`/api/achats/fa/${id}/payer`,{method:'PUT'});toast('Facture marquée payée ✓');loadFA();}
-  catch(e){toast(e.message,'err');}
-}
-
-// Update navigation loaders — defined above
-
-// Update openModal to fill selects for new modals
-async function openModal(id){
-  $(id)?.classList.add('open');
-  if(id==='m-of'){
-    const [prods,ops]=await Promise.all([api('/api/produits'),api('/api/operateurs')]);
-    if(!prods||!ops) return;
-    $('of-prod').innerHTML=prods.map(p=>`<option value="${p.id}">${p.code} — ${p.nom}</option>`).join('');
-    $('of-op').innerHTML='<option value="">— Non assigné —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-    const d=new Date();d.setDate(d.getDate()+7);$('of-date').value=d.toISOString().split('T')[0];
-  }
-  if(id==='m-user'){
-    const ops=await api('/api/operateurs');
-    if(!ops) return;
-    $('usr-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-  }
-  if(id==='m-da'){
-    const [mats,ops]=await Promise.all([api('/api/materiaux'),api('/api/operateurs')]);
-    if(!mats||!ops) return;
-    $('da-mat').innerHTML='<option value="">— Aucun —</option>'+mats.map(m=>`<option value="${m.id}">${m.nom}</option>`).join('');
-    $('da-demandeur').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-  }
-  if(id==='m-bc'){
-    bcLines=[];renderBCLines();
-    const das=await api('/api/achats/da');
-    if(!das) return;
-    const pending=das.filter(d=>d.statut==='APPROVED');
-    $('bc-da').innerHTML='<option value="">— Aucun —</option>'+pending.map(d=>`<option value="${d.id}">${d.da_numero} — ${d.description}</option>`).join('');
-  }
-  if(id==='m-br'){
-    const bcs=await api('/api/achats/bc');
-    if(!bcs) return;
-    const open=bcs.filter(b=>['DRAFT','ENVOYE','RECU_PARTIEL'].includes(b.statut));
-    $('br-bc').innerHTML='<option value="">— Sélectionner BC —</option>'+open.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
-    const d=new Date();$('br-date').value=d.toISOString().split('T')[0];
-    $('br-lines').innerHTML='';
-  }
-  if(id==='m-fa'){
-    const bcs=await api('/api/achats/bc');
-    if(!bcs) return;
-    const received=bcs.filter(b=>['RECU','RECU_PARTIEL'].includes(b.statut));
-    $('fa-bc').innerHTML='<option value="">— Sélectionner BC —</option>'+received.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
-    const d=new Date();$('fa-date').value=d.toISOString().split('T')[0];
-  }
-}
-
-loadDashboard();
+const _u = getUserInfo();
+if (!localStorage.getItem('token')) window.location.href = '/';
+if ($('user-info'))   $('user-info').textContent   = _u.prenom ? `${_u.prenom} ${_u.nom}` : 'Admin';
+if ($('role-badge'))  $('role-badge').textContent  = _u.role || 'ADMIN';
+if ($('footer-user')) $('footer-user').textContent = `${_u.role||''} · ${_u.prenom||''} ${_u.nom||''}`;
+if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
+navigate('dashboard');
 </script>
 </body>
 </html>

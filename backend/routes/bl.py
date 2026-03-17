@@ -59,11 +59,14 @@ def print_bl(bl_id: int, db=Depends(get_db)):
     bl = q(db, """
         SELECT bl.*, o.numero of_numero, o.quantite, o.atelier, o.date_echeance,
                p.nom produit_nom, p.code produit_code,
-               CONCAT(op.prenom,' ',op.nom) operateur_nom
+               CONCAT(cp.prenom,' ',cp.nom) operateur_nom,
+               c.nom client_nom, c.matricule_fiscal client_mf,
+               c.adresse client_adresse, c.ville client_ville
         FROM bons_livraison bl
         JOIN ordres_fabrication o ON bl.of_id=o.id
         JOIN produits p ON o.produit_id=p.id
-        LEFT JOIN operateurs op ON o.operateur_id=op.id
+        LEFT JOIN operateurs cp ON o.chef_projet_id=cp.id
+        LEFT JOIN clients c ON c.id=o.client_id
         WHERE bl.id=%s
     """, (bl_id,), one=True)
     if not bl: raise HTTPException(404, "BL non trouvé")
@@ -164,3 +167,52 @@ def print_bl(bl_id: int, db=Depends(get_db)):
     c.save(); buf.seek(0)
     return StreamingResponse(io.BytesIO(buf.read()), media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{bl["bl_numero"]}.pdf"'})
+
+
+@router.put("/{bl_id}")
+def update_bl(bl_id: int, data: BLUpdate, db=Depends(get_db),
+              user=Depends(require_any_role)):
+    bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
+    if not bl: raise HTTPException(404, "BL non trouvé")
+    fields, vals = [], []
+    if data.statut         is not None: fields.append("statut=%s");         vals.append(data.statut)
+    if data.date_livraison is not None: fields.append("date_livraison=%s"); vals.append(data.date_livraison)
+    if data.notes          is not None: fields.append("notes=%s");          vals.append(data.notes)
+    if fields:
+        vals.append(bl_id)
+        exe(db, f"UPDATE bons_livraison SET {','.join(fields)} WHERE id=%s", vals)
+    return {"message": "BL mis à jour"}
+
+
+class BLLivrer(BaseModel):
+    destinataire: str
+    adresse: str
+    date_livraison: date
+    notes: Optional[str] = None
+
+@router.post("/{bl_id}/livrer")
+def livrer_bl(bl_id: int, data: BLLivrer, db=Depends(get_db),
+              user=Depends(require_manager_or_admin)):
+    """Mark BL as LIVRÉ, record recipient + date, auto-complete the OF."""
+    bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
+    if not bl: raise HTTPException(404, "BL non trouvé")
+    if bl["statut"] == "LIVRE":
+        raise HTTPException(400, "BL déjà livré")
+
+    exe(db, """
+        UPDATE bons_livraison
+        SET statut='LIVRE',
+            date_livraison=%s,
+            date_livraison_reelle=%s,
+            destinataire_final=%s,
+            adresse_finale=%s,
+            notes=%s
+        WHERE id=%s
+    """, (data.date_livraison, data.date_livraison,
+          data.destinataire, data.adresse,
+          data.notes, bl_id))
+
+    # Auto-complete the OF
+    exe(db, "UPDATE ordres_fabrication SET statut='COMPLETED' WHERE id=%s", (bl["of_id"],))
+
+    return {"message": "BL marqué LIVRÉ — OF clôturé", "bl_id": bl_id, "of_id": bl["of_id"]}
