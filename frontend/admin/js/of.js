@@ -17,28 +17,43 @@ async function loadOrders() {
 
 function renderOrders(ofs) {
   $('search-count').textContent = `${ofs.length} ordre(s)`;
-  $('orders-tb').innerHTML = ofs.length === 0 ? empty(10) : ofs.map(of => `<tr>
-    <td><span class="of-num">${of.numero}</span></td>
-    <td>${of.produit_nom}</td>
-    <td style="font-size:11px;color:var(--muted)">${of.client_nom||'—'}</td>
-    <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${of.quantite}</td>
-    <td>${pBadge(of.priorite)}</td>
-    <td>${sBadge(of.statut)}</td>
-    <td>${dots(of.operations)}</td>
-    <td style="font-size:10px;color:var(--muted)">${of.chef_projet_nom||'—'}</td>
-    <td>${dateTd(of.date_echeance)}</td>
-    <td><div style="display:flex;gap:3px;flex-wrap:wrap">
-      ${of.statut==='COMPLETED' ? `
-        <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px"
-          onclick="window.open('${API}/api/of/${of.id}/fiche','_blank')" title="Fiche Résumé Production">📋 Fiche</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:8px"
-          onclick="printFacture(${of.id},'client')" title="Facture client">📄 Facture</button>` : ''}
-      ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
-        <button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>` : ''}
-      ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED' ? `
-        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>` : ''}
-    </div></td>
-  </tr>`).join('');
+  $('orders-tb').innerHTML = ofs.length === 0 ? empty(12, 'Aucun OF trouvé') : ofs.map(of => {
+    const blBadge = of.bl_numero
+      ? `<span class="of-num" style="font-size:9px;cursor:pointer" onclick="navigate('bl')" title="Voir BL">${of.bl_numero}</span>`
+      : '—';
+    const blStatut = of.bl_statut === 'LIVRE'
+      ? '<span class="badge b-completed" style="font-size:7px">LIVRÉ</span>'
+      : of.bl_statut === 'EMIS'
+        ? '<span class="badge b-approved" style="font-size:7px">ÉMIS</span>'
+        : '';
+
+    return `<tr>
+      <td><input type="checkbox" class="of-chk" value="${of.id}" ${of.statut!=='COMPLETED'?'disabled':''}></td>
+      <td><span class="of-num">${of.numero}</span></td>
+      <td>${blBadge} ${blStatut}</td>
+      <td>${of.produit_nom}</td>
+      <td style="font-size:11px;color:var(--muted)">${of.client_nom||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${of.quantite}</td>
+      <td>${pBadge(of.priorite)}</td>
+      <td>${sBadge(of.statut)}</td>
+      <td>${dots(of.operations)}</td>
+      <td style="font-size:10px;color:var(--muted)">${of.chef_projet_nom||'—'}</td>
+      <td>${dateTd(of.date_echeance)}</td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+        ${of.statut==='COMPLETED' ? `
+          <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px"
+            onclick="window.open('${API}/api/of/${of.id}/fiche','_blank')" title="Fiche Résumé Production">📋 Fiche</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:8px"
+            onclick="printFacture(${of.id},'client')" title="Facture client">📄 Facture</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:8px"
+            onclick="printFacture(${of.id},'interne')" title="Rapport interne">🖨️ Interne</button>` : ''}
+        ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
+          <button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>` : ''}
+        ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED' ? `
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('');
 }
 
 function searchOF() {

@@ -89,11 +89,13 @@ def list_of(statut: Optional[str]=None, priorite: Optional[str]=None,
     sql = """
         SELECT o.*, p.nom produit_nom, p.code produit_code,
                CONCAT(cp.prenom,' ',cp.nom) chef_projet_nom,
-               c.nom client_nom, c.matricule_fiscal client_mf
+               c.nom client_nom, c.matricule_fiscal client_mf,
+               bl.bl_numero, bl.statut bl_statut, bl.id bl_id
         FROM ordres_fabrication o
         JOIN produits p ON o.produit_id = p.id
         LEFT JOIN operateurs cp ON cp.id = o.chef_projet_id
         LEFT JOIN clients c ON c.id = o.client_id
+        LEFT JOIN bons_livraison bl ON bl.of_id = o.id
         WHERE 1=1
     """
     params = []

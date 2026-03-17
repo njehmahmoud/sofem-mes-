@@ -21,15 +21,23 @@ PRIX_UNIT  = 85.0
 
 def get_of_data(of_id, db):
     of = q(db, """SELECT o.*, p.nom produit_nom, p.code produit_code,
-        CONCAT(op.prenom,' ',op.nom) operateur_nom
+        CONCAT(op.prenom,' ',op.nom) operateur_nom,
+        c.nom client_nom, c.matricule_fiscal client_mf, c.adresse client_adresse
         FROM ordres_fabrication o
         JOIN produits p ON o.produit_id=p.id
-        LEFT JOIN operateurs op ON o.operateur_id=op.id
+        LEFT JOIN operateurs op ON o.chef_projet_id=op.id
+        LEFT JOIN clients c ON c.id=o.client_id
         WHERE o.id=%s""", (of_id,), one=True)
     if not of: raise HTTPException(404, f"OF {of_id} non trouvé")
-    of["etapes"] = q(db, """SELECT e.*, CONCAT(op.prenom,' ',op.nom) operateur_nom
-        FROM etapes_production e LEFT JOIN operateurs op ON e.operateur_id=op.id
-        WHERE e.of_id=%s ORDER BY FIELD(e.etape,'AutoCAD','Découpage','Pliage','Soudage','Ponçage')""", (of_id,))
+    of["etapes"] = q(db, """
+            SELECT op2.operation_nom etape, op2.statut,
+                   GROUP_CONCAT(CONCAT(o2.prenom,' ',o2.nom) SEPARATOR ', ') operateur_nom,
+                   op2.duree_reelle
+            FROM of_operations op2
+            LEFT JOIN op_operateurs oo ON oo.operation_id = op2.id
+            LEFT JOIN operateurs o2 ON o2.id = oo.operateur_id
+            WHERE op2.of_id=%s
+            GROUP BY op2.id ORDER BY op2.ordre""", (of_id,))
     return serialize(of)
 
 def draw_header(c, W, H, colors, title, numero, now):
@@ -117,7 +125,7 @@ def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
         c.setFillColor(DARK); c.setFont("Helvetica-Bold",9); c.drawString(20*mm,y,title)
         return y - 8*mm
 
-    STAGE_ORDER = ['AutoCAD','Découpage','Pliage','Soudage','Ponçage']
+    # Dynamic operations - no fixed stages
 
     if type == "interne":
         y_cur = sec_title("ÉTAPES DE PRODUCTION", y_cur)
@@ -126,9 +134,8 @@ def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
         for i,h in enumerate(["ÉTAPE","STATUT","OPÉRATEUR","DURÉE"]):
             c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_e[i]+2*mm,y_cur-3*mm,h)
         y_cur-=6*mm
-        for idx,sn in enumerate(STAGE_ORDER):
-            e=next((x for x in of["etapes"] if x["etape"]==sn),None)
-            if not e: continue
+        for idx,e in enumerate(of["etapes"]):
+            sn = e.get("etape") or e.get("operation_nom","—")
             rh=8*mm; y_cur-=rh
             if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
             duree="—"

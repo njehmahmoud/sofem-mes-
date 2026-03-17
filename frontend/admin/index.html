@@ -307,7 +307,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
       </div>
     </div>
     <div class="tw"><table>
-      <thead><tr><th><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)"></th><th>N° OF</th><th>BL</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Opérateur</th><th>Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
+      <thead><tr><th><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)"></th><th>N° OF</th><th>BL</th><th>Produit</th><th>Client</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Opérations</th><th>Chef Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
       <tbody id="orders-tb"><tr><td colspan="12"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -331,7 +331,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>AutoCAD</th><th>Découpage</th><th>Pliage</th><th>Soudage</th><th>Ponçage</th><th>Opérateur</th></tr></thead>
+      <thead id="monitor-thead"><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Qté</th><th id="monitor-op-cols">Opérations</th></tr></thead>
       <tbody id="monitor-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -1100,6 +1100,6 @@ if ($('role-badge'))  $('role-badge').textContent  = _u.role || 'ADMIN';
 if ($('footer-user')) $('footer-user').textContent = `${_u.role||''} · ${_u.prenom||''} ${_u.nom||''}`;
 if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
 navigate('dashboard');
-</script></div>
+</script>
 </body>
 </html>
