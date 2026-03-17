@@ -20,7 +20,9 @@ def rapport_operateurs(db=Depends(get_db)):
         COUNT(DISTINCT ep.of_id) total_ofs,
         SUM(ep.statut='COMPLETED') etapes_completes,
         ROUND(AVG(TIMESTAMPDIFF(MINUTE,ep.debut,ep.fin)),0) duree_moy_min
-        FROM operateurs o LEFT JOIN etapes_production ep ON o.id=ep.operateur_id
+        FROM operateurs o
+        LEFT JOIN op_operateurs oo ON oo.operateur_id = o.id
+        LEFT JOIN of_operations ep ON ep.id = oo.operation_id
         WHERE o.actif=TRUE GROUP BY o.id ORDER BY etapes_completes DESC"""))
 
 @router.get("/stock-alertes", dependencies=[Depends(require_manager_or_admin)])

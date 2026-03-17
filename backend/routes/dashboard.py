@@ -1,4 +1,4 @@
-"""SOFEM MES v2.0 — Dashboard Routes"""
+"""SOFEM MES v6.0 — Dashboard Routes"""
 
 from fastapi import APIRouter, Depends
 from database import get_db, q, serialize
@@ -25,19 +25,33 @@ def dashboard(db=Depends(get_db)):
     return serialize({
         "ordres_actifs": actifs, "urgents": urgents,
         "taux_completion": taux, "alertes_stock": al_stock,
-        "en_retard": retard, "graphique": graphique
+        "en_retard": retard, "graphique": graphique,
+        # aliases used by dashboard.js
+        "total_ofs": actifs, "in_progress": actifs,
+        "completed_today": comp_m, "stock_alerts": al_stock,
+        "production_par_semaine": graphique
     })
 
 @router.get("/operator/{operateur_id}", dependencies=[Depends(require_any_role)])
 def dashboard_operator(operateur_id: int, db=Depends(get_db)):
-    """Dashboard for a specific operator — only their data"""
-    mes_ofs  = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE operateur_id=%s AND statut='IN_PROGRESS'", (operateur_id,), one=True)["n"]
-    termines = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE operateur_id=%s AND statut='COMPLETED'", (operateur_id,), one=True)["n"]
-    total    = q(db, "SELECT COUNT(*) n FROM ordres_fabrication WHERE operateur_id=%s", (operateur_id,), one=True)["n"]
-    etapes   = q(db, """
-        SELECT COUNT(*) n FROM etapes_production ep
-        JOIN ordres_fabrication o ON ep.of_id=o.id
-        WHERE o.operateur_id=%s AND ep.statut='IN_PROGRESS'
+    """Dashboard for a specific operator"""
+    mes_ops  = q(db, """
+        SELECT COUNT(*) n FROM op_operateurs oo
+        JOIN of_operations op ON op.id = oo.operation_id
+        JOIN ordres_fabrication o ON o.id = op.of_id
+        WHERE oo.operateur_id=%s AND o.statut='IN_PROGRESS'
+    """, (operateur_id,), one=True)["n"]
+    termines = q(db, """
+        SELECT COUNT(DISTINCT o.id) n FROM op_operateurs oo
+        JOIN of_operations op ON op.id = oo.operation_id
+        JOIN ordres_fabrication o ON o.id = op.of_id
+        WHERE oo.operateur_id=%s AND o.statut='COMPLETED'
+    """, (operateur_id,), one=True)["n"]
+    total    = q(db, """
+        SELECT COUNT(DISTINCT o.id) n FROM op_operateurs oo
+        JOIN of_operations op ON op.id = oo.operation_id
+        JOIN ordres_fabrication o ON o.id = op.of_id
+        WHERE oo.operateur_id=%s
     """, (operateur_id,), one=True)["n"]
     perf = round(termines / total * 100, 1) if total > 0 else 0
-    return {"mes_ofs_actifs": mes_ofs, "ofs_termines": termines, "etapes_en_cours": etapes, "performance": perf}
+    return {"mes_ofs_actifs": mes_ops, "ofs_termines": termines, "performance": perf}
