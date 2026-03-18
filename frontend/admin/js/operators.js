@@ -2,21 +2,26 @@
 async function loadOperators() {
   try {
     const ops = await api('/api/operateurs') || [];
-    $('operators-tb').innerHTML = ops.length === 0 ? empty(8) : ops.map(o => `<tr>
-      <td><strong>${o.prenom} ${o.nom}</strong></td>
-      <td><span class="badge b-draft">${o.specialite}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${o.telephone||'—'}</td>
-      <td style="font-size:11px">${o.email||'—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${o.type_taux||'HORAIRE'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">
-        ${o.type_taux==='PIECE'?'—':o.taux_horaire+' TND/h'}
-      </td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">
-        ${o.type_taux==='HORAIRE'?'—':o.taux_piece+' TND/pcs'}
-      </td>
-      <td><button class="fbtn" onclick="openEditOperateur(${JSON.stringify(o).replace(/"/g,'&quot;')})">✎</button>
-          <button class="fbtn" style="color:var(--red)" onclick="deleteOperateur(${o.id})">✕</button></td>
-    </tr>`).join('');
+    const init = o => (o.prenom[0]||'')+(o.nom[0]||'');
+    $('ops-tb').innerHTML = ops.length === 0 ? empty(9) : ops.map(o => {
+      const tauxStr = o.type_taux==='PIECE' ? `${o.taux_piece} TND/pcs`
+                    : o.type_taux==='BOTH'  ? `${o.taux_horaire} TND/h + ${o.taux_piece} TND/pcs`
+                    :                         `${o.taux_horaire} TND/h`;
+      return `<tr>
+        <td><div style="width:32px;height:32px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#fff">${init(o)}</div></td>
+        <td>${o.prenom}</td>
+        <td><strong>${o.nom}</strong></td>
+        <td><span class="badge b-draft">${o.specialite}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${o.telephone||'—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)">${tauxStr}</td>
+        <td>—</td>
+        <td><span class="badge b-completed">ACTIF</span></td>
+        <td>
+          <button class="fbtn" onclick="openEditOperateur(${JSON.stringify(o).replace(/"/g,'&quot;')})">✎</button>
+          <button class="fbtn" style="color:var(--red)" onclick="deleteOperateur(${o.id})">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
   } catch(e) { toast('Erreur opérateurs: ' + e.message, 'err'); }
 }
 

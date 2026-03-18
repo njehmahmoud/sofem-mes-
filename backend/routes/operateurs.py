@@ -1,4 +1,4 @@
-"""SOFEM MES v6.0 — Opérateurs (with taux horaire/pièce)"""
+"""SOFEM MES v6.0 — Opérateurs"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db, q, exe, serialize
@@ -10,16 +10,11 @@ router = APIRouter(prefix="/api/operateurs", tags=["operateurs"])
 
 @router.get("", dependencies=[Depends(require_any_role)])
 def list_operateurs(db=Depends(get_db)):
+    # Simple query — no heavy joins
     ops = q(db, """
-        SELECT o.*,
-               COUNT(DISTINCT oo.operation_id) total_operations,
-               COUNT(DISTINCT of2.id) total_ofs
-        FROM operateurs o
-        LEFT JOIN op_operateurs oo ON oo.operateur_id = o.id
-        LEFT JOIN of_operations ops2 ON ops2.id = oo.operation_id
-        LEFT JOIN ordres_fabrication of2 ON of2.id = ops2.of_id
-        WHERE o.actif = TRUE
-        GROUP BY o.id ORDER BY o.nom
+        SELECT * FROM operateurs
+        WHERE actif = TRUE
+        ORDER BY nom
     """)
     return serialize(ops)
 
@@ -28,15 +23,18 @@ def list_operateurs(db=Depends(get_db)):
 def get_operateur(op_id: int, db=Depends(get_db)):
     op = q(db, "SELECT * FROM operateurs WHERE id=%s", (op_id,), one=True)
     if not op: raise HTTPException(404, "Opérateur introuvable")
-    op["operations_recentes"] = q(db, """
-        SELECT ops.operation_nom, ops.statut, ops.debut, ops.fin,
-               ops.duree_reelle, of2.numero of_numero
-        FROM op_operateurs oo
-        JOIN of_operations ops ON ops.id = oo.operation_id
-        JOIN ordres_fabrication of2 ON of2.id = ops.of_id
-        WHERE oo.operateur_id = %s
-        ORDER BY ops.created_at DESC LIMIT 10
-    """, (op_id,))
+    try:
+        op["operations_recentes"] = q(db, """
+            SELECT ops.operation_nom, ops.statut, ops.debut, ops.fin,
+                   ops.duree_reelle, of2.numero of_numero
+            FROM op_operateurs oo
+            JOIN of_operations ops ON ops.id = oo.operation_id
+            JOIN ordres_fabrication of2 ON of2.id = ops.of_id
+            WHERE oo.operateur_id = %s
+            ORDER BY ops.created_at DESC LIMIT 10
+        """, (op_id,))
+    except Exception:
+        op["operations_recentes"] = []
     return serialize(op)
 
 
