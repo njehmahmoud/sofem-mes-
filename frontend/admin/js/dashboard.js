@@ -3,47 +3,51 @@ async function loadDashboard() {
   try {
     const [dash, ofs, mats] = await Promise.all([
       api('/api/dashboard'),
-      api('/api/of?limit=10'),
+      api('/api/of?limit=50'),
       api('/api/materiaux')
     ]);
     if (!dash) return;
 
-    // KPIs — use correct element IDs from HTML
+    // KPIs
     if ($('k-actifs'))  $('k-actifs').textContent  = dash.ordres_actifs  ?? 0;
     if ($('k-urgents')) $('k-urgents').textContent = dash.urgents        ?? 0;
     if ($('k-taux'))    $('k-taux').textContent    = (dash.taux_completion ?? 0) + '%';
     if ($('k-stock'))   $('k-stock').textContent   = dash.alertes_stock  ?? 0;
     if ($('k-retard'))  $('k-retard').textContent  = dash.en_retard      ?? 0;
 
-    // Pipeline — dynamic from active OFs
-    if (ofs) {
+    // Pipeline — aggregate all operations across IN_PROGRESS OFs
+    const pipeEl = $('dash-pipeline');
+    if (pipeEl && ofs) {
       const activeOfs = ofs.filter(o => o.statut === 'IN_PROGRESS');
-      const opNames = [...new Set(
-        activeOfs.flatMap(o => (o.operations||[]).map(op => op.operation_nom))
-      )];
-      const pipeEl = document.querySelector('.pipeline-steps');
-      if (pipeEl) {
-        if (opNames.length === 0) {
-          pipeEl.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:1rem;font-family:\'IBM Plex Mono\',monospace">Aucun ordre en cours</div>';
-        } else {
-          pipeEl.innerHTML = opNames.map((name, i) => {
-            const all  = activeOfs.flatMap(o => (o.operations||[]).filter(op => op.operation_nom === name));
-            const inp  = all.filter(op => op.statut === 'IN_PROGRESS').length;
-            const done = all.filter(op => op.statut === 'COMPLETED').length;
-            const cls  = inp > 0 ? 'active' : done > 0 ? 'done' : 'pending';
-            const val  = inp > 0 ? inp : done > 0 ? '✓' : '○';
-            return `<div class="ps">
-              <div class="ps-circle ${cls}"><span>${val}</span></div>
-              <div class="ps-label">${name}</div>
-            </div>${i < opNames.length-1 ? '<div class="ps-arrow">→</div>' : ''}`;
-          }).join('');
-        }
+      // collect unique operation names preserving order
+      const opMap = new Map();
+      activeOfs.forEach(of => {
+        (of.operations||[]).forEach(op => {
+          if (!opMap.has(op.operation_nom)) opMap.set(op.operation_nom, {inp:0, done:0, total:0});
+          const e = opMap.get(op.operation_nom);
+          e.total++;
+          if (op.statut === 'IN_PROGRESS') e.inp++;
+          if (op.statut === 'COMPLETED')   e.done++;
+        });
+      });
+      if (opMap.size === 0) {
+        pipeEl.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'IBM Plex Mono\',monospace;padding:.5rem">Aucun ordre en cours</div>';
+      } else {
+        const entries = [...opMap.entries()];
+        pipeEl.innerHTML = entries.map(([name, s], i) => {
+          const cls = s.inp > 0 ? 'active' : s.done === s.total ? 'done' : 'pending';
+          const val = s.inp > 0 ? s.inp : s.done > 0 ? '✓' : '○';
+          return `<div class="stage">
+            <div class="sb ${cls}">${val}</div>
+            <div class="stage-name">${name}</div>
+          </div>${i < entries.length-1 ? '<div style="color:var(--muted);margin:0 4px">→</div>' : ''}`;
+        }).join('');
       }
     }
 
-    // Recent OFs table
+    // Recent OFs — 8 cols: N° OF, Produit, Client, Qté, Priorité, Statut, Opérations, Échéance
     if (ofs && $('dash-ofs')) {
-      $('dash-ofs').innerHTML = ofs.length === 0 ? empty(7) : ofs.slice(0,6).map(of => `
+      $('dash-ofs').innerHTML = ofs.length === 0 ? empty(8) : ofs.slice(0,6).map(of => `
         <tr>
           <td><span class="of-num">${of.numero}</span></td>
           <td>${of.produit_nom}</td>
@@ -52,6 +56,7 @@ async function loadDashboard() {
           <td>${pBadge(of.priorite)}</td>
           <td>${sBadge(of.statut)}</td>
           <td>${dots(of.operations)}</td>
+          <td>${dateTd(of.date_echeance)}</td>
         </tr>`).join('');
     }
 
@@ -61,19 +66,19 @@ async function loadDashboard() {
       $('dash-alerts').innerHTML = alerts.length === 0
         ? '<div style="color:var(--green);font-size:11px;padding:.5rem">✓ Tous les stocks OK</div>'
         : alerts.map(m => `
-            <div class="mat-item">
-              <div style="flex:1">
-                <div class="mat-name">${m.nom}</div>
-                <div class="mat-ref">${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</div>
-              </div>
-              <span class="badge b-urgent">ALERTE</span>
-            </div>`).join('');
+          <div class="mat-item">
+            <div style="flex:1">
+              <div class="mat-name">${m.nom}</div>
+              <div class="mat-ref">${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</div>
+            </div>
+            <span class="badge b-urgent">ALERTE</span>
+          </div>`).join('');
     }
 
     // OF par mois chart
-    if (dash.graphique?.length && $('rep-chart')) {
+    if (dash.graphique?.length && $('dash-chart')) {
       const max = Math.max(...dash.graphique.map(d => d.total), 1);
-      $('rep-chart').innerHTML = dash.graphique.map((d, i, arr) =>
+      $('dash-chart').innerHTML = dash.graphique.map((d, i, arr) =>
         `<div class="bc">
           <div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--text);margin-bottom:2px">${d.total}</span>

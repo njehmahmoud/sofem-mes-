@@ -240,18 +240,12 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">PRODUCTION</span></div></div>
-    <div class="pipeline">
-      <div class="stage"><div class="sb pending" id="pip-0">○</div><div class="stage-name">AutoCAD</div></div>
-      <div class="stage"><div class="sb pending" id="pip-1">○</div><div class="stage-name">Découpage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-2">○</div><div class="stage-name">Pliage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-3">○</div><div class="stage-name">Soudage</div></div>
-      <div class="stage"><div class="sb pending" id="pip-4">○</div><div class="stage-name">Ponçage</div></div>
-    </div>
+    <div class="pipeline" id="dash-pipeline"><div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Chargement...</div></div>
   </div>
   <div class="sec">
     <div class="sec-h"><div class="sec-title">ORDRES <span class="ac">RÉCENTS</span></div></div>
     <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Étapes</th><th>Échéance</th></tr></thead>
+      <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Opérations</th><th>Échéance</th></tr></thead>
       <tbody id="dash-ofs"><tr><td colspan="7"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
     </table></div>
   </div>
@@ -323,13 +317,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">GLOBAL</span></div><div id="mon-stats" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)"></div></div>
-    <div class="pipeline">
-      <div class="stage"><div class="sb pending" id="mp-0">—</div><div class="stage-name">AutoCAD</div></div>
-      <div class="stage"><div class="sb pending" id="mp-1">—</div><div class="stage-name">Découpage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-2">—</div><div class="stage-name">Pliage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-3">—</div><div class="stage-name">Soudage</div></div>
-      <div class="stage"><div class="sb pending" id="mp-4">—</div><div class="stage-name">Ponçage</div></div>
-    </div>
+    <div class="pipeline" id="mon-pipeline"><div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Chargement...</div></div>
   </div>
   <div class="sec">
     <div class="tw"><table>

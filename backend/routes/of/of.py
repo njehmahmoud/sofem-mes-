@@ -109,13 +109,18 @@ def list_of(statut: Optional[str]=None, priorite: Optional[str]=None,
                 SELECT op.id, op.ordre, op.operation_nom, op.statut,
                        op.debut, op.fin, op.duree_reelle, op.machine_id,
                        m.nom machine_nom,
-                       GROUP_CONCAT(CONCAT(o2.prenom,' ',o2.nom) SEPARATOR ', ') operateurs_noms
+                       COALESCE(GROUP_CONCAT(
+                           DISTINCT CONCAT(o2.prenom,' ',o2.nom)
+                           ORDER BY o2.nom SEPARATOR ', '
+                       ),'') operateurs_noms
                 FROM of_operations op
                 LEFT JOIN machines m ON m.id = op.machine_id
                 LEFT JOIN op_operateurs oo ON oo.operation_id = op.id
                 LEFT JOIN operateurs o2 ON o2.id = oo.operateur_id
                 WHERE op.of_id = %s
-                GROUP BY op.id ORDER BY op.ordre, op.id
+                GROUP BY op.id, op.ordre, op.operation_nom, op.statut,
+                         op.debut, op.fin, op.duree_reelle, op.machine_id, m.nom
+                ORDER BY op.ordre, op.id
             """, (of["id"],))
         except Exception:
             of["operations"] = []
