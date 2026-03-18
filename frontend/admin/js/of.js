@@ -153,10 +153,12 @@ function printFacture(ofId, type='interne') {
 async function openOFModal() {
   _ofOpsData = [];
   _ofBomData = [];
-  const [prods, ops, clients, machines] = await Promise.all([
+  const [prods, ops, clients, machines, opTypes] = await Promise.all([
     api('/api/produits'), api('/api/operateurs'),
-    api('/api/clients'),  api('/api/machines')
+    api('/api/clients'),  api('/api/machines'),
+    api('/api/operation-types')
   ]);
+  window._opTypesCache = opTypes || [];
 
   // Populate selects
   $('of-prod').innerHTML = (prods||[]).map(p =>
@@ -211,32 +213,44 @@ function onOFQtyChange() {
 
 // ── DYNAMIC OPERATIONS BUILDER ───────────────────────────
 function renderOFOpsBuilder() {
-  const ops  = window._opsCache || [];
-  const mach = window._machinesCache || [];
+  const ops    = window._opsCache || [];
+  const mach   = window._machinesCache || [];
+  const types  = window._opTypesCache || [];
+
   $('of-ops-list').innerHTML = _ofOpsData.length === 0
-    ? '<div style="color:var(--muted);font-size:11px;padding:.5rem">— Aucune opération —</div>'
+    ? '<div style="color:var(--muted);font-size:11px;padding:.5rem">— Cliquez + Ajouter pour créer une op&eacute;ration —</div>'
     : _ofOpsData.map((op, i) => `
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem;margin-bottom:.4rem">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--red);font-weight:600">${i+1}</span>
-          <input value="${op.operation_nom}" placeholder="Nom opération"
-            style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 7px;color:var(--text);font-size:11px"
-            onchange="_ofOpsData[${i}].operation_nom=this.value">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--red);font-weight:600;min-width:16px">${i+1}</span>
+
+          <!-- Operation type dropdown -->
+          <select onchange="_ofOpsData[${i}].operation_nom=this.value"
+            style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px">
+            <option value="">— Sélectionner opération —</option>
+            ${types.map(t => `<option value="${t.nom}" ${op.operation_nom===t.nom?'selected':''}>${t.nom}</option>`).join('')}
+          </select>
+
+          <!-- Machine dropdown -->
           <select onchange="_ofOpsData[${i}].machine_id=this.value?parseInt(this.value):null"
-            style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:10px">
+            style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px">
             <option value="">— Machine —</option>
             ${mach.map(m => `<option value="${m.id}" ${op.machine_id===m.id?'selected':''}>${m.nom}</option>`).join('')}
           </select>
+
           <button class="fbtn" style="color:var(--red)" onclick="_ofOpsData.splice(${i},1);renderOFOpsBuilder()">✕</button>
         </div>
-        <div style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:3px">OPÉRATEURS</div>
+
+        <!-- Operators for this operation -->
+        <div style="font-size:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Opérateurs</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
           ${ops.map(o => {
             const checked = (op.operateur_ids||[]).includes(o.id);
-            return `<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;padding:2px 6px;background:${checked?'rgba(212,43,43,0.15)':'var(--bg2)'};border:1px solid ${checked?'var(--red)':'var(--border)'};border-radius:4px">
+            return `<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;padding:2px 7px;background:${checked?'rgba(212,43,43,0.12)':'var(--bg2)'};border:1px solid ${checked?'var(--red)':'var(--border)'};border-radius:4px;transition:all .1s">
               <input type="checkbox" ${checked?'checked':''} style="accent-color:var(--red)"
                 onchange="toggleOpOnOp(${i},${o.id},this.checked)">
               ${o.prenom} ${o.nom}
+              <span style="font-size:8px;color:var(--muted);margin-left:2px">(${o.specialite||''})</span>
             </label>`;
           }).join('')}
         </div>
@@ -297,10 +311,12 @@ async function createOF() {
 async function openEditOF(ofId) {
   const of = await api(`/api/of/${ofId}`);
   if (!of) return;
-  const [prods, ops, clients, machines] = await Promise.all([
+  const [prods, ops, clients, machines, opTypes] = await Promise.all([
     api('/api/produits'), api('/api/operateurs'),
-    api('/api/clients'),  api('/api/machines')
+    api('/api/clients'),  api('/api/machines'),
+    api('/api/operation-types')
   ]);
+  window._opTypesCache = opTypes || [];
 
   // Pre-fill OF modal with existing data
   window._editingOfId = ofId;

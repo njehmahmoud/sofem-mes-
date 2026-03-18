@@ -204,6 +204,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="nav-group" id="admin-only-nav">
     <div class="nav-lbl">Admin</div>
     <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
+    <div class="nav-item" data-p="op-types">⚙️ Opérations</div>
     <div class="nav-item" data-p="reports">📊 Rapports</div>
   </div>
   <div class="sidebar-footer">SOFEM MES v6.0<br>SMARTMOVE · 2025</div>
@@ -701,7 +702,39 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
+
+<!-- OPERATION TYPES -->
+<div class="page" id="page-op-types">
+  <div class="ph">
+    <div><div class="ph-title">TYPES D'<span>OPÉRATIONS</span></div>
+    <div class="ph-sub">// CATALOGUE DES OPÉRATIONS DE PRODUCTION</div></div>
+    <button class="btn" onclick="openNewOpType()">+ Nouvelle Opération</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Ordre</th><th>Nom</th><th>Description</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="op-types-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
 </main>
+
+
+<!-- OPERATION TYPES -->
+<div class="page" id="page-op-types">
+  <div class="ph">
+    <div><div class="ph-title">TYPES D'<span>OPÉRATIONS</span></div>
+    <div class="ph-sub">// CATALOGUE DES OPÉRATIONS DE PRODUCTION</div></div>
+    <button class="btn" onclick="openNewOpType()">+ Nouvelle Opération</button>
+  </div>
+  <div class="sec">
+    <div class="tw"><table>
+      <thead><tr><th>Ordre</th><th>Nom</th><th>Description</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody id="op-types-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
 
 </main>
 </div>
@@ -1063,6 +1096,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 <script src="/admin/js/fournisseurs.js"></script>
 <script src="/admin/js/reports.js"></script>
 <script src="/admin/js/users.js"></script>
+<script src="/admin/js/operation_types.js"></script>
 <script>
 window.pageLoaders = {
   dashboard:    loadDashboard,
@@ -1084,6 +1118,7 @@ window.pageLoaders = {
   planning:     loadPlanning,
   fournisseurs: loadFournisseurs,
   users:        loadUsers,
+  'op-types':   loadOpTypes,
   reports:      loadReports,
 };
 const _u = getUserInfo();
@@ -1158,6 +1193,30 @@ navigate('dashboard');
     </div>
     <div class="modal-f">
       <button class="btn" onclick="closeModal('m-bl-notready')">OK</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- OPERATION TYPE MODAL -->
+<div class="overlay" id="m-op-type">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE OPÉRATION</div>
+      <button class="x" onclick="closeModal('m-op-type')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="opt-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="opt-nom" placeholder="Ex: Fraisage, Tournage..."></div>
+      <div class="fg"><label>Description</label>
+        <input type="text" id="opt-desc" placeholder="Description courte"></div>
+      <div class="fg"><label>Ordre d'affichage</label>
+        <input type="number" id="opt-ordre" value="0" min="0"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-op-type')">Annuler</button>
+      <button class="btn" onclick="saveOpType()">Enregistrer</button>
     </div>
   </div>
 </div>
