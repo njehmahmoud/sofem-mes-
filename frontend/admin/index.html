@@ -883,15 +883,27 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="modal">
     <div class="modal-h"><div class="modal-title">NOUVELLE DEMANDE D'ACHAT</div><button class="x" onclick="closeModal('m-da')">✕</button></div>
     <div class="modal-b">
-      <div class="fg"><label>Description *</label><input type="text" id="da-desc" placeholder="Ex: Tôle acier 2mm..."></div>
-      <div class="fg"><label>Matériau lié (optionnel)</label><select id="da-mat"><option value="">— Aucun —</option></select></div>
+      <div class="fg"><label>Description *</label>
+        <input type="text" id="da-desc" placeholder="Ex: Acier Rond 40 10m"></div>
       <div class="row2">
-        <div class="fg"><label>Quantité *</label><input type="number" id="da-qte" min="0.01" step="0.01" value="1"></div>
-        <div class="fg"><label>Unité</label><input type="text" id="da-unite" value="pcs"></div>
+        <div class="fg"><label>Matériau lié</label>
+          <select id="da-mat"><option value="">— Aucun —</option></select></div>
+        <div class="fg"><label>OF lié</label>
+          <select id="da-of"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Objet (pour BA PDF)</label>
+        <textarea id="da-objet" rows="2" placeholder="Détail de la demande — apparaît sur le BA PDF"></textarea></div>
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="da-qte" min="0.01" step="0.01" value="1"></div>
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="da-unite" value="pcs"></div>
       </div>
       <div class="row2">
-        <div class="fg"><label>Urgence</label><select id="da-urgence"><option value="NORMAL">Normal</option><option value="URGENT">URGENT</option></select></div>
-        <div class="fg"><label>Demandeur</label><select id="da-demandeur"><option value="">— Aucun —</option></select></div>
+        <div class="fg"><label>Urgence</label>
+          <select id="da-urgence"><option value="NORMAL">Normal</option><option value="URGENT">URGENT</option></select></div>
+        <div class="fg"><label>Demandeur</label>
+          <select id="da-demandeur"><option value="">— Aucun —</option></select></div>
       </div>
       <div class="fg"><label>Notes</label><textarea id="da-notes" rows="2"></textarea></div>
     </div>

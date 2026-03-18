@@ -8,10 +8,18 @@ async function loadDA() {
       api('/api/of?limit=500'), api('/api/operateurs')
     ]);
     // Populate modal selects
-    if (mats) $('da-mat').innerHTML = '<option value="">— Matériau —</option>' +
-      mats.map(m => `<option value="${m.id}">${m.nom} (${m.stock_actuel} ${m.unite})</option>`).join('');
-    if (ofs) $('da-of').innerHTML = '<option value="">— OF lié —</option>' +
-      ofs.map(o => `<option value="${o.id}">${o.numero} — ${o.produit_nom}</option>`).join('');
+    if (mats) $('da-mat').innerHTML = '<option value="">— Aucun —</option>' +
+      mats.map(m => `<option value="${m.id}">${m.nom} (stock: ${m.stock_actuel} ${m.unite})</option>`).join('');
+    if (ofs) {
+      const daOfEl = $('da-of');
+      if (daOfEl) daOfEl.innerHTML = '<option value="">— Aucun —</option>' +
+        ofs.map(o => `<option value="${o.id}">${o.numero} — ${o.produit_nom}</option>`).join('');
+    }
+    // Populate demandeur from operateurs
+    const opsList = await api('/api/operateurs') || [];
+    const demEl = $('da-demandeur');
+    if (demEl) demEl.innerHTML = '<option value="">— Aucun —</option>' +
+      opsList.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
     if (ops) $('da-demandeur').innerHTML = '<option value="">— Aucun —</option>' +
       ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
 
@@ -39,17 +47,18 @@ async function loadDA() {
 }
 
 async function saveDA() {
-  if (!$('da-desc').value) { toast('Description requise','err'); return; }
+  if (!$('da-desc')?.value) { toast('Description requise','err'); return; }
   try {
     const res = await api('/api/achats/da','POST',{
-      materiau_id:  $('da-mat').value ? parseInt($('da-mat').value) : null,
-      of_id:        $('da-of').value  ? parseInt($('da-of').value)  : null,
+      materiau_id:  $('da-mat')?.value       ? parseInt($('da-mat').value)       : null,
+      of_id:        $('da-of')?.value         ? parseInt($('da-of').value)         : null,
       description:  $('da-desc').value,
-      objet:        $('da-objet').value||null,
-      quantite:     parseFloat($('da-qte').value)||1,
-      unite:        $('da-unite').value||'pcs',
-      urgence:      $('da-urgence').value,
-      notes:        $('da-notes').value||null
+      objet:        $('da-objet')?.value      || null,
+      quantite:     parseFloat($('da-qte')?.value)||1,
+      unite:        $('da-unite')?.value      || 'pcs',
+      urgence:      $('da-urgence')?.value    || 'NORMAL',
+      notes:        $('da-notes')?.value      || null,
+      demandeur_id: $('da-demandeur')?.value  ? parseInt($('da-demandeur').value) : null
     });
     toast(`${res.da_numero} créée ✓`); closeModal('m-da'); loadDA();
   } catch(e) { toast(e.message,'err'); }
