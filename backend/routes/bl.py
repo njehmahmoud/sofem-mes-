@@ -1,4 +1,4 @@
-"""SOFEM MES v3.0 — Bon de Livraison Routes"""
+"""SOFEM MES v6.0 — Bon de Livraison Routes"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -35,10 +35,13 @@ def gen_bl_number(db) -> str:
 @router.get("", dependencies=[Depends(require_any_role)])
 def list_bl(db=Depends(get_db)):
     return serialize(q(db, """
-        SELECT bl.*, o.numero of_numero, p.nom produit_nom, o.quantite
+        SELECT bl.*, o.numero of_numero, o.statut of_statut,
+               p.nom produit_nom, o.quantite,
+               c.nom client_nom, c.matricule_fiscal client_mf
         FROM bons_livraison bl
         JOIN ordres_fabrication o ON bl.of_id=o.id
         JOIN produits p ON o.produit_id=p.id
+        LEFT JOIN clients c ON c.id = o.client_id
         ORDER BY bl.created_at DESC
     """))
 
@@ -174,6 +177,19 @@ def update_bl(bl_id: int, data: BLUpdate, db=Depends(get_db),
               user=Depends(require_any_role)):
     bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
     if not bl: raise HTTPException(404, "BL non trouvé")
+    # Save current version before update
+    last_ver = q(db, "SELECT MAX(version) v FROM bl_versions WHERE bl_id=%s",
+                 (bl_id,), one=True)
+    ver = (last_ver["v"] or 0) + 1
+    try:
+        exe(db, """
+            INSERT INTO bl_versions
+              (bl_id,version,destinataire,adresse,date_livraison,notes,modifie_par)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """, (bl_id, ver, bl["destinataire"], bl["adresse"],
+              bl["date_livraison"], bl["notes"],
+              user.get("prenom","") + " " + user.get("nom","")))
+    except Exception: pass  # bl_versions table may not exist yet
     fields, vals = [], []
     if data.statut         is not None: fields.append("statut=%s");         vals.append(data.statut)
     if data.date_livraison is not None: fields.append("date_livraison=%s"); vals.append(data.date_livraison)
@@ -181,7 +197,51 @@ def update_bl(bl_id: int, data: BLUpdate, db=Depends(get_db),
     if fields:
         vals.append(bl_id)
         exe(db, f"UPDATE bons_livraison SET {','.join(fields)} WHERE id=%s", vals)
-    return {"message": "BL mis à jour"}
+    return {"message": "BL mis à jour", "version": ver}
+
+
+@router.put("/{bl_id}/details")
+def update_bl_details(bl_id: int, db=Depends(get_db),
+                      user=Depends(require_any_role),
+                      destinataire: str = None,
+                      adresse: str = None,
+                      notes: str = None):
+    """Update BL recipient/address/notes (editable even after delivery)."""
+    bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
+    if not bl: raise HTTPException(404, "BL non trouvé")
+    # Save version
+    last_ver = q(db, "SELECT MAX(version) v FROM bl_versions WHERE bl_id=%s",
+                 (bl_id,), one=True)
+    ver = (last_ver["v"] or 0) + 1
+    try:
+        exe(db, """
+            INSERT INTO bl_versions
+              (bl_id,version,destinataire,adresse,date_livraison,notes,modifie_par)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """, (bl_id, ver, bl["destinataire"], bl["adresse"],
+              bl["date_livraison"], bl["notes"],
+              user.get("prenom","") + " " + user.get("nom","")))
+    except Exception: pass
+    fields, vals = [], []
+    if destinataire is not None: fields.append("destinataire=%s"); vals.append(destinataire)
+    if adresse      is not None: fields.append("adresse=%s");      vals.append(adresse)
+    if notes        is not None: fields.append("notes=%s");        vals.append(notes)
+    if fields:
+        vals.append(bl_id)
+        exe(db, f"UPDATE bons_livraison SET {','.join(fields)} WHERE id=%s", vals)
+    return {"message": "BL mis à jour", "version": ver}
+
+
+@router.get("/{bl_id}/versions")
+def get_bl_versions(bl_id: int, db=Depends(get_db), user=Depends(require_any_role)):
+    """Get version history for a BL."""
+    try:
+        versions = q(db, """
+            SELECT * FROM bl_versions WHERE bl_id=%s ORDER BY version DESC
+        """, (bl_id,))
+        return serialize(versions)
+    except Exception:
+        return []
 
 
 class BLLivrer(BaseModel):
@@ -196,6 +256,14 @@ def livrer_bl(bl_id: int, data: BLLivrer, db=Depends(get_db),
     """Mark BL as LIVRÉ, record recipient + date, auto-complete the OF."""
     bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
     if not bl: raise HTTPException(404, "BL non trouvé")
+    # Check OF is COMPLETED before allowing delivery
+    of_check = q(db, "SELECT statut FROM ordres_fabrication WHERE id=%s",
+                 (bl["of_id"],), one=True)
+    if of_check and of_check["statut"] != "COMPLETED":
+        raise HTTPException(409, {
+            "message": "Impossible de livrer — l'OF n'est pas terminé",
+            "of_statut": of_check["statut"]
+        })
     if bl["statut"] == "LIVRE":
         raise HTTPException(400, "BL déjà livré")
 

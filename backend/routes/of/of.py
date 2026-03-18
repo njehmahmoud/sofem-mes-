@@ -45,11 +45,18 @@ def get_of_full(db, of_id):
 
 
 def auto_create_das(db, of_id, produit_id, quantite, bom_overrides):
+    """Always reads from of_bom table — must be called AFTER of_bom is saved."""
     das = []
-    if bom_overrides:
-        lines = [{"materiau_id": b.materiau_id,
-                  "quantite_requise": b.quantite_requise} for b in bom_overrides]
+    # Read actual quantities from of_bom (already saved with correct totals)
+    saved = q(db, """
+        SELECT ob.materiau_id, ob.quantite_requise
+        FROM of_bom ob WHERE ob.of_id = %s
+    """, (of_id,))
+    if saved:
+        lines = [{"materiau_id": r["materiau_id"],
+                  "quantite_requise": float(r["quantite_requise"])} for r in saved]
     else:
+        # Fallback: product BOM × quantite
         raw = q(db, """
             SELECT materiau_id, quantite_par_unite * %s AS quantite_requise
             FROM bom WHERE produit_id = %s
@@ -210,8 +217,39 @@ def create_of(data: OFCreate, db=Depends(get_db)):
 @router.put("/{of_id}")
 def update_of(of_id: int, data: OFUpdate,
               user=Depends(require_any_role), db=Depends(get_db)):
-    of = q(db, "SELECT id FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+    of = q(db, "SELECT id,statut,quantite,produit_id FROM ordres_fabrication WHERE id=%s",
+           (of_id,), one=True)
     if not of: raise HTTPException(404, "OF non trouvé")
+
+    # Block advancing to IN_PROGRESS if stock insufficient
+    if data.statut == "IN_PROGRESS" and of["statut"] in ("DRAFT","APPROVED"):
+        shortfalls = []
+        bom = q(db, """
+            SELECT ob.quantite_requise, m.nom, m.unite,
+                   m.stock_actuel, m.stock_minimum, m.id materiau_id
+            FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
+            WHERE ob.of_id = %s
+        """, (of_id,))
+        for b in bom:
+            needed = float(b["quantite_requise"])
+            stock  = float(b["stock_actuel"])
+            if stock < needed:
+                shortfalls.append({
+                    "materiau": b["nom"],
+                    "unite": b["unite"],
+                    "stock": stock,
+                    "requis": needed,
+                    "manque": round(needed - stock, 3)
+                })
+        if shortfalls:
+            # Auto-create DAs for missing materials
+            das = auto_create_das(db, of_id, of["produit_id"], of["quantite"], [])
+            raise HTTPException(409, {
+                "message": "Stock insuffisant — production bloquée",
+                "shortfalls": shortfalls,
+                "das_crees": das
+            })
+
     fields, params = [], []
     for f, v in data.dict(exclude_none=True).items():
         fields.append(f"{f}=%s"); params.append(v)
@@ -222,6 +260,62 @@ def update_of(of_id: int, data: OFUpdate,
 
 
 @router.delete("/{of_id}", dependencies=[Depends(require_manager_or_admin)])
-def cancel_of(of_id: int, db=Depends(get_db)):
-    exe(db, "UPDATE ordres_fabrication SET statut='CANCELLED' WHERE id=%s", (of_id,))
-    return {"message": "OF annulé"}
+def delete_of(of_id: int, db=Depends(get_db)):
+    of = q(db, "SELECT statut FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+    if not of: raise HTTPException(404, "OF non trouvé")
+    if of["statut"] in ("COMPLETED", "CANCELLED"):
+        raise HTTPException(400, f"Impossible de supprimer un OF {of['statut']}")
+    # Cascade delete: of_operations, op_operateurs, of_bom, bons_livraison handled by FK
+    exe(db, "DELETE FROM ordres_fabrication WHERE id=%s", (of_id,))
+    return {"message": "OF supprimé"}
+
+
+@router.put("/{of_id}/full")
+def update_of_full(of_id: int, data: OFCreate,
+                   user=Depends(require_manager_or_admin), db=Depends(get_db)):
+    """Full edit of an OF — header + operations + BOM."""
+    of = q(db, "SELECT id,statut FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+    if not of: raise HTTPException(404, "OF non trouvé")
+    if of["statut"] == "COMPLETED":
+        raise HTTPException(400, "Impossible de modifier un OF terminé")
+
+    # Update header fields
+    exe(db, """
+        UPDATE ordres_fabrication SET
+          produit_id=%s, quantite=%s, priorite=%s,
+          chef_projet_id=%s, client_id=%s, plan_numero=%s,
+          atelier=%s, date_echeance=%s, notes=%s,
+          sous_traitant=%s, sous_traitant_op=%s, sous_traitant_cout=%s
+        WHERE id=%s
+    """, (data.produit_id, data.quantite, data.priorite,
+          data.chef_projet_id, data.client_id, data.plan_numero,
+          data.atelier, data.date_echeance, data.notes,
+          data.sous_traitant, data.sous_traitant_op, data.sous_traitant_cout,
+          of_id))
+
+    # Replace operations
+    exe(db, "DELETE FROM of_operations WHERE of_id=%s", (of_id,))
+    for i, op in enumerate(data.operations):
+        op_id = exe(db, """
+            INSERT INTO of_operations (of_id,ordre,operation_nom,machine_id,statut)
+            VALUES (%s,%s,%s,%s,'PENDING')
+        """, (of_id, op.ordre if op.ordre else i+1, op.operation_nom, op.machine_id))
+        for oper_id in op.operateur_ids:
+            exe(db, "INSERT IGNORE INTO op_operateurs (operation_id,operateur_id) VALUES (%s,%s)",
+                (op_id, oper_id))
+
+    # Replace BOM
+    exe(db, "DELETE FROM of_bom WHERE of_id=%s", (of_id,))
+    bom_src = data.bom_overrides if data.bom_overrides else []
+    if not bom_src:
+        raw = q(db, "SELECT materiau_id, quantite_par_unite*%s qr FROM bom WHERE produit_id=%s",
+                (data.quantite, data.produit_id))
+        from models import BOMOverride
+        bom_src = [BOMOverride(materiau_id=r["materiau_id"],
+                               quantite_requise=float(r["qr"])) for r in raw]
+    for b in bom_src:
+        exe(db, """
+            INSERT INTO of_bom (of_id,materiau_id,quantite_requise) VALUES (%s,%s,%s)
+        """, (of_id, b.materiau_id, b.quantite_requise))
+
+    return {"message": "OF mis à jour complet"}

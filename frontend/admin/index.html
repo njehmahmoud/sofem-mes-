@@ -705,6 +705,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 </main>
 </div>
+<footer class="footer"><div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div></footer>
 
 
 <div class="overlay" id="m-of">
@@ -1093,5 +1094,74 @@ if ($('role-badge'))  $('role-badge').textContent  = _u.role || 'ADMIN';
 if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
 navigate('dashboard');
 </script>
+
+<!-- STOCK WARNING MODAL -->
+<div class="overlay" id="m-stock-warning">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-h">
+      <div class="modal-title" style="color:var(--red)">⚠️ STOCK INSUFFISANT</div>
+      <button class="x" onclick="closeModal('m-stock-warning')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">
+        La production est <strong style="color:var(--red)">bloquée</strong> — matériaux manquants :
+      </div>
+      <div id="stock-warning-list"></div>
+      <div id="stock-das-created" style="margin-top:.75rem;display:none">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">✓ Demandes Achat auto-créées</div>
+        <div id="stock-das-list"></div>
+      </div>
+      <div style="margin-top:.75rem;background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.2);border-radius:6px;padding:.6rem;font-size:11px;color:var(--muted)">
+        Les DAs ont été créées. Une fois les matériaux réceptionnés et le stock mis à jour, vous pourrez démarrer la production.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal('m-stock-warning')">Compris</button>
+    </div>
+  </div>
+</div>
+
+<!-- BL EDIT MODAL -->
+<div class="overlay" id="m-bl-edit">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER BL — <span id="bl-edit-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-bl-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="bl-edit-id">
+      <div class="fg"><label>Destinataire</label><input type="text" id="bl-edit-dest"></div>
+      <div class="fg"><label>Adresse</label><textarea id="bl-edit-adresse" rows="2"></textarea></div>
+      <div class="fg"><label>Notes</label><textarea id="bl-edit-notes" rows="2"></textarea></div>
+      <div style="margin-top:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">Historique des versions</div>
+        <div id="bl-version-history" style="max-height:150px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bl-edit')">Annuler</button>
+      <button class="btn" onclick="saveBLEdit()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- BL NOT READY MODAL -->
+<div class="overlay" id="m-bl-notready">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title" style="color:var(--accent)">⚠️ OF NON TERMINÉ</div>
+      <button class="x" onclick="closeModal('m-bl-notready')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div style="font-size:12px;margin-bottom:.5rem">Impossible de marquer ce BL comme livré.</div>
+      <div style="font-size:11px;color:var(--muted)">L'ordre de fabrication associé doit être <strong style="color:var(--green)">TERMINÉ</strong> avant de pouvoir effectuer la livraison.</div>
+      <div id="bl-notready-statut" style="margin-top:.75rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal('m-bl-notready')">OK</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

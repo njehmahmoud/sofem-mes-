@@ -48,9 +48,11 @@ function renderOrders(ofs) {
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
             onclick="printFacture(${of.id},'interne')" title="Rapport interne">🖨️ Interne</button>` : ''}
         ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
-          <button class="btn btn-ghost btn-sm" onclick="advanceOF(${of.id},'${of.statut}')">▶</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="advanceOFSafe(${of.id},'${of.statut}')">▶</button>` : ''}
         ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED' ? `
-          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="cancelOF(${of.id})">✕</button>` : ''}
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openEditOF(${of.id})" title="Modifier">✎</button>` : ''}
+        ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteOF(${of.id})" title="Supprimer">🗑</button>` : ''}
       </div></td>
     </tr>`;
   }).join('');
@@ -82,8 +84,59 @@ function filterOF(btn, val, field = '') {
 async function advanceOF(id, current) {
   const next = {DRAFT:'APPROVED', APPROVED:'IN_PROGRESS', IN_PROGRESS:'COMPLETED'}[current];
   if (!next) return;
-  try { await api(`/api/of/${id}`, 'PUT', {statut:next}); toast(`OF → ${next} ✓`); loadOrders(); }
-  catch(e) { toast(e.message,'err'); }
+  try {
+    await api(`/api/of/${id}`, 'PUT', {statut: next});
+    toast(`OF → ${next} ✓`); loadOrders();
+  } catch(e) {
+    // Handle stock insufficient (409)
+    if (e.message && e.message.includes('Stock insuffisant')) {
+      try {
+        const detail = JSON.parse(e.message.replace('Stock insuffisant — ','').replace(/.*?(\{.*\}).*/s,'$1'));
+      } catch {}
+      // Re-fetch the error detail from the response
+      showStockWarning(e);
+    } else {
+      toast(e.message, 'err');
+    }
+  }
+}
+
+async function advanceOFSafe(id, current) {
+  const next = {DRAFT:'APPROVED', APPROVED:'IN_PROGRESS', IN_PROGRESS:'COMPLETED'}[current];
+  if (!next) return;
+  const res = await fetch(`${API}/api/of/${id}`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('token')},
+    body: JSON.stringify({statut: next})
+  });
+  if (res.ok) { toast(`OF → ${next} ✓`); loadOrders(); return; }
+  if (res.status === 409) {
+    const err = await res.json();
+    const detail = err.detail || err;
+    showStockWarning(detail.shortfalls || [], detail.das_crees || []);
+  } else {
+    const err = await res.json().catch(()=>({detail:'Erreur'}));
+    toast(err.detail || 'Erreur', 'err');
+  }
+}
+
+function showStockWarning(shortfalls, das) {
+  $('stock-warning-list').innerHTML = (shortfalls||[]).map(s =>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+      <span><strong>${s.materiau}</strong></span>
+      <span style="font-family:'IBM Plex Mono',monospace;color:var(--red)">
+        Stock: ${s.stock} ${s.unite} | Requis: ${s.requis} | Manque: ${s.manque}
+      </span>
+    </div>`).join('');
+  if (das && das.length > 0) {
+    $('stock-das-created').style.display = 'block';
+    $('stock-das-list').innerHTML = das.map(d =>
+      `<div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ ${d.da_numero} — ${d.materiau} (${d.quantite})</div>`
+    ).join('');
+  } else {
+    $('stock-das-created').style.display = 'none';
+  }
+  openModal('m-stock-warning');
 }
 
 async function cancelOF(id) {
@@ -236,5 +289,103 @@ async function createOF() {
     toast(msg);
     closeModal('m-of');
     loadOrders();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+
+// ── OF EDIT ───────────────────────────────────────────────
+async function openEditOF(ofId) {
+  const of = await api(`/api/of/${ofId}`);
+  if (!of) return;
+  const [prods, ops, clients, machines] = await Promise.all([
+    api('/api/produits'), api('/api/operateurs'),
+    api('/api/clients'),  api('/api/machines')
+  ]);
+
+  // Pre-fill OF modal with existing data
+  window._editingOfId = ofId;
+  $('of-prod').innerHTML = (prods||[]).map(p =>
+    `<option value="${p.id}" data-bom='${JSON.stringify(p.bom||[]).replace(/'/g,"&apos;")}'
+     ${p.id===of.produit_id?'selected':''}>${p.code} — ${p.nom}</option>`).join('');
+  $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
+    (clients||[]).map(c => `<option value="${c.id}" ${c.id===of.client_id?'selected':''}>${c.nom}</option>`).join('');
+  $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
+    (ops||[]).map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('');
+  $('of-prio').value = of.priorite || 'NORMAL';
+  $('of-atelier').value = of.atelier || 'Atelier A';
+  $('of-date').value = of.date_echeance || '';
+  $('of-plan').value = of.plan_numero || '';
+  $('of-notes').value = of.notes || '';
+  $('of-st-nom').value = of.sous_traitant || '';
+  $('of-st-op').value = of.sous_traitant_op || '';
+  $('of-st-cout').value = of.sous_traitant_cout || 0;
+  $('of-qte').value = of.quantite || 1;
+
+  // Pre-fill operations
+  window._opsCache = ops || [];
+  window._machinesCache = machines || [];
+  _ofOpsData = (of.operations||[]).map(op => ({
+    operation_nom: op.operation_nom,
+    machine_id: op.machine_id || null,
+    operateur_ids: [] // will be loaded separately
+  }));
+  renderOFOpsBuilder();
+
+  // Pre-fill BOM
+  _ofBomData = (of.bom||[]).map(b => ({...b, quantite_override: null}));
+  onOFQtyChange();
+
+  // Change modal button
+  const btn = document.querySelector('#m-of .modal-f .btn:last-child');
+  if (btn) { btn.textContent = '💾 Enregistrer modifications'; btn.onclick = saveEditOF; }
+  const title = document.querySelector('#m-of .modal-title');
+  if (title) title.textContent = `MODIFIER OF — ${of.numero}`;
+
+  openModal('m-of');
+}
+
+async function saveEditOF() {
+  const id = window._editingOfId;
+  if (!id) return;
+  const qty = parseInt($('of-qte').value) || 1;
+  const bom_overrides = _ofBomData.map((b,i) => ({
+    materiau_id: b.materiau_id,
+    quantite_requise: b.quantite_override != null ? b.quantite_override : (b.quantite_par_unite * qty)
+  }));
+  const payload = {
+    produit_id:     parseInt($('of-prod').value),
+    quantite:       qty,
+    priorite:       $('of-prio').value,
+    client_id:      $('of-client').value ? parseInt($('of-client').value) : null,
+    chef_projet_id: $('of-chef').value   ? parseInt($('of-chef').value)   : null,
+    plan_numero:    $('of-plan').value   || null,
+    atelier:        $('of-atelier').value || 'Atelier A',
+    date_echeance:  $('of-date').value,
+    notes:          $('of-notes').value  || null,
+    sous_traitant:  $('of-st-nom').value || null,
+    sous_traitant_op:   $('of-st-op').value   || null,
+    sous_traitant_cout: parseFloat($('of-st-cout').value) || 0,
+    operations:     _ofOpsData.filter(o => o.operation_nom.trim()),
+    bom_overrides:  bom_overrides.filter(b => b.quantite_requise > 0)
+  };
+  try {
+    await api(`/api/of/${id}/full`, 'PUT', payload);
+    toast('OF modifié ✓');
+    closeModal('m-of');
+    // Reset modal to create mode
+    window._editingOfId = null;
+    const btn = document.querySelector('#m-of .modal-f .btn:last-child');
+    if (btn) { btn.textContent = 'Créer OF + BL'; btn.onclick = createOF; }
+    const title = document.querySelector('#m-of .modal-title');
+    if (title) title.textContent = 'NOUVEL ORDRE DE FABRICATION';
+    loadOrders();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteOF(id) {
+  if (!confirm('Supprimer définitivement cet OF et tous ses documents liés ?')) return;
+  try {
+    await api(`/api/of/${id}`, 'DELETE');
+    toast('OF supprimé ✓'); loadOrders();
   } catch(e) { toast(e.message, 'err'); }
 }

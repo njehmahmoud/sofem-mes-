@@ -71,7 +71,27 @@ def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
     of = get_of_data(of_id, db)
     if of["statut"] != "COMPLETED":
         raise HTTPException(400, "Facture disponible uniquement pour les OFs terminés")
-    materiaux = serialize(q(db, "SELECT * FROM materiaux ORDER BY nom LIMIT 5"))
+    # Fetch actual BOM for this OF (of_bom table), fallback to product BOM
+    materiaux = serialize(q(db, """
+        SELECT m.nom, m.code, m.unite,
+               ob.quantite_requise AS quantite_estimee
+        FROM of_bom ob
+        JOIN materiaux m ON m.id = ob.materiau_id
+        WHERE ob.of_id = %s
+        ORDER BY m.nom
+    """, (of_id,)))
+    # If of_bom is empty, fall back to product BOM × quantite
+    if not materiaux:
+        materiaux = serialize(q(db, """
+            SELECT m.nom, m.code, m.unite,
+                   ROUND(b.quantite_par_unite * %s, 3) AS quantite_estimee
+            FROM bom b
+            JOIN materiaux m ON m.id = b.materiau_id
+            JOIN produits p ON p.id = b.produit_id
+            JOIN ordres_fabrication o ON o.produit_id = p.id
+            WHERE o.id = %s
+            ORDER BY m.nom
+        """, (of["quantite"], of_id)))
 
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -159,8 +179,8 @@ def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
         for i,h in enumerate(["MATÉRIAU","CODE","UNITÉ","QTÉ ESTIMÉE"]):
             c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_m[i]+2*mm,y_cur-3*mm,h)
         y_cur-=6*mm
-        for idx,m in enumerate(materiaux[:4]):
-            cons=round(float(m.get("stock_minimum",0))*0.05*of["quantite"]/100,3)
+        for idx,m in enumerate(materiaux):
+            cons=float(m.get("quantite_estimee") or 0)
             rh=8*mm; y_cur-=rh
             if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
             c.setFillColor(DARK); c.setFont("Helvetica",7.5)
