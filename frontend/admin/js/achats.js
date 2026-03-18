@@ -3,14 +3,17 @@
 // ── DA ────────────────────────────────────────────────────
 async function loadDA() {
   try {
-    const [das, mats, ofs] = await Promise.all([
-      api('/api/achats/da'), api('/api/materiaux'), api('/api/of?limit=500')
+    const [das, mats, ofs, ops] = await Promise.all([
+      api('/api/achats/da'), api('/api/materiaux'),
+      api('/api/of?limit=500'), api('/api/operateurs')
     ]);
     // Populate modal selects
     if (mats) $('da-mat').innerHTML = '<option value="">— Matériau —</option>' +
       mats.map(m => `<option value="${m.id}">${m.nom} (${m.stock_actuel} ${m.unite})</option>`).join('');
     if (ofs) $('da-of').innerHTML = '<option value="">— OF lié —</option>' +
       ofs.map(o => `<option value="${o.id}">${o.numero} — ${o.produit_nom}</option>`).join('');
+    if (ops) $('da-demandeur').innerHTML = '<option value="">— Aucun —</option>' +
+      ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
 
     $('da-tb').innerHTML = (das||[]).length===0 ? empty(9) : das.map(da => {
       const badge = {PENDING:'b-draft',APPROVED:'b-approved',REJECTED:'b-cancelled',ORDERED:'b-inprogress'}[da.statut]||'b-draft';
