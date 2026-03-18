@@ -109,32 +109,55 @@ async function advanceOFSafe(id, current) {
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('token')},
     body: JSON.stringify({statut: next})
   });
-  if (res.ok) { toast(`OF → ${next} ✓`); loadOrders(); return; }
+  if (res.ok) {
+    const labels = {APPROVED:'Approuvé', IN_PROGRESS:'En Cours', COMPLETED:'Terminé'};
+    toast(`OF → ${labels[next]||next} ✓`);
+    loadOrders();
+    return;
+  }
   if (res.status === 409) {
     const err = await res.json();
     const detail = err.detail || err;
-    showStockWarning(detail.shortfalls || [], detail.das_crees || []);
+    if (detail.statut === 'APPROVED') {
+      // OF was approved but stock insufficient — show warning and refresh
+      loadOrders();
+    }
+    if (detail.pending_das > 0) {
+      // Trying to start but DAs still pending
+      showStockWarning([], [], detail.pending_das);
+    } else {
+      showStockWarning(detail.shortfalls || [], detail.das_crees || []);
+    }
   } else {
     const err = await res.json().catch(()=>({detail:'Erreur'}));
     toast(err.detail || 'Erreur', 'err');
   }
 }
 
-function showStockWarning(shortfalls, das) {
-  $('stock-warning-list').innerHTML = (shortfalls||[]).map(s =>
-    `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-      <span><strong>${s.materiau}</strong></span>
-      <span style="font-family:'IBM Plex Mono',monospace;color:var(--red)">
-        Stock: ${s.stock} ${s.unite} | Requis: ${s.requis} | Manque: ${s.manque}
-      </span>
-    </div>`).join('');
-  if (das && das.length > 0) {
-    $('stock-das-created').style.display = 'block';
-    $('stock-das-list').innerHTML = das.map(d =>
-      `<div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ ${d.da_numero} — ${d.materiau} (${d.quantite})</div>`
-    ).join('');
-  } else {
+function showStockWarning(shortfalls, das, pendingDas) {
+  if (pendingDas > 0) {
+    $('stock-warning-list').innerHTML = `
+      <div style="padding:.75rem;background:rgba(245,166,35,0.1);border:1px solid var(--accent);border-radius:6px;font-size:12px">
+        ⏳ <strong>${pendingDas} Demande(s) d'Achat</strong> sont en attente de réception.<br>
+        <span style="color:var(--muted);font-size:11px">Le démarrage sera possible une fois les matériaux réceptionnés et le stock mis à jour.</span>
+      </div>`;
     $('stock-das-created').style.display = 'none';
+  } else {
+    $('stock-warning-list').innerHTML = (shortfalls||[]).map(s =>
+      `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+        <span><strong>${s.materiau}</strong></span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:var(--red)">
+          Stock: ${s.stock} ${s.unite} | Requis: ${s.requis} | Manque: ${s.manque}
+        </span>
+      </div>`).join('');
+    if (das && das.length > 0) {
+      $('stock-das-created').style.display = 'block';
+      $('stock-das-list').innerHTML = das.map(d =>
+        `<div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ ${d.da_numero} — ${d.materiau} (${d.quantite})</div>`
+      ).join('');
+    } else {
+      $('stock-das-created').style.display = 'none';
+    }
   }
   openModal('m-stock-warning');
 }

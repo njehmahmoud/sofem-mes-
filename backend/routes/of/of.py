@@ -1,5 +1,7 @@
 """SOFEM MES v6.0 — OF Core (CRUD)"""
 
+import logging
+logger = logging.getLogger("sofem-of")
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 from datetime import datetime
@@ -144,9 +146,18 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_of(data: OFCreate, db=Depends(get_db)):
     year = datetime.now().year
-    last = q(db, "SELECT numero FROM ordres_fabrication ORDER BY id DESC LIMIT 1", one=True)
-    try: num = int(last["numero"].split("-")[-1]) + 1 if last else 1
-    except: num = 1
+    # Find highest numeric OF number for this year
+    rows = q(db, """
+        SELECT numero FROM ordres_fabrication
+        WHERE numero LIKE %s
+        ORDER BY id DESC
+    """, (f"OF-{year}-%",))
+    num = 1
+    for row in rows:
+        try:
+            n = int(row["numero"].split("-")[-1])
+            if n >= num: num = n + 1
+        except: continue
     numero = f"OF-{year}-{str(num).zfill(3)}"
 
     of_id = exe(db, """
@@ -171,19 +182,16 @@ def create_of(data: OFCreate, db=Depends(get_db)):
             exe(db, "INSERT IGNORE INTO op_operateurs (operation_id,operateur_id) VALUES (%s,%s)",
                 (op_id, oper_id))
 
-    # BOM
-    bom_src = data.bom_overrides
+    # BOM — frontend sends quantities already multiplied by qty
+    # If no overrides sent, calculate from product BOM
+    from models import BOMOverride
+    bom_src = data.bom_overrides if data.bom_overrides else []
     if not bom_src:
         raw = q(db, "SELECT materiau_id, quantite_par_unite*%s qr FROM bom WHERE produit_id=%s",
                 (data.quantite, data.produit_id))
-        from models import BOMOverride
         bom_src = [BOMOverride(materiau_id=r["materiau_id"],
                                quantite_requise=float(r["qr"])) for r in raw]
-    else:
-        from models import BOMOverride
-        bom_src = [BOMOverride(materiau_id=b.materiau_id,
-                               quantite_requise=b.quantite_requise*data.quantite)
-                   for b in bom_src]
+    # No extra multiplication — quantities are already totals
     for b in bom_src:
         exe(db, """
             INSERT INTO of_bom (of_id,materiau_id,quantite_requise) VALUES (%s,%s,%s)
@@ -221,33 +229,49 @@ def update_of(of_id: int, data: OFUpdate,
            (of_id,), one=True)
     if not of: raise HTTPException(404, "OF non trouvé")
 
-    # Block advancing to IN_PROGRESS if stock insufficient
-    if data.statut == "IN_PROGRESS" and of["statut"] in ("DRAFT","APPROVED"):
-        shortfalls = []
+    # When advancing to APPROVED: check stock, create DAs, block IN_PROGRESS if pending DAs
+    if data.statut == "APPROVED" and of["statut"] == "DRAFT":
         bom = q(db, """
             SELECT ob.quantite_requise, m.nom, m.unite,
                    m.stock_actuel, m.stock_minimum, m.id materiau_id
             FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
             WHERE ob.of_id = %s
         """, (of_id,))
+        shortfalls = []
         for b in bom:
             needed = float(b["quantite_requise"])
             stock  = float(b["stock_actuel"])
             if stock < needed:
                 shortfalls.append({
-                    "materiau": b["nom"],
-                    "unite": b["unite"],
-                    "stock": stock,
-                    "requis": needed,
+                    "materiau": b["nom"], "unite": b["unite"],
+                    "stock": stock, "requis": needed,
                     "manque": round(needed - stock, 3)
                 })
         if shortfalls:
-            # Auto-create DAs for missing materials
+            # Auto-create DAs and approve OF but warn user
             das = auto_create_das(db, of_id, of["produit_id"], of["quantite"], [])
+            # Let the status update happen (APPROVED) but return warning
+            fields, params = ["statut=%s"], ["APPROVED"]
+            params.append(of_id)
+            exe(db, f"UPDATE ordres_fabrication SET {','.join(fields)} WHERE id=%s", params)
             raise HTTPException(409, {
-                "message": "Stock insuffisant — production bloquée",
+                "message": "OF approuvé — stock insuffisant, DAs créées. Démarrage bloqué jusqu'à réception.",
                 "shortfalls": shortfalls,
-                "das_crees": das
+                "das_crees": das,
+                "statut": "APPROVED"
+            })
+
+    # Block IN_PROGRESS if pending DAs exist for this OF
+    if data.statut == "IN_PROGRESS" and of["statut"] == "APPROVED":
+        pending_das = q(db, """
+            SELECT COUNT(*) n FROM demandes_achat
+            WHERE of_id = %s AND statut IN ('PENDING', 'ORDERED')
+        """, (of_id,), one=True)["n"]
+        if pending_das > 0:
+            raise HTTPException(409, {
+                "message": f"Démarrage bloqué — {pending_das} DA(s) en attente de réception",
+                "pending_das": pending_das,
+                "statut": "APPROVED"
             })
 
     fields, params = [], []
