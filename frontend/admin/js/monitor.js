@@ -1,4 +1,4 @@
-// ── monitor.js v6 ────────────────────────────────────────
+//  ── monitor.js v6 ────────────────────────────────────────
 async function loadMonitor() {
   try {
     const all = await api('/api/of?limit=500') || [];

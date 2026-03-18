@@ -1,4 +1,4 @@
-// ── dashboard.js v6 ──────────────────────────────────────
+//  ── dashboard.js v6 ──────────────────────────────────────
 let _dashOfs = [];
 
 async function loadDashboard() {
