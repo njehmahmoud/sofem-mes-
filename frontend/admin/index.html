@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOFEM MES v6.1 — Admin</title>
+<title>SOFEM MES v6.0 — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
@@ -705,7 +705,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 </main>
 </div>
-<footer class="footer"><div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div><div id="footer-user">—</div></footer>
+<footer class="footer"><div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div></footer>
 
 
 <div class="overlay" id="m-of">
@@ -1091,7 +1091,6 @@ const _u = getUserInfo();
 if (!localStorage.getItem('token')) window.location.href = '/';
 if ($('user-info'))   $('user-info').textContent   = _u.prenom ? `${_u.prenom} ${_u.nom}` : 'Admin';
 if ($('role-badge'))  $('role-badge').textContent  = _u.role || 'ADMIN';
-if ($('footer-user')) $('footer-user').textContent = `${_u.role||''} · ${_u.prenom||''} ${_u.nom||''}`;
 if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
 navigate('dashboard');
 </script>
