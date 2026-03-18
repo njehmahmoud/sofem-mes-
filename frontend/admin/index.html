@@ -239,8 +239,16 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div class="kpi o"><div class="kpi-lbl">En Retard</div><div class="kpi-val o" id="k-retard">—</div><div class="kpi-det">Délai dépassé</div></div>
   </div>
   <div class="sec">
-    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">PRODUCTION</span></div></div>
-    <div class="pipeline" id="dash-pipeline"><div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Chargement...</div></div>
+    <div class="sec-h">
+      <div class="sec-title">PIPELINE <span class="ac">PRODUCTION</span></div>
+      <select id="pipeline-of-select" onchange="renderDashPipeline()"
+        style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:9px">
+        <option value="">— Sélectionner un OF —</option>
+      </select>
+    </div>
+    <div class="pipeline" id="dash-pipeline" style="min-height:60px">
+      <div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Sélectionnez un OF pour voir ses opérations</div>
+    </div>
   </div>
   <div class="sec">
     <div class="sec-h"><div class="sec-title">ORDRES <span class="ac">RÉCENTS</span></div></div>
@@ -315,10 +323,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
     <div><div class="ph-title">MONITORING <span>PRODUCTION</span></div><div class="ph-sub">// CLIQUER SUR UNE ÉTAPE POUR AVANCER</div></div>
     <button class="btn btn-ghost" onclick="loadMonitor()">↺ Actualiser</button>
   </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">PIPELINE <span class="ac">GLOBAL</span></div><div id="mon-stats" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)"></div></div>
-    <div class="pipeline" id="mon-pipeline"><div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Chargement...</div></div>
-  </div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);padding:.25rem 0" id="mon-stats"></div>
   <div class="sec">
     <div class="tw"><table>
       <thead id="monitor-thead"><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Qté</th><th id="monitor-op-cols">Opérations</th></tr></thead>
@@ -700,8 +705,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 </main>
 </div>
-  <div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div>
-  <div id="footer-user">—</div>
+<footer class="footer"><div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div><div id="footer-user">—</div></footer>
 
 
 <div class="overlay" id="m-of">

@@ -1,12 +1,15 @@
 // ── dashboard.js v6 ──────────────────────────────────────
+let _dashOfs = [];
+
 async function loadDashboard() {
   try {
     const [dash, ofs, mats] = await Promise.all([
       api('/api/dashboard'),
-      api('/api/of?limit=50'),
+      api('/api/of?limit=100'),
       api('/api/materiaux')
     ]);
     if (!dash) return;
+    _dashOfs = ofs || [];
 
     // KPIs
     if ($('k-actifs'))  $('k-actifs').textContent  = dash.ordres_actifs  ?? 0;
@@ -15,37 +18,23 @@ async function loadDashboard() {
     if ($('k-stock'))   $('k-stock').textContent   = dash.alertes_stock  ?? 0;
     if ($('k-retard'))  $('k-retard').textContent  = dash.en_retard      ?? 0;
 
-    // Pipeline — aggregate all operations across IN_PROGRESS OFs
-    const pipeEl = $('dash-pipeline');
-    if (pipeEl && ofs) {
-      const activeOfs = ofs.filter(o => o.statut === 'IN_PROGRESS');
-      // collect unique operation names preserving order
-      const opMap = new Map();
-      activeOfs.forEach(of => {
-        (of.operations||[]).forEach(op => {
-          if (!opMap.has(op.operation_nom)) opMap.set(op.operation_nom, {inp:0, done:0, total:0});
-          const e = opMap.get(op.operation_nom);
-          e.total++;
-          if (op.statut === 'IN_PROGRESS') e.inp++;
-          if (op.statut === 'COMPLETED')   e.done++;
-        });
+    // Populate OF selector - show active OFs first
+    const sel = $('pipeline-of-select');
+    if (sel && ofs) {
+      const sorted = [...ofs].sort((a,b) => {
+        const order = {IN_PROGRESS:0, APPROVED:1, DRAFT:2, COMPLETED:3, CANCELLED:4};
+        return (order[a.statut]??9) - (order[b.statut]??9);
       });
-      if (opMap.size === 0) {
-        pipeEl.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'IBM Plex Mono\',monospace;padding:.5rem">Aucun ordre en cours</div>';
-      } else {
-        const entries = [...opMap.entries()];
-        pipeEl.innerHTML = entries.map(([name, s], i) => {
-          const cls = s.inp > 0 ? 'active' : s.done === s.total ? 'done' : 'pending';
-          const val = s.inp > 0 ? s.inp : s.done > 0 ? '✓' : '○';
-          return `<div class="stage">
-            <div class="sb ${cls}">${val}</div>
-            <div class="stage-name">${name}</div>
-          </div>${i < entries.length-1 ? '<div style="color:var(--muted);margin:0 4px">→</div>' : ''}`;
-        }).join('');
-      }
+      sel.innerHTML = '<option value="">— Sélectionner un OF —</option>' +
+        sorted.map(o =>
+          `<option value="${o.id}">${o.numero} · ${o.produit_nom} · ${sBadgeText(o.statut)}</option>`
+        ).join('');
+      // Auto-select first IN_PROGRESS
+      const first = sorted.find(o => o.statut === 'IN_PROGRESS');
+      if (first) { sel.value = first.id; renderDashPipeline(); }
     }
 
-    // Recent OFs — 8 cols: N° OF, Produit, Client, Qté, Priorité, Statut, Opérations, Échéance
+    // Recent OFs table
     if (ofs && $('dash-ofs')) {
       $('dash-ofs').innerHTML = ofs.length === 0 ? empty(8) : ofs.slice(0,6).map(of => `
         <tr>
@@ -89,4 +78,44 @@ async function loadDashboard() {
     }
 
   } catch(e) { toast('Erreur dashboard: ' + e.message, 'err'); }
+}
+
+// Render pipeline for the selected OF
+function renderDashPipeline() {
+  const sel = $('pipeline-of-select');
+  const pipeEl = $('dash-pipeline');
+  if (!sel || !pipeEl) return;
+
+  const ofId = parseInt(sel.value);
+  if (!ofId) {
+    pipeEl.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'IBM Plex Mono\',monospace">Sélectionnez un OF pour voir ses opérations</div>';
+    return;
+  }
+
+  const of = _dashOfs.find(o => o.id === ofId);
+  if (!of) return;
+
+  const ops = of.operations || [];
+  if (ops.length === 0) {
+    pipeEl.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:\'IBM Plex Mono\',monospace">Aucune opération définie pour cet OF</div>';
+    return;
+  }
+
+  pipeEl.innerHTML = ops.map((op, i) => {
+    const st  = op.statut || 'PENDING';
+    const cls = st === 'COMPLETED' ? 'done' : st === 'IN_PROGRESS' ? 'active' : 'pending';
+    const val = st === 'COMPLETED' ? '✓' : st === 'IN_PROGRESS' ? '▶' : '○';
+    const opNom = op.operateurs_noms
+      ? `<div style="font-size:8px;color:var(--muted);margin-top:2px;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${op.operateurs_noms}</div>`
+      : '';
+    return `<div class="stage" style="align-items:center">
+      <div class="sb ${cls}" title="${st}">${val}</div>
+      <div class="stage-name">${op.operation_nom}</div>
+      ${opNom}
+    </div>${i < ops.length-1 ? '<div style="color:var(--muted);margin:0 4px;font-size:14px">→</div>' : ''}`;
+  }).join('');
+}
+
+function sBadgeText(s) {
+  return {IN_PROGRESS:'En Cours', COMPLETED:'Terminé', DRAFT:'Brouillon', APPROVED:'Approuvé', CANCELLED:'Annulé'}[s] || s;
 }
