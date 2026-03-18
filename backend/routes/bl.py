@@ -1,9 +1,9 @@
-"""SOFEM MES v6.0 — Bon de Livraison Routes"""
+"""SOFEM MES v3.0 — Bon de Livraison Routes"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize
-from auth import require_any_role, require_manager_or_admin
+from auth import require_any_role, get_pdf_user, require_manager_or_admin
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, date
@@ -58,7 +58,7 @@ def create_bl(data: BLCreate, db=Depends(get_db)):
     return {"id": bl_id, "bl_numero": numero, "message": "BL créé"}
 
 @router.get("/{bl_id}/pdf")
-def print_bl(bl_id: int, db=Depends(get_db)):
+def print_bl(bl_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     bl = q(db, """
         SELECT bl.*, o.numero of_numero, o.quantite, o.atelier, o.date_echeance,
                p.nom produit_nom, p.code produit_code,

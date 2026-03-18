@@ -21,7 +21,7 @@ async function loadBL() {
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${bl.date_livraison_reelle || bl.date_livraison || '—'}</td>
         <td style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm"
-            onclick="window.open('${API}/api/bl/${bl.id}/pdf','_blank')">🖨️ PDF</button>
+            onclick="window.open(pdfUrl('/api/bl/${bl.id}/pdf'),'_blank')">🖨️ PDF</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--accent)"
             onclick="openBLEdit(${bl.id},'${bl.bl_numero}','${dest}','${addr}','${notes}')">✎</button>
           ${!isLivre
@@ -68,7 +68,7 @@ async function confirmLivraison() {
     });
     toast('BL livré — OF clôturé ✓');
     closeModal('m-bl-livrer');
-    window.open(`${API}/api/bl/${id}/pdf`, '_blank');
+    window.open(pdfUrl(`/api/bl/${id}/pdf`), '_blank');
     loadBL();
   } catch(e) { toast(e.message, 'err'); }
 }

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize
-from auth import require_any_role, require_manager_or_admin
+from auth import require_any_role, get_pdf_user, require_manager_or_admin
 from models import BCCreate
 from datetime import datetime
 import io
@@ -65,7 +65,7 @@ def update_statut(bc_id: int, statut: str, db=Depends(get_db)):
 
 
 @router.get("/{bc_id}/pdf")
-def print_bc(bc_id: int, db=Depends(get_db)):
+def print_bc(bc_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     bc = q(db, "SELECT * FROM bons_commande WHERE id=%s", (bc_id,), one=True)
     if not bc: raise HTTPException(404, "BC non trouvé")
     lignes = q(db, """

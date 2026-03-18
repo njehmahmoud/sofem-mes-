@@ -120,3 +120,10 @@ function navigate(page) {
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigate(item.dataset.p));
 });
+
+// PDF URL helper — appends token for authenticated PDF endpoints
+function pdfUrl(path) {
+  const token = localStorage.getItem('token') || '';
+  const sep = path.includes('?') ? '&' : '?';
+  return `${API}${path}${sep}token=${token}`;
+}

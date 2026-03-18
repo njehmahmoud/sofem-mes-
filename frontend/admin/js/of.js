@@ -42,7 +42,7 @@ function renderOrders(ofs) {
       <td><div style="display:flex;gap:3px;flex-wrap:wrap">
         ${of.statut==='COMPLETED' ? `
           <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px"
-            onclick="window.open('${API}/api/of/${of.id}/fiche','_blank')" title="Fiche Résumé Production">📋 Fiche</button>
+            onclick="window.open(pdfUrl('/api/of/${of.id}/fiche'),'_blank')" title="Fiche Résumé Production">📋 Fiche</button>
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
             onclick="printFacture(${of.id},'client')" title="Facture client">📄 Facture</button>
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
@@ -169,7 +169,7 @@ async function cancelOF(id) {
 }
 
 function printFacture(ofId, type='interne') {
-  window.open(`${API}/api/facture/${ofId}?type=${type}`, '_blank');
+  window.open(pdfUrl(`/api/facture/${ofId}?type=${type}`), '_blank');
 }
 
 // ── OF CREATION MODAL ────────────────────────────────────

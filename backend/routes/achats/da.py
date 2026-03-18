@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize
-from auth import require_any_role, require_manager_or_admin
+from auth import require_any_role, get_pdf_user, require_manager_or_admin
 from models import DACreate, DAUpdate
 from datetime import datetime
 import io
@@ -61,7 +61,7 @@ def update_da(da_id: int, data: DAUpdate, db=Depends(get_db)):
 
 
 @router.get("/{da_id}/ba")
-def print_ba(da_id: int, db=Depends(get_db)):
+def print_ba(da_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     """Generate Besoins & Achats PDF (ENR-ACH-01)"""
     da = q(db, """
         SELECT da.*, m.nom materiau_nom, m.code materiau_code, m.unite materiau_unite,

@@ -8,7 +8,7 @@ SMARTMOVE · Mahmoud Njeh
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, serialize
-from auth import require_any_role, require_manager_or_admin
+from auth import require_any_role, get_pdf_user, require_manager_or_admin
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
@@ -67,7 +67,7 @@ def draw_footer(c, W, colors, numero, now):
 
 # ── SINGLE OF FACTURE ─────────────────────────────────────
 @router.get("/{of_id}")
-def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
+def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = get_of_data(of_id, db)
     if of["statut"] != "COMPLETED":
         raise HTTPException(400, "Facture disponible uniquement pour les OFs terminés")
@@ -158,11 +158,19 @@ def get_facture(of_id: int, type: str = "interne", db=Depends(get_db)):
             sn = e.get("etape") or e.get("operation_nom","—")
             rh=8*mm; y_cur-=rh
             if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
-            duree="—"
-            if e.get("debut") and e.get("fin"):
+            duree = "—"
+            # Use duree_reelle first (most accurate), then calculate from debut/fin
+            if e.get("duree_reelle"):
+                mins = int(e["duree_reelle"])
+                duree = f"{mins//60}h {mins%60}min" if mins >= 60 else f"{mins} min"
+            elif e.get("debut") and e.get("fin"):
                 try:
-                    mins=int((datetime.fromisoformat(str(e["fin"]))-datetime.fromisoformat(str(e["debut"]))).total_seconds()/60)
-                    duree=f"{mins//60}h {mins%60}min" if mins>=60 else f"{mins} min"
+                    def parse_dt(d):
+                        if isinstance(d, str):
+                            return datetime.fromisoformat(d.replace('Z','').replace('T',' '))
+                        return d
+                    mins = int((parse_dt(e["fin"]) - parse_dt(e["debut"])).total_seconds() / 60)
+                    duree = f"{mins//60}h {mins%60}min" if mins >= 60 else f"{mins} min"
                 except: pass
             st_icon="✓ TERMINÉ" if e["statut"]=="COMPLETED" else "⏳ EN COURS" if e["statut"]=="IN_PROGRESS" else "— EN ATTENTE"
             st_col=GREEN if e["statut"]=="COMPLETED" else RED if e["statut"]=="IN_PROGRESS" else GRAY

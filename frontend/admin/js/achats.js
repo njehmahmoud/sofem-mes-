@@ -35,7 +35,7 @@ async function loadDA() {
         <td style="font-size:10px;color:var(--muted)">${(da.created_at||'').slice(0,10)}</td>
         <td style="font-size:11px">${da.of_numero||'—'}</td>
         <td style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-sm" onclick="window.open('${API}/api/achats/da/${da.id}/ba','_blank')" title="Besoins & Achats PDF">📋 BA</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="Besoins & Achats PDF">📋 BA</button>
           ${da.statut==='PENDING'
             ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')">✓</button>
                <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')">✕</button>`
@@ -86,7 +86,7 @@ async function loadBC() {
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ttc||0} TND TTC</td>
         <td><span class="badge ${badge}">${bc.statut}</span></td>
         <td style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-sm" onclick="window.open('${API}/api/achats/bc/${bc.id}/pdf','_blank')">🖨️</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')">🖨️</button>
           <select class="fbtn" onchange="updateBC(${bc.id},this.value)" style="font-size:9px">
             <option value="">Statut</option>
             <option value="ENVOYE">Envoyé</option>
