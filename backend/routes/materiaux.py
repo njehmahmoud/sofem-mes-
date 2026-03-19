@@ -16,8 +16,8 @@ def list_materiaux(db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_materiau(data: MateriauCreate, db=Depends(get_db)):
-    mid = exe(db, "INSERT INTO materiaux (code,nom,unite,stock_actuel,stock_minimum,fournisseur) VALUES (%s,%s,%s,%s,%s,%s)",
-              (data.code, data.nom, data.unite, data.stock_actuel, data.stock_minimum, data.fournisseur))
+    mid = exe(db, "INSERT INTO materiaux (code,nom,unite,stock_actuel,stock_minimum,fournisseur,prix_unitaire) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+              (data.code, data.nom, data.unite, data.stock_actuel, data.stock_minimum, data.fournisseur, data.prix_unitaire))
     return {"id": mid, "message": "Matériau créé"}
 
 @router.post("/mouvement", dependencies=[Depends(require_any_role)])

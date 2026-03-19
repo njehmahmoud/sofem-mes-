@@ -204,7 +204,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     y_cur-=14*mm
     lbl_sec="DÉTAIL FINANCIER" if type=="interne" else "FACTURE CLIENT"
     y_cur=sec_title(lbl_sec,y_cur)
-    ht=float(of.get("prix_vente_ht") or 85.0)*of["quantite"]; tva=ht*TVA_RATE; ttc=ht+tva
+    ht=float(of.get('prix_vente_ht') or 85.0)*of["quantite"]; tva=ht*TVA_RATE; ttc=ht+tva
     cols_p=[15*mm,90*mm,130*mm,165*mm]
     c.setFillColor(DARK); c.rect(15*mm,y_cur-6*mm,W-30*mm,8*mm,fill=1,stroke=0)
     for i,h in enumerate(["DÉSIGNATION","QTÉ","PRIX UNIT. HT","TOTAL HT"]):
@@ -214,7 +214,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     c.setFillColor(DARK); c.setFont("Helvetica",8)
     c.drawString(cols_p[0]+2*mm,y_cur+2.5*mm,f"Fabrication {of['produit_nom']} — {of['numero']}")
     c.drawString(cols_p[1]+2*mm,y_cur+2.5*mm,str(of["quantite"]))
-    c.drawString(cols_p[2]+2*mm,y_cur+2.5*mm,f"{float(of.get("prix_vente_ht") or 85.0):.3f} TND")
+    c.drawString(cols_p[2]+2*mm,y_cur+2.5*mm,f"{float(of.get('prix_vente_ht') or 85.0):.3f} TND")
     c.setFont("Helvetica-Bold",8); c.drawString(cols_p[3]+2*mm,y_cur+2.5*mm,f"{ht:.3f} TND")
 
     y_cur-=12*mm; bx=W-85*mm
@@ -268,7 +268,7 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
 
     now = datetime.now().strftime("%d / %m / %Y")
     fac_num = f"FAC-GROUP-{datetime.now().strftime('%Y%m%d%H%M')}"
-    total_ht  = sum(float(of.get("prix_vente_ht") or 85.0) * of["quantite"] for of in ofs)
+    total_ht  = sum(float(of.get('prix_vente_ht') or 85.0) * of["quantite"] for of in ofs)
     total_tva = round(total_ht * TVA_RATE, 3)
     total_ttc = round(total_ht + total_tva, 3)
 
@@ -297,13 +297,13 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
     y_cur-=6*mm
 
     for idx,of in enumerate(ofs):
-        ht=float(of.get("prix_vente_ht") or 85.0)*of["quantite"]; rh=8*mm; y_cur-=rh
+        ht=float(of.get('prix_vente_ht') or 85.0)*of["quantite"]; rh=8*mm; y_cur-=rh
         if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
         c.setFillColor(RED);  c.setFont("Helvetica-Bold",8); c.drawString(cols[0]+2*mm,y_cur+2.5*mm,of["numero"])
         c.setFillColor(DARK); c.setFont("Helvetica",8)
         c.drawString(cols[1]+2*mm,y_cur+2.5*mm,of["produit_nom"][:25])
         c.drawString(cols[2]+2*mm,y_cur+2.5*mm,str(of["quantite"]))
-        c.drawString(cols[3]+2*mm,y_cur+2.5*mm,f"{float(of.get("prix_vente_ht") or 85.0):.3f}")
+        c.drawString(cols[3]+2*mm,y_cur+2.5*mm,f"{float(of.get('prix_vente_ht') or 85.0):.3f}")
         c.setFont("Helvetica-Bold",8); c.drawString(cols[4]+2*mm,y_cur+2.5*mm,f"{ht:.3f} TND")
         c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm,y_cur,W-15*mm,y_cur)
 
