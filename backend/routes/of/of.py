@@ -140,6 +140,44 @@ def list_of(statut: Optional[str]=None, priorite: Optional[str]=None,
 def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
     of = get_of_full(db, of_id)
     if not of: raise HTTPException(404, "OF non trouvé")
+    # Calculate cost summary
+    try:
+        bom = q(db, """
+            SELECT ob.quantite_requise, m.prix_unitaire
+            FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
+            WHERE ob.of_id = %s
+        """, (of_id,))
+        total_mat = sum(float(b["quantite_requise"]) * float(b["prix_unitaire"] or 0) for b in bom)
+
+        ops = q(db, """
+            SELECT op.duree_reelle, op.operation_nom,
+                   GROUP_CONCAT(o2.taux_horaire SEPARATOR ',') taux_h,
+                   GROUP_CONCAT(o2.taux_piece   SEPARATOR ',') taux_p,
+                   GROUP_CONCAT(o2.type_taux    SEPARATOR ',') type_t
+            FROM of_operations op
+            LEFT JOIN op_operateurs oo ON oo.operation_id = op.id
+            LEFT JOIN operateurs o2 ON o2.id = oo.operateur_id
+            WHERE op.of_id = %s GROUP BY op.id
+        """, (of_id,))
+        qte = int(of.get("quantite", 1))
+        total_mo = 0
+        for op in ops:
+            dur = float(op.get("duree_reelle") or 0) / 60
+            mult = 1 if "autocad" in str(op.get("operation_nom","")).lower() else qte
+            try:
+                th = float((op.get("taux_h") or "0").split(",")[0])
+                tp = float((op.get("taux_p") or "0").split(",")[0])
+                tt = (op.get("type_t") or "HORAIRE").split(",")[0]
+                if tt == "HORAIRE":   total_mo += dur * mult * th
+                elif tt == "PIECE":   total_mo += mult * tp
+                else:                 total_mo += dur * mult * th + mult * tp
+            except: pass
+        st_cost = float(of.get("sous_traitant_cout") or 0)
+        of["cout_matieres"]    = round(total_mat, 3)
+        of["cout_main_oeuvre"] = round(total_mo, 3)
+        of["cout_sous_traitance"] = round(st_cost, 3)
+        of["cout_revient"]     = round(total_mat + total_mo + st_cost, 3)
+    except: pass
     return serialize(of)
 
 
@@ -280,7 +318,92 @@ def update_of(of_id: int, data: OFUpdate,
     if fields:
         params.append(of_id)
         exe(db, f"UPDATE ordres_fabrication SET {','.join(fields)} WHERE id=%s", params)
+
+    # ── Stock auto-deduction when moving to IN_PROGRESS ──────
+    if data.statut == "IN_PROGRESS" and of["statut"] == "APPROVED":
+        from routes.settings import get_all_settings
+        cfg = get_all_settings(db)
+        if cfg.get("stock_deduction_auto", True):
+            bom = q(db, """
+                SELECT ob.materiau_id, ob.quantite_requise,
+                       m.nom, m.unite, m.stock_actuel
+                FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
+                WHERE ob.of_id = %s
+            """, (of_id,))
+            for b in bom:
+                avant  = float(b["stock_actuel"])
+                deduct = float(b["quantite_requise"])
+                apres  = max(0, avant - deduct)
+                exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
+                    (apres, b["materiau_id"]))
+                exe(db, """
+                    INSERT INTO mouvements_stock
+                      (materiau_id, of_id, type, quantite, stock_avant, stock_apres, motif)
+                    VALUES (%s, %s, 'SORTIE', %s, %s, %s, %s)
+                """, (b["materiau_id"], of_id, deduct, avant, apres,
+                      f"Consommation production OF #{of_id}"))
+
     return {"message": "OF mis à jour"}
+
+
+@router.post("/{of_id}/duplicate", dependencies=[Depends(require_manager_or_admin)])
+def duplicate_of(of_id: int, db=Depends(get_db)):
+    """Duplicate an OF — copies header, operations, BOM. Creates fresh DRAFT."""
+    src = q(db, "SELECT * FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+    if not src: raise HTTPException(404, "OF non trouvé")
+
+    year = datetime.now().year
+    rows = q(db, "SELECT numero FROM ordres_fabrication WHERE numero LIKE %s ORDER BY id DESC",
+             (f"OF-{year}-%",))
+    num = 1
+    for row in rows:
+        try:
+            n = int(row["numero"].split("-")[-1])
+            if n >= num: num = n + 1
+        except: continue
+    numero = f"OF-{year}-{str(num).zfill(3)}"
+
+    new_id = exe(db, """
+        INSERT INTO ordres_fabrication
+          (numero,produit_id,quantite,priorite,statut,
+           chef_projet_id,client_id,plan_numero,atelier,
+           date_echeance,notes,sous_traitant,sous_traitant_op,sous_traitant_cout)
+        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (numero, src["produit_id"], src["quantite"], src["priorite"],
+          src["chef_projet_id"], src["client_id"], src["plan_numero"],
+          src["atelier"], src["date_echeance"], src["notes"],
+          src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"]))
+
+    # Copy operations
+    ops = q(db, "SELECT * FROM of_operations WHERE of_id=%s ORDER BY ordre", (of_id,))
+    for op in ops:
+        op_id = exe(db, """
+            INSERT INTO of_operations (of_id,ordre,operation_nom,machine_id,statut)
+            VALUES (%s,%s,%s,%s,'PENDING')
+        """, (new_id, op["ordre"], op["operation_nom"], op["machine_id"]))
+        # Copy operator assignments
+        opers = q(db, "SELECT operateur_id FROM op_operateurs WHERE operation_id=%s", (op["id"],))
+        for o in opers:
+            exe(db, "INSERT IGNORE INTO op_operateurs (operation_id,operateur_id) VALUES (%s,%s)",
+                (op_id, o["operateur_id"]))
+
+    # Copy BOM
+    bom = q(db, "SELECT * FROM of_bom WHERE of_id=%s", (of_id,))
+    for b in bom:
+        exe(db, "INSERT INTO of_bom (of_id,materiau_id,quantite_requise) VALUES (%s,%s,%s)",
+            (new_id, b["materiau_id"], b["quantite_requise"]))
+
+    # Create BL
+    try:
+        last_bl = q(db, "SELECT bl_numero FROM bons_livraison ORDER BY id DESC LIMIT 1", one=True)
+        try: bn = int(last_bl["bl_numero"].split("-")[-1]) + 1 if last_bl else 1
+        except: bn = 1
+        bl_num = f"BL-{year}-{str(bn).zfill(3)}"
+        exe(db, "INSERT INTO bons_livraison (bl_numero,of_id,destinataire,adresse,statut) VALUES (%s,%s,%s,%s,'DRAFT')",
+            (bl_num, new_id, "SOFEM", "Route Sidi Salem 2.5KM, Sfax"))
+    except: pass
+
+    return {"id": new_id, "numero": numero, "message": f"OF dupliqué → {numero}"}
 
 
 @router.delete("/{of_id}", dependencies=[Depends(require_manager_or_admin)])
