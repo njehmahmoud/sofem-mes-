@@ -51,6 +51,21 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     """, (of_id,))
 
     of = serialize(of); ops = serialize(ops); bom = serialize(bom)
+    # Load settings
+    from routes.settings import get_all_settings
+    cfg = get_all_settings(db)
+    S_NOM    = cfg.get("societe_nom",       S_NOM)
+    S_TAG    = cfg.get("societe_tagline",   "Société de Fabrication Électromécanique & de Maintenance")
+    S_ADDR   = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
+    S_VILLE  = cfg.get("societe_ville",     "Sfax")
+    S_TEL    = cfg.get("societe_telephone", "+216 74 469 181")
+    S_EMAIL  = cfg.get("societe_email",     "contact@sofem-tn.com")
+    S_MF     = cfg.get("societe_mf",        "000000000/A/M/000")
+    S_WEB    = cfg.get("societe_website",   "sofem-tn.com")
+    TVA_RATE = float(cfg.get("tva_rate",    19)) / 100
+    PDF_REV  = cfg.get("pdf_rev",           "00")
+    PDF_PIED = cfg.get("pdf_pied_custom",   PDF_PIED)
+
     qte = int(of.get("quantite", 1))
 
     from reportlab.lib.pagesizes import A4
@@ -80,18 +95,18 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.drawCentredString(22*mm, H-22*mm, "S")
     # Company name
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 18)
-    c.drawString(36*mm, H-20*mm, "SOFEM")
+    c.drawString(36*mm, H-20*mm, S_NOM)
     c.setFillColor(RED); c.setFont("Helvetica", 7)
-    c.drawString(36*mm, H-25*mm, "SOCIÉTÉ DE FABRICATION ÉLECTROMÉCANIQUE & DE MAINTENANCE")
+    c.drawString(36*mm, H-25*mm, S_TAG.upper()[:55])
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 6.5)
-    c.drawString(36*mm, H-29*mm, "Route Sidi Salem 2.5KM · Sfax · +216 74 469 181")
+    c.drawString(36*mm, H-29*mm, f"{S_ADDR} · {S_VILLE} · {S_TEL}")
     # Title right
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 16)
     c.drawRightString(W-12*mm, H-20*mm, "FICHE DE RÉSUMÉ PRODUCTION")
     c.setFillColor(RED); c.setFont("Helvetica-Bold", 10)
     c.drawRightString(W-12*mm, H-26*mm, "ENR-PRD-02")
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 8)
-    c.drawRightString(W-12*mm, H-30*mm, f"Rév. 00  ·  Date: {now}  ·  Page 1/1")
+    c.drawRightString(W-12*mm, H-30*mm, f"Rév. {PDF_REV}  ·  Date: {now}  ·  Page 1/1")
 
     # ── INFO BAND — 2 rows × 4 cols ────────────────────
     ROW_H  = 14*mm
@@ -285,8 +300,8 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.setFillColor(DARK); c.rect(0, 0, W, 10*mm, fill=1, stroke=0)
     c.setFillColor(RED);  c.rect(0, 10*mm, W, 0.8*mm, fill=1, stroke=0)
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(12*mm, 6*mm, "SOFEM · Route Sidi Salem 2.5KM · Sfax · +216 74 469 181")
-    c.drawRightString(W-12*mm, 6*mm, f"ENR-PRD-02 · {now} · SOFEM MES v6.0")
+    c.drawString(12*mm, 6*mm, f"{S_NOM} · {S_ADDR} · {S_VILLE} · {S_TEL}")
+    c.drawRightString(W-12*mm, 6*mm, f"ENR-PRD-02 · {now} · {PDF_PIED}")
 
     c.save(); buf.seek(0)
     fname = f"Fiche_{of['numero'].replace('/','-')}.pdf"

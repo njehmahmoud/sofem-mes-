@@ -204,6 +204,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="nav-group" id="admin-only-nav">
     <div class="nav-lbl">Admin</div>
     <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
+    <div class="nav-item" data-p="settings">⚙️ Paramètres</div>
     <div class="nav-item" data-p="op-types">⚙️ Opérations</div>
     <div class="nav-item" data-p="reports">📊 Rapports</div>
   </div>
@@ -826,6 +827,21 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="ph">
+    <div>
+      <div class="ph-title">PARA<span>MÈTRES</span></div>
+      <div class="ph-sub">// CONFIGURATION SYSTÈME SOFEM MES</div>
+    </div>
+    <button class="btn" onclick="saveAllSettings()">💾 Tout Sauvegarder</button>
+  </div>
+  <div id="settings-container">
+    <div class="loading"><div class="spin"></div></div>
+  </div>
+</div>
+
 </main>
 
 
@@ -841,6 +857,21 @@ td{padding:.65rem 1rem;vertical-align:middle}
       <thead><tr><th>Ordre</th><th>Nom</th><th>Description</th><th>Statut</th><th>Actions</th></tr></thead>
       <tbody id="op-types-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
+  </div>
+</div>
+
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="ph">
+    <div>
+      <div class="ph-title">PARA<span>MÈTRES</span></div>
+      <div class="ph-sub">// CONFIGURATION SYSTÈME SOFEM MES</div>
+    </div>
+    <button class="btn" onclick="saveAllSettings()">💾 Tout Sauvegarder</button>
+  </div>
+  <div id="settings-container">
+    <div class="loading"><div class="spin"></div></div>
   </div>
 </div>
 
@@ -1234,6 +1265,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 <script src="/admin/js/reports.js"></script>
 <script src="/admin/js/users.js"></script>
 <script src="/admin/js/operation_types.js"></script>
+<script src="/admin/js/settings.js"></script>
 <script>
 window.pageLoaders = {
   dashboard:    loadDashboard,
@@ -1256,6 +1288,7 @@ window.pageLoaders = {
   fournisseurs: loadFournisseurs,
   users:        loadUsers,
   'op-types':   loadOpTypes,
+  settings:     loadSettings,
   reports:      loadReports,
 };
 const _u = getUserInfo();

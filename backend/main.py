@@ -27,6 +27,7 @@ from routes.achats.fa import router as fa_router
 # ── Standalone routes
 from routes.clients          import router as clients_router
 from routes.operation_types  import router as op_types_router
+from routes.settings          import router as settings_router
 from routes.facture      import router as facture_router
 from routes.operateurs   import router as operateurs_router
 from routes.bl           import router as bl_router
@@ -80,6 +81,7 @@ app.include_router(fa_router)
 # Standalone
 app.include_router(clients_router)
 app.include_router(op_types_router)
+app.include_router(settings_router)
 app.include_router(facture_router)
 app.include_router(operateurs_router)
 app.include_router(bl_router)

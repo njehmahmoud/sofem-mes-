@@ -61,16 +61,29 @@ def draw_footer(c, W, colors, numero, now):
     RED=colors.HexColor("#D42B2B"); DARK=colors.HexColor("#111"); WHITE=colors.white
     c.setFillColor(DARK); c.rect(0,0,W,14*2.835,fill=1,stroke=0)
     c.setFillColor(RED);  c.rect(0,14*2.835,W,0.8*2.835,fill=1,stroke=0)
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(15*2.835,9*2.835,"SOFEM · Partenaire des Briqueteries")
+    c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(15*2.835,9*2.835,f"{S_NOM} · {S_TAG}")
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica",7)
-    c.drawString(15*2.835,5*2.835,"Route Sidi Salem 2.5KM · Sfax · sofem-tn.com · MF: 000000000/A/M/000")
+    c.drawString(15*2.835,5*2.835,f"{S_ADDR} · {S_VILLE} · {S_WEB} · MF: {S_MF}")
     c.drawRightString(W-15*2.835,9*2.835,f"{numero} · {now}")
-    c.drawRightString(W-15*2.835,5*2.835,"SOFEM MES v3.0 · SMARTMOVE")
+    c.drawRightString(W-15*2.835,5*2.835,PDF_PIED)
 
 # ── SINGLE OF FACTURE ─────────────────────────────────────
 @router.get("/{of_id}")
 def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = get_of_data(of_id, db)
+    # Load settings
+    from routes.settings import get_all_settings
+    cfg = get_all_settings(db)
+    S_NOM  = cfg.get("societe_nom",       "SOFEM")
+    S_TAG  = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
+    S_ADDR = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
+    S_VILLE= cfg.get("societe_ville",     "Sfax")
+    S_TEL  = cfg.get("societe_telephone", "+216 74 469 181")
+    S_MF   = cfg.get("societe_mf",        "000000000/A/M/000")
+    S_WEB  = cfg.get("societe_website",   "sofem-tn.com")
+    TVA_RATE = float(cfg.get("tva_rate",  19)) / 100
+    PDF_PIED = cfg.get("pdf_pied_custom", PDF_PIED)
+
     if of["statut"] != "COMPLETED":
         raise HTTPException(400, "Facture disponible uniquement pour les OFs terminés")
     # Fetch actual BOM for this OF (of_bom table), fallback to product BOM

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/bl", tags=["bon-livraison"])
 class BLCreate(BaseModel):
     of_id: int
     date_livraison: Optional[date] = None
-    destinataire: str = "SOFEM"
+    destinataire: str = S_NOM
     adresse: str = "Route Sidi Salem 2.5KM, Sfax"
     notes: Optional[str] = None
 
@@ -75,6 +75,16 @@ def print_bl(bl_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends
     if not bl: raise HTTPException(404, "BL non trouvé")
     bl = serialize(bl)
 
+
+    from routes.settings import get_all_settings
+    cfg = get_all_settings(db)
+    S_NOM  = cfg.get("societe_nom",       S_NOM)
+    S_ADDR = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
+    S_VILLE= cfg.get("societe_ville",     "Sfax")
+    S_TEL  = cfg.get("societe_telephone", "+216 74 469 181")
+    S_MF   = cfg.get("societe_mf",        "000000000/A/M/000")
+    PDF_PIED = cfg.get("pdf_pied_custom", PDF_PIED)
+
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -99,10 +109,10 @@ def print_bl(bl_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends
     c.setFillColor(RED);  c.rect(0, H-40*mm, W, 2*mm,  fill=1, stroke=0)
     c.setFillColor(RED);  c.roundRect(15*mm, H-32*mm, 22*mm, 22*mm, 4, fill=1, stroke=0)
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 18); c.drawCentredString(26*mm, H-24*mm, "S")
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 20); c.drawString(42*mm, H-22*mm, "SOFEM")
+    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 20); c.drawString(42*mm, H-22*mm, S_NOM)
     c.setFillColor(RED);   c.setFont("Helvetica", 7);  c.drawString(42*mm, H-27*mm, "PARTENAIRE DES BRIQUETERIES")
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 7)
-    c.drawString(42*mm, H-32*mm, "Route Sidi Salem 2.5KM · Sfax · +216 74 469 181")
+    c.drawString(42*mm, H-32*mm, f"{S_ADDR} · {S_VILLE} · {S_TEL}")
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 26); c.drawRightString(W-15*mm, H-20*mm, "BON DE LIVRAISON")
     c.setFillColor(RED);   c.setFont("Helvetica-Bold", 13); c.drawRightString(W-15*mm, H-27*mm, bl["bl_numero"])
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 8)
