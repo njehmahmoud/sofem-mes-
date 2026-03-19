@@ -1,6 +1,6 @@
 // ── achats.js ────────────────────────────────────────────
 
-//  ── DA ────────────────────────────────────────────────────
+// ── DA ────────────────────────────────────────────────────
 async function loadDA() {
   try {
     const [das, mats, ofs, ops] = await Promise.all([
@@ -101,11 +101,94 @@ async function updateDA(id, statut) {
 }
 
 async function confirmerReception(brId, brNumero) {
-  if (!confirm(`Confirmer la réception ${brNumero} ?\nLe stock sera mis à jour automatiquement.`)) return;
+  // Load BR details to pre-fill modal
   try {
+    const brs = await api('/api/achats/br');
+    const br  = (brs||[]).find(b => b.id === brId);
+    if (!br) { toast('BR introuvable', 'err'); return; }
+
+    // Find the BC line (quantity ordered)
+    const bcs = await api('/api/achats/bc');
+    const bc  = (bcs||[]).find(b => b.id === br.bc_id);
+    const ligne = bc?.lignes?.[0];
+
+    $('br-confirm-id').value      = brId;
+    $('br-confirm-num').textContent = brNumero;
+
+    // Info band
+    const mat = ligne?.materiau_nom || ligne?.description || '—';
+    const unite = ligne?.unite || '';
+    $('br-confirm-info').innerHTML = `
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+        <span>📦 <strong style="color:var(--text)">${mat}</strong></span>
+        <span>🏭 Fournisseur: <strong style="color:var(--text)">${br.fournisseur}</strong></span>
+        <span>📋 BC: <strong style="color:var(--accent)">${br.bc_numero}</strong></span>
+        <span>Unité: <strong style="color:var(--text)">${unite}</strong></span>
+      </div>`;
+
+    const qteCmd = parseFloat(ligne?.quantite || 0);
+    $('br-confirm-qte-cmd').value   = qteCmd;
+    $('br-confirm-qte-recue').value = qteCmd;  // default = full quantity
+    $('br-confirm-prix').value      = parseFloat(ligne?.prix_unitaire || 0);
+    $('br-confirm-notes').value     = '';
+    $('br-confirm-status').style.display = 'none';
+    updateBRTotal();
+
+    openModal('m-br-confirm');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function updateBRTotal() {
+  const qte  = parseFloat($('br-confirm-qte-recue')?.value || 0);
+  const prix = parseFloat($('br-confirm-prix')?.value || 0);
+  const total = Math.round(qte * prix * 1000) / 1000;
+  if ($('br-confirm-total')) $('br-confirm-total').value = total;
+
+  // Show partial/full indicator
+  const qteCmd = parseFloat($('br-confirm-qte-cmd')?.value || 0);
+  const statusEl = $('br-confirm-status');
+  if (statusEl && qteCmd > 0) {
+    if (qte <= 0) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = 'rgba(212,43,43,0.1)';
+      statusEl.style.border = '1px solid var(--red)';
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '⚠ Quantité reçue doit être > 0';
+    } else if (qte < qteCmd) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = 'rgba(245,158,11,0.1)';
+      statusEl.style.border = '1px solid #f59e0b';
+      statusEl.style.color = '#f59e0b';
+      statusEl.textContent = `⚠ Réception partielle — ${qte} / ${qteCmd} ${''} reçus`;
+    } else {
+      statusEl.style.display = 'block';
+      statusEl.style.background = 'rgba(22,163,74,0.1)';
+      statusEl.style.border = '1px solid var(--green)';
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = `✓ Réception complète — ${qte} sur ${qteCmd} commandés`;
+    }
+  }
+}
+
+async function submitConfirmerReception() {
+  const brId     = parseInt($('br-confirm-id').value);
+  const qteRecue = parseFloat($('br-confirm-qte-recue').value);
+  const prix     = parseFloat($('br-confirm-prix').value || 0);
+  const notes    = $('br-confirm-notes').value || null;
+
+  if (!qteRecue || qteRecue <= 0) { toast('Quantité reçue requise', 'err'); return; }
+
+  try {
+    // Update price on BC line first if provided
+    if (prix > 0) {
+      await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
+    } else {
+      await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
+    }
+    // Confirm reception
     const res = await api(`/api/achats/br/${brId}/confirmer`, 'PUT');
     toast(res.message + ' ✓');
-    // Refresh all achats tabs + stock alerts on dashboard
+    closeModal('m-br-confirm');
     loadDA(); loadBR(); loadBC();
     if (window.pageLoaders?.dashboard) window.pageLoaders.dashboard();
   } catch(e) { toast(e.message, 'err'); }

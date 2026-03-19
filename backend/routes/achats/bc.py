@@ -111,31 +111,32 @@ def print_bc(bc_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends
 
     y_cur=y-14*mm
     c.setFillColor(DARK); c.rect(15*mm,y_cur-6*mm,W-30*mm,8*mm,fill=1,stroke=0)
-    for i,(h,x) in enumerate(zip(["DESCRIPTION","QTÉ","UNITÉ","PRIX UNIT. HT","TOTAL HT"],
-                                  [15,80,120,145,170])):
+    for i,(h,x) in enumerate(zip(["DÉSIGNATION","QUANTITÉ COMMANDÉE","UNITÉ","OBSERVATIONS"],
+                                  [15,90,145,165])):
         c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(x*mm+2*mm,y_cur-3*mm,h)
     y_cur-=6*mm
     for idx,l in enumerate(lignes):
         y_cur-=8*mm
         if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,8*mm,fill=1,stroke=0)
-        total=round(float(l["quantite"])*float(l["prix_unitaire"]),3)
         c.setFillColor(DARK); c.setFont("Helvetica",8)
-        c.drawString(17*mm,y_cur+2.5*mm,str(l.get("materiau_nom") or l["description"])[:35])
-        c.drawString(82*mm,y_cur+2.5*mm,str(l["quantite"]))
-        c.drawString(122*mm,y_cur+2.5*mm,str(l["unite"]))
-        c.drawString(147*mm,y_cur+2.5*mm,f"{float(l['prix_unitaire']):.3f}")
-        c.setFont("Helvetica-Bold",8); c.drawString(172*mm,y_cur+2.5*mm,f"{total:.3f} TND")
+        c.drawString(17*mm,y_cur+2.5*mm,str(l.get("materiau_nom") or l["description"])[:40])
+        c.setFont("Helvetica-Bold",8)
+        c.drawString(92*mm,y_cur+2.5*mm,str(l["quantite"]))
+        c.setFont("Helvetica",8)
+        c.drawString(147*mm,y_cur+2.5*mm,str(l["unite"]))
         c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm,y_cur,W-15*mm,y_cur)
 
-    y_cur-=12*mm; bx=W-85*mm
-    for lbl,val,bg,fg in [("Total HT",f"{ht:.3f} TND",LIGHT,DARK),
-                           (f"TVA ({TVA_RATE}%)",f"{tva:.3f} TND",LIGHT,GRAY),
-                           ("TOTAL TTC",f"{ttc:.3f} TND",DARK,WHITE)]:
-        rh=9*mm if "TTC" not in lbl else 11*mm
-        c.setFillColor(bg); c.rect(bx,y_cur-rh,W-15*mm-bx,rh,fill=1,stroke=0)
-        c.setFillColor(fg); c.setFont("Helvetica-Bold",9 if "TTC" not in lbl else 11)
-        c.drawString(bx+3*mm,y_cur-rh+3*mm,lbl); c.drawRightString(W-17*mm,y_cur-rh+3*mm,val)
-        y_cur-=rh
+    # Signature box instead of price totals
+    y_cur-=16*mm
+    for label, sx in [("RESPONSABLE ACHATS", 15*mm), ("VISA DIRECTION", W/2+5*mm)]:
+        c.setStrokeColor(BORDER); c.setLineWidth(0.5)
+        c.roundRect(sx, y_cur-28*mm, 80*mm, 30*mm, 3, fill=0, stroke=1)
+        c.setFillColor(LIGHT); c.roundRect(sx, y_cur-28*mm, 80*mm, 8*mm, 3, fill=1, stroke=0)
+        c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 7)
+        c.drawString(sx+3*mm, y_cur-24*mm, label)
+        c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+        c.drawString(sx+3*mm, y_cur-6*mm, "Date: _______________")
+        c.line(sx+5*mm, y_cur-16*mm, sx+75*mm, y_cur-16*mm)
 
     c.setFillColor(DARK); c.rect(0,0,W,12*mm,fill=1,stroke=0)
     c.setFillColor(RED);  c.rect(0,12*mm,W,0.8*mm,fill=1,stroke=0)

@@ -495,7 +495,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>N° BR</th><th>BC lié</th><th>Fournisseur</th><th>Date Réception</th><th>Statut</th><th>Date</th></tr></thead>
+      <thead><tr><th>N° BR</th><th>BC LIÉ</th><th>FOURNISSEUR</th><th>STATUT</th><th>DATE RÉCEPTION</th><th>ACTION</th></tr></thead>
       <tbody id="br-tb"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -1507,6 +1507,61 @@ navigate('dashboard');
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal('m-of-dup')">Annuler</button>
       <button class="btn" onclick="confirmDuplicateOF()">⎘ Créer la copie</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="overlay" id="m-br-confirm">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-h">
+      <div class="modal-title">CONFIRMER RÉCEPTION — <span id="br-confirm-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-br-confirm')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="br-confirm-id">
+
+      <!-- Material info -->
+      <div id="br-confirm-info" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem;margin-bottom:1rem;font-size:11px;color:var(--muted)"></div>
+
+      <div class="row2">
+        <div class="fg">
+          <label>Quantité commandée</label>
+          <input type="number" id="br-confirm-qte-cmd" disabled
+            style="opacity:.5;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+        </div>
+        <div class="fg">
+          <label>Quantité reçue *</label>
+          <input type="number" id="br-confirm-qte-recue" min="0.001" step="0.001"
+            style="background:var(--bg3);border:1px solid var(--green);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-weight:600">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fg">
+          <label>Prix unitaire HT (DT)</label>
+          <input type="number" id="br-confirm-prix" min="0" step="0.001" value="0"
+            oninput="updateBRTotal()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+        </div>
+        <div class="fg">
+          <label>Total HT (DT)</label>
+          <input type="number" id="br-confirm-total" disabled
+            style="opacity:.7;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-weight:600">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Notes réception</label>
+        <textarea id="br-confirm-notes" rows="2" placeholder="Observations, état de la marchandise..."></textarea>
+      </div>
+
+      <!-- Reception status indicator -->
+      <div id="br-confirm-status" style="margin-top:.5rem;font-size:11px;padding:.5rem .75rem;border-radius:4px;display:none"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-br-confirm')">Annuler</button>
+      <button class="btn" style="background:var(--green)" onclick="submitConfirmerReception()">✓ Confirmer Réception</button>
     </div>
   </div>
 </div>
