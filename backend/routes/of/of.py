@@ -3,6 +3,7 @@
 import logging
 logger = logging.getLogger("sofem-of")
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from database import get_db, q, exe, serialize
