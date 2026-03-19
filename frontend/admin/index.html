@@ -554,28 +554,41 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </div>
 
 <!-- MODALS v4 -->
-<div class="modal-overlay" id="modal-machine" onclick="if(event.target===this)closeModal('modal-machine')">
-  <div class="modal-box">
-    <div class="modal-title">Nouvelle Machine</div>
-    <div class="fg"><label>Nom *</label><input id="m-nom" placeholder="Ex: Tour CNC 1"></div>
-    <div class="fg"><label>Code</label><input id="m-code" placeholder="Auto si vide"></div>
-    <div class="frow">
-      <div class="fg"><label>Type</label><input id="m-type" placeholder="Ex: Tour CNC"></div>
-      <div class="fg"><label>Atelier</label>
-        <select id="m-atelier"><option>Atelier A</option><option>Atelier B</option><option>Atelier C</option></select>
+<div class="overlay" id="modal-machine">
+  <div class="modal" style="max-width:600px;width:97vw">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE MACHINE</div>
+      <button class="x" onclick="closeModal('modal-machine')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="m-edit-id">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="m-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">MCH-XXX</div>
       </div>
+      <div class="fg"><label>Nom *</label><input id="m-nom" placeholder="Ex: Tour CNC HAAS"></div>
+      <div class="row2">
+        <div class="fg"><label>Type</label><input id="m-type" placeholder="Ex: Tour CNC, Fraiseuse..."></div>
+        <div class="fg"><label>Atelier</label>
+          <select id="m-atelier">
+            <option value="Atelier A">Atelier A</option>
+            <option value="Atelier B">Atelier B</option>
+            <option value="Atelier C">Atelier C</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Marque</label><input id="m-marque" placeholder="Ex: HAAS, DMG..."></div>
+        <div class="fg"><label>Modèle</label><input id="m-modele"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>N° Série</label><input id="m-serie"></div>
+        <div class="fg"><label>Date Acquisition</label><input type="date" id="m-date"></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Marque</label><input id="m-marque"></div>
-      <div class="fg"><label>Modèle</label><input id="m-modele"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>N° Série</label><input id="m-serie"></div>
-      <div class="fg"><label>Date Acquisition</label><input type="date" id="m-date"></div>
-    </div>
-    <div class="fg"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-machine')">Annuler</button>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-machine')">Annuler</button>
       <button class="btn" onclick="saveMachine()">Enregistrer</button>
     </div>
   </div>
@@ -629,28 +642,61 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-qualite" onclick="if(event.target===this)closeModal('modal-qualite')">
-  <div class="modal-box">
-    <div class="modal-title">Nouveau Contrôle Qualité</div>
-    <div class="frow">
-      <div class="fg"><label>OF lié</label><select id="cq-of"><option value="">— Aucun —</option></select></div>
-      <div class="fg"><label>Type</label>
-        <select id="cq-type"><option value="FINAL">Final</option><option value="EN_COURS">En cours</option><option value="RECEPTION">Réception</option></select>
+<div class="overlay" id="modal-qualite">
+  <div class="modal" style="max-width:620px;width:97vw">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU CONTRÔLE QUALITÉ</div>
+      <button class="x" onclick="closeModal('modal-qualite')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="row2">
+        <div class="fg"><label>OF lié</label>
+          <select id="cq-of" onchange="onCQOFChange()">
+            <option value="">— Aucun —</option>
+          </select>
+        </div>
+        <div class="fg"><label>Type Contrôle</label>
+          <select id="cq-type">
+            <option value="EN_COURS">En Cours Production</option>
+            <option value="FINAL">Final (réception)</option>
+            <option value="RECEPTION">Réception matières</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Opérateur / Contrôleur</label>
+          <select id="cq-op"><option value="">— Aucun —</option></select>
+        </div>
+        <div class="fg"><label>Date Contrôle *</label>
+          <input type="date" id="cq-date">
+        </div>
+      </div>
+      <div class="fg"><label>Critères Contrôlés</label>
+        <input type="text" id="cq-criteres" placeholder="Ex: Dimensions, Aspect visuel, Fonctionnel...">
+      </div>
+      <div class="row2" style="margin-top:.5rem">
+        <div class="fg"><label>Qté Contrôlée</label>
+          <input type="number" id="cq-total" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+        <div class="fg"><label>Qté Conforme</label>
+          <input type="number" id="cq-ok" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+        <div class="fg"><label>Qté Rebut</label>
+          <input type="number" id="cq-rebut" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+      </div>
+      <!-- Live result badge -->
+      <div id="cq-resultat" style="margin-top:.5rem;padding:.5rem .75rem;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Résultat</span>
+        <span id="cq-resultat-badge" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">— Saisir les quantités —</span>
+      </div>
+      <div class="fg" style="margin-top:.5rem"><label>Notes</label>
+        <textarea id="cq-notes" rows="2" placeholder="Observations, défauts constatés..."></textarea>
       </div>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Opérateur</label><select id="cq-op"><option value="">— Aucun —</option></select></div>
-      <div class="fg"><label>Date Contrôle *</label><input type="date" id="cq-date"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Qté Contrôlée</label><input type="number" id="cq-total" value="0"></div>
-      <div class="fg"><label>Qté Conforme</label><input type="number" id="cq-ok" value="0"></div>
-      <div class="fg"><label>Qté Rebut</label><input type="number" id="cq-rebut" value="0"></div>
-    </div>
-    <div class="fg"><label>Notes</label><textarea id="cq-notes" rows="2"></textarea></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-qualite')">Annuler</button>
-      <button class="btn" onclick="saveControle()">Enregistrer</button>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-qualite')">Annuler</button>
+      <button class="btn" onclick="saveControle()">✓ Enregistrer</button>
     </div>
   </div>
 </div>
