@@ -17,6 +17,7 @@ const DISPLAY_DEFAULTS = {
   show_chef_col:     true,
   show_client_col:   true,
   compact_table:     false,
+  theme:             'dark',
 };
 
 function loadDisplaySettings() {
@@ -399,6 +400,47 @@ function renderAffichageTab() {
       </div>
     </div>
 
+    <!-- Thème -->
+    <div class="scard">
+      <div class="scard-head">
+        <div class="scard-icon">🌓</div>
+        <div>
+          <div class="scard-title">Thème de l'Interface</div>
+          <div class="scard-desc">Basculer entre le mode sombre et le mode clair</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem;padding:.25rem 0">
+        <!-- Dark mode card -->
+        <div onclick="setTheme('dark')" style="flex:1;cursor:pointer;border-radius:10px;overflow:hidden;
+          border:3px solid ${d.theme==='dark'?'var(--red)':'var(--border)'};transition:all .2s">
+          <div style="background:#0E0F11;padding:1rem;display:flex;flex-direction:column;gap:6px">
+            <div style="height:8px;border-radius:4px;background:#1C1F25;width:60%"></div>
+            <div style="height:8px;border-radius:4px;background:#1C1F25;width:80%"></div>
+            <div style="height:8px;border-radius:4px;background:#D42B2B;width:40%"></div>
+          </div>
+          <div style="background:#14161A;padding:.5rem .75rem;display:flex;align-items:center;
+            justify-content:space-between;border-top:1px solid rgba(255,255,255,0.07)">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#E8E9EB">🌙 Mode Sombre</span>
+            ${d.theme==='dark'?'<span style="color:var(--red);font-size:14px">✓</span>':''}
+          </div>
+        </div>
+        <!-- Light mode card -->
+        <div onclick="setTheme('light')" style="flex:1;cursor:pointer;border-radius:10px;overflow:hidden;
+          border:3px solid ${d.theme==='light'?'var(--red)':'var(--border)'};transition:all .2s">
+          <div style="background:#F3F4F6;padding:1rem;display:flex;flex-direction:column;gap:6px">
+            <div style="height:8px;border-radius:4px;background:#E5E7EB;width:60%"></div>
+            <div style="height:8px;border-radius:4px;background:#E5E7EB;width:80%"></div>
+            <div style="height:8px;border-radius:4px;background:#D42B2B;width:40%"></div>
+          </div>
+          <div style="background:#FFFFFF;padding:.5rem .75rem;display:flex;align-items:center;
+            justify-content:space-between;border-top:1px solid rgba(0,0,0,0.08)">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#111827">☀️ Mode Clair</span>
+            ${d.theme==='light'?'<span style="color:var(--red);font-size:14px">✓</span>':''}
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Couleur accent -->
     <div class="scard">
       <div class="scard-head">
@@ -464,6 +506,15 @@ function updateDatePreview() {
 function updateNumberPreview() {
   const el = $('number-preview');
   if (el) el.textContent = 'Aperçu: ' + formatNumber(1234.567, _displaySettings.number_format) + ' TND';
+}
+
+function setTheme(theme) {
+  _displaySettings.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  saveDisplaySettings();
+  // Re-render to update card borders
+  renderSettingsPage();
+  toast(theme === 'dark' ? '🌙 Mode Sombre activé' : '☀️ Mode Clair activé');
 }
 
 function setAccentColor(color) {
@@ -532,6 +583,8 @@ function saveDisplayAll() {
 function applyDisplaySettings() {
   loadDisplaySettings();
   const d = _displaySettings;
+  // Apply theme
+  document.documentElement.setAttribute('data-theme', d.theme || 'dark');
   if (d.accent_color && d.accent_color !== '#D42B2B') {
     document.documentElement.style.setProperty('--red', d.accent_color);
     document.documentElement.style.setProperty('--red-d', d.accent_color);

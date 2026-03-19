@@ -127,3 +127,32 @@ function pdfUrl(path) {
   const sep = path.includes('?') ? '&' : '?';
   return `${API}${path}${sep}token=${token}`;
 }
+
+// ── Theme toggle ──────────────────────────────────────────
+function quickThemeToggle() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sofem_display') || '{}');
+    const current = saved.theme || document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    saved.theme = next;
+    localStorage.setItem('sofem_display', JSON.stringify(saved));
+    document.documentElement.setAttribute('data-theme', next);
+    const btn = $('theme-toggle-btn');
+    if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
+    toast(next === 'dark' ? '🌙 Mode Sombre' : '☀️ Mode Clair');
+  } catch(e) {}
+}
+
+// Apply theme on initial load
+(function() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sofem_display') || '{}');
+    const theme = saved.theme || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    // Update button icon after DOM loads
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('theme-toggle-btn');
+      if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+    });
+  } catch(e) {}
+})();

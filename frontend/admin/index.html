@@ -7,6 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
+[data-theme="light"]{--bg:#F3F4F6;--bg2:#FFFFFF;--bg3:#F9FAFB;--border:rgba(0,0,0,0.1);--text:#111827;--muted:#6B7280;--accent:#F5A623;--green:#16A34A;--blue:#2563EB}
+[data-theme="light"] .topbar{box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+[data-theme="light"] .sidebar{box-shadow:1px 0 3px rgba(0,0,0,0.05)}
+[data-theme="light"] .nav-item:hover{background:rgba(0,0,0,0.04)}
+[data-theme="light"] .btn{color:#fff}
+[data-theme="light"] .of-num{color:var(--red)}
+[data-theme="light"] table{color:var(--text)}
+[data-theme="light"] .badge{opacity:0.9}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200}
@@ -157,6 +165,11 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="topbar-r">
     <div class="user-info" id="user-info">—</div>
     <div class="clock" id="clock">—</div>
+    <button onclick="quickThemeToggle()" title="Changer thème"
+      style="background:transparent;border:1px solid var(--border);color:var(--muted);
+        font-size:14px;width:30px;height:30px;border-radius:6px;cursor:pointer;
+        margin-right:.5rem;display:flex;align-items:center;justify-content:center"
+      id="theme-toggle-btn">🌙</button>
     <button class="btn-logout" onclick="logout()">DÉCONNEXION</button>
   </div>
 </header>
