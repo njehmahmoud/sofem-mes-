@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from database import get_db, q, serialize
 from auth import require_any_role, get_pdf_user
 from datetime import datetime
+from setting import *
 import io
 
 router = APIRouter(prefix="/api/of", tags=["fiche"])
