@@ -5,7 +5,6 @@ from fastapi.responses import StreamingResponse
 from database import get_db, q, serialize
 from auth import require_any_role, get_pdf_user
 from datetime import datetime
-from setting import *
 import io
 
 router = APIRouter(prefix="/api/of", tags=["fiche"])
@@ -55,7 +54,7 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     # Load settings
     from routes.settings import get_all_settings
     cfg = get_all_settings(db)
-    S_NOM    = cfg.get("societe_nom",       S_NOM)
+    S_NOM    = cfg.get("societe_nom",       "sofem")
     S_TAG    = cfg.get("societe_tagline",   "Société de Fabrication Électromécanique & de Maintenance")
     S_ADDR   = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
     S_VILLE  = cfg.get("societe_ville",     "Sfax")
@@ -65,7 +64,7 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     S_WEB    = cfg.get("societe_website",   "sofem-tn.com")
     TVA_RATE = float(cfg.get("tva_rate",    19)) / 100
     PDF_REV  = cfg.get("pdf_rev",           "00")
-    PDF_PIED = cfg.get("pdf_pied_custom",   PDF_PIED)
+    PDF_PIED = cfg.get("pdf_pied_custom",   "PDF_PIED")
 
     qte = int(of.get("quantite", 1))
 
