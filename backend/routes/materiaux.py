@@ -16,9 +16,16 @@ def list_materiaux(db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_materiau(data: MateriauCreate, db=Depends(get_db)):
+    # Auto-generate MAT-xxx code if not provided
+    if not data.code:
+        last = q(db, "SELECT code FROM materiaux WHERE code LIKE 'MAT-%' ORDER BY id DESC LIMIT 1", one=True)
+        try:
+            n = int(last["code"].split("-")[1]) + 1 if last else 1
+        except: n = 1
+        data.code = f"MAT-{str(n).zfill(3)}"
     mid = exe(db, "INSERT INTO materiaux (code,nom,unite,stock_actuel,stock_minimum,fournisseur,prix_unitaire) VALUES (%s,%s,%s,%s,%s,%s,%s)",
               (data.code, data.nom, data.unite, data.stock_actuel, data.stock_minimum, data.fournisseur, data.prix_unitaire))
-    return {"id": mid, "message": "Matériau créé"}
+    return {"id": mid, "code": data.code, "message": "Matériau créé"}
 
 @router.post("/mouvement", dependencies=[Depends(require_any_role)])
 def mouvement_stock(data: MouvementCreate, db=Depends(get_db)):
@@ -28,7 +35,7 @@ def mouvement_stock(data: MouvementCreate, db=Depends(get_db)):
     apres = avant + data.quantite if data.type=="ENTREE" else avant - data.quantite if data.type=="SORTIE" else data.quantite
     if apres < 0: raise HTTPException(400, f"Stock insuffisant (disponible: {avant})")
     exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s", (apres, data.materiau_id))
-    exe(db, "INSERT INTO mouvements_stock (materiau_id,of_id,type,quantite,stock_avant,stock_apres,motif) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+    exe(db, "INSERT INTO mouvements_stock (materiau_id,of_id,type,quantite,stock_avant,stock_apres,motif) VALUES (%s,%s,%s,%s,%s,%s,%s)",
         (data.materiau_id, data.of_id, data.type, data.quantite, avant, apres, data.motif))
     return {"message": "Mouvement enregistré", "stock_avant": avant, "stock_apres": apres}
 

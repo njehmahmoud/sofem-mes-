@@ -344,7 +344,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Matériau</th><th>Stock</th><th>Min.</th><th>Unité</th><th>Fournisseur</th><th>État</th><th>Niveau</th></tr></thead>
+      <thead><tr><th>Code</th><th>Matériau</th><th>Stock</th><th>Min.</th><th>Unité</th><th>Prix/u (DT)</th><th>Fournisseur</th><th>Niveau</th><th>Actions</th></tr></thead>
       <tbody id="mats-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -379,7 +379,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
   <div class="sec">
     <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Produit</th><th>Unité</th><th>BOM (Matériaux)</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Code</th><th>Produit</th><th>Description</th><th>Unité</th><th>Prix Vente HT</th><th>BOM (Matériaux)</th><th></th></tr></thead>
       <tbody id="prods-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
     </table></div>
   </div>
@@ -990,10 +990,24 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="modal">
     <div class="modal-h"><div class="modal-title">NOUVEAU MATÉRIAU</div><button class="x" onclick="closeModal('m-mat')">✕</button></div>
     <div class="modal-b">
-      <div class="row2"><div class="fg"><label>Code *</label><input type="text" id="mat-code"></div><div class="fg"><label>Unité *</label><input type="text" id="mat-unite"></div></div>
-      <div class="fg"><label>Nom *</label><input type="text" id="mat-nom"></div>
-      <div class="row2"><div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" value="0" step="0.01"></div><div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" value="0" step="0.01"></div></div>
-      <div class="row2"><div class="fg"><label>Prix Unitaire (DT)</label><input type="number" id="mat-prix" step="0.001" value="0" placeholder="Coût achat/unité"></div><div class="fg"><label>Fournisseur</label><input type="text" id="mat-four"></div></div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="mat-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">MAT-XXX</div>
+      </div>
+      <div class="fg"><label>Nom *</label><input type="text" id="mat-nom" placeholder="Ex: Tole Acier S235 3mm"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité *</label><input type="text" id="mat-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Unitaire (DT)</label><input type="number" id="mat-prix" step="0.001" value="0"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" value="0" step="0.01"></div>
+        <div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" value="0" step="0.01"></div>
+      </div>
+      <div class="fg"><label>Fournisseur</label>
+        <select id="mat-fourn-sel" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-size:12px;width:100%">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
     </div>
     <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mat')">Annuler</button><button class="btn" onclick="saveMateriau()">Créer</button></div>
   </div>
@@ -1232,6 +1246,67 @@ navigate('dashboard');
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal('m-op-type')">Annuler</button>
       <button class="btn" onclick="saveOpType()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- PRODUIT EDIT MODAL -->
+<div class="overlay" id="m-prod-edit">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER PRODUIT</div>
+      <button class="x" onclick="closeModal('m-prod-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="prod-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="prod-edit-nom"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="prod-edit-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Vente HT (DT/unité)</label>
+          <input type="number" id="prod-edit-prix" step="0.001" value="0"></div>
+      </div>
+      <div class="fg"><label>Description</label>
+        <textarea id="prod-edit-desc" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-prod-edit')">Annuler</button>
+      <button class="btn" onclick="saveEditProduit()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MATERIAU EDIT MODAL -->
+<div class="overlay" id="m-mat-edit">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER MATÉRIAU</div>
+      <button class="x" onclick="closeModal('m-mat-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="mat-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="mat-edit-nom"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="mat-edit-unite"></div>
+        <div class="fg"><label>Stock Minimum</label>
+          <input type="number" id="mat-edit-min" step="0.001" value="0"></div>
+      </div>
+      <div class="fg"><label>Prix Unitaire (DT)</label>
+        <input type="number" id="mat-edit-prix" step="0.001" value="0"></div>
+      <div class="fg"><label>Fournisseur</label>
+        <select id="mat-edit-four-sel" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-size:12px;width:100%">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-mat-edit')">Annuler</button>
+      <button class="btn" onclick="saveEditMateriau()">💾 Enregistrer</button>
     </div>
   </div>
 </div>

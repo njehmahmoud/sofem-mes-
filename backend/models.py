@@ -123,7 +123,7 @@ class BOMLine(BaseModel):
 
 # ── MATERIAUX ─────────────────────────────────────────────
 class MateriauCreate(BaseModel):
-    code: str; nom: str; unite: str
+    code: str = ""; nom: str; unite: str
     stock_actuel: float=0; stock_minimum: float=0
     fournisseur: Optional[str]=None
     prix_unitaire: float=0.0
