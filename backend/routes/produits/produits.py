@@ -46,8 +46,8 @@ def get_produit(pid: int, db=Depends(get_db)):
 def create_produit(data: ProduitCreate, db=Depends(get_db)):
     code = next_code(db)
     pid = exe(db,
-        "INSERT INTO produits (code,nom,description,unite) VALUES (%s,%s,%s,%s)",
-        (code, data.nom, data.description, data.unite))
+        "INSERT INTO produits (code,nom,description,unite,prix_vente_ht) VALUES (%s,%s,%s,%s,%s)",
+        (code, data.nom, data.description, data.unite, data.prix_vente_ht))
     return {"id": pid, "code": code, "message": f"Produit créé — {code}"}
 
 

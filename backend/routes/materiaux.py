@@ -28,7 +28,7 @@ def mouvement_stock(data: MouvementCreate, db=Depends(get_db)):
     apres = avant + data.quantite if data.type=="ENTREE" else avant - data.quantite if data.type=="SORTIE" else data.quantite
     if apres < 0: raise HTTPException(400, f"Stock insuffisant (disponible: {avant})")
     exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s", (apres, data.materiau_id))
-    exe(db, "INSERT INTO mouvements_stock (materiau_id,of_id,type,quantite,stock_avant,stock_apres,motif) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+    exe(db, "INSERT INTO mouvements_stock (materiau_id,of_id,type,quantite,stock_avant,stock_apres,motif) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
         (data.materiau_id, data.of_id, data.type, data.quantite, avant, apres, data.motif))
     return {"message": "Mouvement enregistré", "stock_avant": avant, "stock_apres": apres}
 

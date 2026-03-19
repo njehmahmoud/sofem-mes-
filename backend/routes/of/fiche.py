@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/of", tags=["fiche"])
 def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = q(db, """
         SELECT o.*, p.nom produit_nom, p.code produit_code,
+               p.prix_vente_ht,
                CONCAT(cp.prenom,' ',cp.nom) chef_projet_nom,
                c.nom client_nom, c.matricule_fiscal client_mf,
                bl.bl_numero
@@ -43,7 +44,8 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     """, (of_id,))
 
     bom = q(db, """
-        SELECT ob.*, m.nom materiau_nom, m.code materiau_code, m.unite
+        SELECT ob.*, m.nom materiau_nom, m.code materiau_code,
+               m.unite, m.prix_unitaire
         FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
         WHERE ob.of_id = %s
     """, (of_id,))
@@ -91,33 +93,50 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 8)
     c.drawRightString(W-12*mm, H-30*mm, f"Rév. 00  ·  Date: {now}  ·  Page 1/1")
 
-    # ── INFO BAND ───────────────────────────────────────
-    y = H - 55*mm
-    c.setFillColor(LIGHT); c.rect(12*mm, y, W-24*mm, 16*mm, fill=1, stroke=0)
+    # ── INFO BAND — 2 rows × 4 cols ────────────────────
+    ROW_H  = 14*mm
+    BAND_H = ROW_H * 2
+    BX     = 12*mm
+    BW     = W - 24*mm
+    y      = H - 40*mm          # top of band
+
+    # Draw band background + outer border
+    c.setFillColor(LIGHT)
+    c.rect(BX, y - BAND_H, BW, BAND_H, fill=1, stroke=0)
     c.setStrokeColor(BORDER); c.setLineWidth(0.5)
-    c.rect(12*mm, y, W-24*mm, 16*mm, fill=0, stroke=1)
+    c.rect(BX, y - BAND_H, BW, BAND_H, fill=0, stroke=1)
+    # Horizontal divider between rows
+    c.line(BX, y - ROW_H, BX + BW, y - ROW_H)
 
-    def info_cell(label, value, x, y_base):
-        c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6.5)
-        c.drawString(x, y_base+11*mm, label.upper())
+    col_x = [14*mm, 62*mm, 117*mm, 162*mm]
+
+    def info_cell(label, value, x, row):
+        y_lbl = y - row * ROW_H - 3.5*mm
+        y_val = y - row * ROW_H - 10*mm
+        c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 6)
+        c.drawString(x, y_lbl, label.upper())
         c.setFillColor(DARK); c.setFont("Helvetica-Bold", 9)
-        c.drawString(x, y_base+6.5*mm, str(value or "—")[:30])
+        c.drawString(x, y_val, str(value or "—")[:28])
 
-    info_cell("OF N°",         of["numero"],            14*mm, y)
-    info_cell("Produit",        of["produit_nom"],       50*mm, y)
-    info_cell("Client",         of["client_nom"],        100*mm, y)
-    info_cell("Plan N°",        of.get("plan_numero"),   150*mm, y)
-    # second row
-    info_cell("Quantité",       of["quantite"],          14*mm, y-8*mm)
-    info_cell("Chef Atelier",   of.get("chef_projet_nom"), 50*mm, y-8*mm)
-    info_cell("MF Client",      of.get("client_mf"),     100*mm, y-8*mm)
-    info_cell("Date",           now,                     150*mm, y-8*mm)
+    # Row 0 — top
+    info_cell("OF N°",       of["numero"],                         col_x[0], 0)
+    info_cell("Produit",     of["produit_nom"],                    col_x[1], 0)
+    info_cell("Client",      of.get("client_nom") or "—",         col_x[2], 0)
+    info_cell("Plan N°",     of.get("plan_numero") or "—",        col_x[3], 0)
+    # Row 1 — bottom
+    info_cell("Quantité",    str(of["quantite"]),                  col_x[0], 1)
+    info_cell("Chef Atelier",of.get("chef_projet_nom") or "—",    col_x[1], 1)
+    info_cell("MF Client",   of.get("client_mf") or "—",          col_x[2], 1)
+    info_cell("Date Éch.",   str(of.get("date_echeance") or now)[:10], col_x[3], 1)
 
-    c.setFillColor(LIGHT); c.rect(12*mm, y-10*mm, W-24*mm, 10*mm, fill=1, stroke=0)
-    c.rect(12*mm, y-10*mm, W-24*mm, 10*mm, fill=0, stroke=1)
+    # Vertical dividers
+    c.setLineWidth(0.3)
+    for cx in col_x[1:]:
+        c.line(cx - 2*mm, y - BAND_H, cx - 2*mm, y)
+
+    y_cur = y - BAND_H - 8*mm
 
     # ── OPERATIONS TABLE ────────────────────────────────
-    y_cur = y - 18*mm
     c.setFillColor(DARK); c.setFont("Helvetica-Bold", 9)
     c.drawString(12*mm, y_cur+2*mm, "DÉTAIL DES OPÉRATIONS")
 
@@ -132,14 +151,12 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
         c.drawString(cols_x[i]*mm+1*mm, y_cur-2*mm, h)
     y_cur -= 12*mm
 
-    total_cost = 0
+    total_mo_cost = 0  # main d'oeuvre
     for idx, op in enumerate(ops):
         dur = op.get("duree_reelle") or 0  # minutes
         dur_h = dur / 60
-        # AutoCAD × 1, others × quantite
         mult = 1 if "autocad" in op["operation_nom"].lower() else qte
         total_h = dur_h * mult
-        # Cost: use first operator's rate
         cost = 0
         try:
             th = float((op.get("taux_horaires") or "0").split(",")[0])
@@ -149,7 +166,7 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
             elif tt == "PIECE":  cost = mult * tp
             else: cost = total_h * th + mult * tp
         except: pass
-        total_cost += cost
+        total_mo_cost += cost
 
         bg = LIGHT if idx % 2 == 0 else WHITE
         c.setFillColor(bg); c.rect(12*mm, y_cur-4*mm, W-24*mm, 6*mm, fill=1, stroke=0)
@@ -177,20 +194,27 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.setFillColor(DARK); c.setFont("Helvetica-Bold", 9)
     c.drawString(12*mm, y_cur+2*mm, "MATIÈRES CONSOMMÉES")
     y_cur -= 6*mm
-    mat_headers = ["DÉSIGNATION","CODE","QUANTITÉ","UNITÉ"]
-    mat_x = [12, 82, 132, 162]
+    mat_headers = ["DÉSIGNATION","CODE","QUANTITÉ","UNITÉ","PRIX UNIT.","TOTAL DT"]
+    mat_x = [12, 72, 112, 137, 155, 175]
     c.setFillColor(DARK); c.rect(12*mm, y_cur-5*mm, W-24*mm, 7*mm, fill=1, stroke=0)
     for i, h in enumerate(mat_headers):
         c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 7)
         c.drawString(mat_x[i]*mm+1*mm, y_cur-2*mm, h)
     y_cur -= 12*mm
+    total_mat_cost = 0
     for idx, b in enumerate(bom):
+        pu = float(b.get("prix_unitaire") or 0)
+        qr = float(b.get("quantite_requise") or 0)
+        mat_cost = pu * qr
+        total_mat_cost += mat_cost
         bg = LIGHT if idx % 2 == 0 else WHITE
         c.setFillColor(bg); c.rect(12*mm, y_cur-4*mm, W-24*mm, 6*mm, fill=1, stroke=0)
         c.setStrokeColor(BORDER); c.rect(12*mm, y_cur-4*mm, W-24*mm, 6*mm, fill=0, stroke=1)
         c.setFillColor(DARK); c.setFont("Helvetica", 8)
-        for i, v in enumerate([b["materiau_nom"], b["materiau_code"],
-                                str(b["quantite_requise"]), b["unite"]]):
+        vals = [b["materiau_nom"], b["materiau_code"],
+                str(b["quantite_requise"]), b["unite"],
+                f"{pu:.3f}", f"{mat_cost:.3f}"]
+        for i, v in enumerate(vals):
             c.drawString(mat_x[i]*mm+1*mm, y_cur-1*mm, str(v))
         y_cur -= 7*mm
 
@@ -206,11 +230,38 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
             f"{of['sous_traitant']} · {of.get('sous_traitant_op','')} · {of.get('sous_traitant_cout',0)} DT")
         y_cur -= 14*mm
 
-    # ── TOTAL COST ───────────────────────────────────────
-    y_cur -= 4*mm
-    c.setFillColor(DARK); c.rect(130*mm, y_cur-8*mm, W-142*mm, 10*mm, fill=1, stroke=0)
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 9)
-    c.drawString(132*mm, y_cur-5*mm, f"COÛT TOTAL: {total_cost:.3f} DT")
+    # ── COST SUMMARY ─────────────────────────────────────
+    st_cost = float(of.get("sous_traitant_cout") or 0)
+    total_cost = total_mo_cost + total_mat_cost + st_cost
+    prix_vente = float(of.get("prix_vente_ht") or 0) * qte
+    marge = prix_vente - total_cost if prix_vente > 0 else None
+
+    y_cur -= 6*mm
+    summary_rows = [
+        ("Main d'Œuvre",   f"{total_mo_cost:.3f} DT"),
+        ("Matières",       f"{total_mat_cost:.3f} DT"),
+        ("Sous-traitance", f"{st_cost:.3f} DT"),
+        ("COÛT REVIENT",   f"{total_cost:.3f} DT"),
+    ]
+    if marge is not None:
+        summary_rows.append(("Prix Vente HT", f"{prix_vente:.3f} DT"))
+        summary_rows.append(("MARGE BRUTE",   f"{marge:.3f} DT"))
+
+    sx = W - 80*mm
+    for i, (lbl, val) in enumerate(summary_rows):
+        is_total = lbl in ("COÛT REVIENT", "MARGE BRUTE")
+        bg = DARK if is_total else LIGHT
+        fg = WHITE if is_total else DARK
+        row_h = 7*mm
+        c.setFillColor(bg)
+        c.rect(sx, y_cur - row_h, 68*mm, row_h, fill=1, stroke=0)
+        c.setStrokeColor(BORDER); c.setLineWidth(0.3)
+        c.rect(sx, y_cur - row_h, 68*mm, row_h, fill=0, stroke=1)
+        c.setFillColor(fg)
+        c.setFont("Helvetica-Bold" if is_total else "Helvetica", 8)
+        c.drawString(sx + 2*mm, y_cur - 5*mm, lbl)
+        c.drawRightString(sx + 66*mm, y_cur - 5*mm, val)
+        y_cur -= row_h
 
     # ── BL REFERENCE ─────────────────────────────────────
     y_cur -= 14*mm

@@ -109,11 +109,13 @@ class ProduitCreate(BaseModel):
     nom: str
     description: Optional[str] = None
     unite: str = "pcs"
+    prix_vente_ht: float = 0.0
 
 class ProduitUpdate(BaseModel):
     nom: Optional[str] = None
     description: Optional[str] = None
     unite: Optional[str] = None
+    prix_vente_ht: Optional[float] = None
 
 class BOMLine(BaseModel):
     materiau_id: int
@@ -124,6 +126,7 @@ class MateriauCreate(BaseModel):
     code: str; nom: str; unite: str
     stock_actuel: float=0; stock_minimum: float=0
     fournisseur: Optional[str]=None
+    prix_unitaire: float=0.0
 
 class MouvementCreate(BaseModel):
     materiau_id: int; of_id: Optional[int]=None

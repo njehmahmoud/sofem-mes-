@@ -738,6 +738,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 </main>
 </div>
+<footer class="footer"><div>SOFEM MES v6.0 · SMARTMOVE · Sfax</div></footer>
 
 
 <div class="overlay" id="m-of">
@@ -993,7 +994,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
       <div class="row2"><div class="fg"><label>Code *</label><input type="text" id="mat-code"></div><div class="fg"><label>Unité *</label><input type="text" id="mat-unite"></div></div>
       <div class="fg"><label>Nom *</label><input type="text" id="mat-nom"></div>
       <div class="row2"><div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" value="0" step="0.01"></div><div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" value="0" step="0.01"></div></div>
-      <div class="fg"><label>Fournisseur</label><input type="text" id="mat-four"></div>
+      <div class="row2"><div class="fg"><label>Prix Unitaire (DT)</label><input type="number" id="mat-prix" step="0.001" value="0" placeholder="Coût achat/unité"></div><div class="fg"><label>Fournisseur</label><input type="text" id="mat-four"></div></div>
     </div>
     <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mat')">Annuler</button><button class="btn" onclick="saveMateriau()">Créer</button></div>
   </div>
@@ -1011,7 +1012,10 @@ td{padding:.65rem 1rem;vertical-align:middle}
         <div id="prod-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">SOFEM-XXX</div>
       </div>
       <div class="fg"><label>Nom *</label><input type="text" id="prod-nom"></div>
-      <div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Vente HT (DT/unité)</label><input type="number" id="prod-prix" step="0.001" value="0" placeholder="Ex: 85.000"></div>
+      </div>
       <div class="fg"><label>Description</label><textarea id="prod-desc" rows="2"></textarea></div>
     </div>
     <div class="modal-f">
