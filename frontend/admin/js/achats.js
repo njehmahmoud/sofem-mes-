@@ -46,10 +46,6 @@ async function loadDA() {
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${bc.br_numero||'—'}</span>
             ${brBadge}
-            ${bc.br_id && bc.br_statut !== 'COMPLET'
-              ? `<button class="btn btn-ghost btn-sm" style="font-size:8px;padding:1px 5px;color:var(--green)"
-                  onclick="confirmerReception(${bc.br_id},'${bc.br_numero}')" title="Confirmer réception">✓ Réception</button>`
-              : ''}
           </div>
         </div>`;
       }
@@ -109,7 +105,9 @@ async function confirmerReception(brId, brNumero) {
   try {
     const res = await api(`/api/achats/br/${brId}/confirmer`, 'PUT');
     toast(res.message + ' ✓');
-    loadDA(); loadBR();
+    // Refresh all achats tabs + stock alerts on dashboard
+    loadDA(); loadBR(); loadBC();
+    if (window.pageLoaders?.dashboard) window.pageLoaders.dashboard();
   } catch(e) { toast(e.message, 'err'); }
 }
 
@@ -205,12 +203,22 @@ async function loadBR() {
         received.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
     }
     $('br-date').value = new Date().toISOString().split('T')[0];
-    $('br-tb').innerHTML = (brs||[]).length===0 ? empty(5) : brs.map(br=>
-      `<tr><td><span class="of-num">${br.br_numero}</span></td>
-       <td>${br.bc_numero}</td><td>${br.fournisseur}</td>
-       <td><span class="badge ${br.statut==='COMPLET'?'b-completed':'b-inprogress'}">${br.statut}</span></td>
-       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.date_reception||'—'}</td></tr>`
-    ).join('');
+    $('br-tb').innerHTML = (brs||[]).length===0 ? empty(6) : brs.map(br => {
+      const badgeCls = {COMPLET:'b-completed',EN_ATTENTE:'b-draft',PARTIEL:'b-inprogress'}[br.statut]||'b-draft';
+      const statutLabel = {COMPLET:'Reçu ✓',EN_ATTENTE:'En attente',PARTIEL:'Partiel'}[br.statut]||br.statut;
+      return `<tr>
+        <td><span class="of-num">${br.br_numero}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.bc_numero}</td>
+        <td style="font-size:11px">${br.fournisseur}</td>
+        <td><span class="badge ${badgeCls}">${statutLabel}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${br.date_reception||'—'}</td>
+        <td>${br.statut !== 'COMPLET'
+          ? `<button class="btn btn-ghost btn-sm" style="color:var(--green)"
+               onclick="confirmerReception(${br.id},'${br.br_numero}')">✓ Confirmer réception</button>`
+          : '<span style="color:var(--muted);font-size:10px">—</span>'}
+        </td>
+      </tr>`;
+    }).join('');
   } catch(e) { toast('Erreur BR: '+e.message,'err'); }
 }
 
