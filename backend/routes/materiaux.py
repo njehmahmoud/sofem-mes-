@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
-from models import MateriauCreate, MouvementCreate
+from models import MateriauCreate, MateriauUpdate, MouvementCreate
 
 router = APIRouter(prefix="/api/materiaux", tags=["materiaux"])
 
