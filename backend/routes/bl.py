@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/bl", tags=["bon-livraison"])
 class BLCreate(BaseModel):
     of_id: int
     date_livraison: Optional[date] = None
-    destinataire: str = S_NOM
+    destinataire: str = "SOFEM"
     adresse: str = "Route Sidi Salem 2.5KM, Sfax"
     notes: Optional[str] = None
 
@@ -78,12 +78,12 @@ def print_bl(bl_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends
 
     from routes.settings import get_all_settings
     cfg = get_all_settings(db)
-    S_NOM  = cfg.get("societe_nom",       S_NOM)
+    S_NOM  = cfg.get("societe_nom",       "SOFEM")
     S_ADDR = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
     S_VILLE= cfg.get("societe_ville",     "Sfax")
     S_TEL  = cfg.get("societe_telephone", "+216 74 469 181")
     S_MF   = cfg.get("societe_mf",        "000000000/A/M/000")
-    PDF_PIED = cfg.get("pdf_pied_custom", PDF_PIED)
+    PDF_PIED = cfg.get("pdf_pied_custom", "SOFEM MES v6.0 · SMARTMOVE")
 
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
