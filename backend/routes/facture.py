@@ -16,7 +16,6 @@ import io
 
 router = APIRouter(prefix="/api/facture", tags=["facture"])
 
-TVA_RATE   = 0.19
 
 def get_of_data(of_id, db):
     of = q(db, """SELECT o.*, p.nom produit_nom, p.code produit_code,
@@ -57,7 +56,11 @@ def draw_header(c, W, H, colors, title, numero, now):
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica",8)
     c.drawRightString(W-15*2.835,H-33*2.835,f"Date: {now}")
 
-def draw_footer(c, W, colors, numero, now):
+def draw_footer(c, W, colors, numero, now,
+                S_NOM="SOFEM", S_TAG="Partenaire des Briqueteries",
+                S_ADDR="Route Sidi Salem 2.5KM", S_VILLE="Sfax",
+                S_WEB="sofem-tn.com", S_MF="000000000/A/M/000",
+                PDF_PIED="SOFEM MES v6.0 · SMARTMOVE"):
     RED=colors.HexColor("#D42B2B"); DARK=colors.HexColor("#111"); WHITE=colors.white
     c.setFillColor(DARK); c.rect(0,0,W,14*2.835,fill=1,stroke=0)
     c.setFillColor(RED);  c.rect(0,14*2.835,W,0.8*2.835,fill=1,stroke=0)
@@ -246,7 +249,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     c.setFillColor(GRAY); c.setFont("Helvetica",8); c.drawCentredString(W-45*mm,y_sig-6*mm,"Signature & Cachet")
     c.line(W-70*mm,y_sig-18*mm,W-20*mm,y_sig-18*mm)
 
-    draw_footer(c,W,colors,fac_num+suffix,now)
+    draw_footer(c,W,colors,fac_num+suffix,now,S_NOM,S_TAG,S_ADDR,S_VILLE,S_WEB,S_MF,PDF_PIED)
     c.save(); buf.seek(0)
     return StreamingResponse(io.BytesIO(buf.read()),media_type="application/pdf",
         headers={"Content-Disposition":f'inline; filename="{fac_num}{suffix}.pdf"'})
@@ -266,6 +269,18 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
         if of["statut"] != "COMPLETED":
             raise HTTPException(400, f"OF {of['numero']} n'est pas terminé")
         ofs.append(of)
+
+    # Load company settings for footer
+    from routes.settings import get_all_settings
+    cfg = get_all_settings(db)
+    S_NOM   = cfg.get("societe_nom",       "SOFEM")
+    S_TAG   = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
+    S_ADDR  = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
+    S_VILLE = cfg.get("societe_ville",     "Sfax")
+    S_WEB   = cfg.get("societe_website",   "sofem-tn.com")
+    S_MF    = cfg.get("societe_mf",        "000000000/A/M/000")
+    PDF_PIED = cfg.get("pdf_pied_custom",  "SOFEM MES v6.0 · SMARTMOVE")
+    TVA_RATE  = float(cfg.get("tva_rate", 19)) / 100
 
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -337,7 +352,7 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
     c.setFillColor(GRAY); c.setFont("Helvetica",8); c.drawCentredString(W-45*mm,y_sig-6*mm,"Signature & Cachet")
     c.line(W-70*mm,y_sig-18*mm,W-20*mm,y_sig-18*mm)
 
-    draw_footer(c,W,colors,fac_num,now)
+    draw_footer(c,W,colors,fac_num,now,S_NOM,S_TAG,S_ADDR,S_VILLE,S_WEB,S_MF,PDF_PIED)
     c.save(); buf.seek(0)
     return StreamingResponse(io.BytesIO(buf.read()),media_type="application/pdf",
         headers={"Content-Disposition":f'inline; filename="{fac_num}.pdf"'})

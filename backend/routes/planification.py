@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/planning", tags=["planning"])
 def list_planning(conn=Depends(get_db), user=Depends(require_any_role)):
     rows = q(conn, """
         SELECT pp.*,
-               of_.of_numero, p.nom as produit_nom,
+               of_.numero AS of_numero, p.nom as produit_nom,
                m.nom as machine_nom, m.code as machine_code,
                o.nom as operateur_nom, o.prenom as operateur_prenom
         FROM planning_production pp
@@ -71,7 +71,7 @@ def gantt_data(conn=Depends(get_db), user=Depends(require_manager_or_admin)):
     """Returns data structured for Gantt chart rendering."""
     rows = q(conn, """
         SELECT pp.id, pp.date_debut, pp.date_fin, pp.statut,
-               of_.of_numero, p.nom as produit_nom,
+               of_.numero AS of_numero, p.nom as produit_nom,
                m.nom as machine_nom,
                o.nom as operateur_nom, o.prenom as operateur_prenom
         FROM planning_production pp

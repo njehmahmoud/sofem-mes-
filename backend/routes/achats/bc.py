@@ -9,7 +9,6 @@ from datetime import datetime
 import io
 
 router = APIRouter(prefix="/api/achats/bc", tags=["achats-bc"])
-TVA_RATE = 19.0
 
 
 def gen_num(db):
@@ -22,6 +21,8 @@ def gen_num(db):
 
 @router.get("", dependencies=[Depends(require_any_role)])
 def list_bc(db=Depends(get_db)):
+    from routes.settings import get_all_settings
+    TVA_RATE = float(get_all_settings(db).get("tva_rate", 19))
     bcs = serialize(q(db, """
         SELECT bc.*, da.da_numero
         FROM bons_commande bc
@@ -43,6 +44,8 @@ def list_bc(db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_bc(data: BCCreate, db=Depends(get_db)):
+    from routes.settings import get_all_settings
+    TVA_RATE = float(get_all_settings(db).get("tva_rate", 19))
     numero = gen_num(db)
     bc_id = exe(db, """
         INSERT INTO bons_commande (bc_numero,fournisseur,da_id,notes)
@@ -66,6 +69,8 @@ def update_statut(bc_id: int, statut: str, db=Depends(get_db)):
 
 @router.get("/{bc_id}/pdf")
 def print_bc(bc_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
+    from routes.settings import get_all_settings
+    TVA_RATE = float(get_all_settings(db).get("tva_rate", 19))
     bc = q(db, "SELECT * FROM bons_commande WHERE id=%s", (bc_id,), one=True)
     if not bc: raise HTTPException(404, "BC non trouvé")
     lignes = q(db, """

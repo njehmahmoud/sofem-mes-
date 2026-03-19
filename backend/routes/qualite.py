@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/qualite", tags=["qualite"])
 def list_controles(conn=Depends(get_db), user=Depends(require_any_role)):
     rows = q(conn, """
         SELECT cq.*,
-               of_.of_numero, of_.produit_id,
+               of_.numero AS of_numero, of_.produit_id,
                p.nom as produit_nom,
                o.nom as operateur_nom, o.prenom as operateur_prenom
         FROM controles_qualite cq
@@ -47,9 +47,12 @@ def create_controle(data: CQCreate, conn=Depends(get_db), user=Depends(require_a
 
 @router.put("/controles/{cid}")
 def update_controle(cid: int, data: CQUpdate, conn=Depends(get_db), user=Depends(require_manager_or_admin)):
+    # Map Pydantic field names to actual DB column names (accent in DB column)
+    FIELD_MAP = {"quantite_controlee": "quantite_controlée"}
     fields, vals = [], []
     for f, v in data.dict(exclude_none=True).items():
-        fields.append(f"{f}=%s")
+        db_col = FIELD_MAP.get(f, f)
+        fields.append(f"{db_col}=%s")
         vals.append(v)
     if not fields:
         raise HTTPException(400, "Aucune donnée")
@@ -65,7 +68,7 @@ def list_nc(conn=Depends(get_db), user=Depends(require_any_role)):
     rows = q(conn, """
         SELECT nc.*,
                cq.cq_numero,
-               of_.of_numero,
+               of_.numero AS of_numero,
                o.nom as responsable_nom, o.prenom as responsable_prenom
         FROM non_conformites nc
         LEFT JOIN controles_qualite cq ON cq.id = nc.cq_id

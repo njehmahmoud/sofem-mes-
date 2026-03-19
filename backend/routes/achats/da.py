@@ -10,7 +10,6 @@ import io
 
 router = APIRouter(prefix="/api/achats/da", tags=["achats-da"])
 
-TVA_RATE = 19.0
 
 
 def gen_da_num(db):
