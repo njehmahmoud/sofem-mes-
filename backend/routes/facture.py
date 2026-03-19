@@ -85,7 +85,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     S_MF   = cfg.get("societe_mf",        "000000000/A/M/000")
     S_WEB  = cfg.get("societe_website",   "sofem-tn.com")
     TVA_RATE = float(cfg.get("tva_rate",  19)) / 100
-    PDF_PIED = cfg.get("pdf_pied_custom", PDF_PIED)
+    PDF_PIED = cfg.get("pdf_pied_custom", "SOFEM MES v6.0 · SMARTMOVE")
 
     if of["statut"] != "COMPLETED":
         raise HTTPException(400, "Facture disponible uniquement pour les OFs terminés")
