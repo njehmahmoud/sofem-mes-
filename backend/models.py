@@ -128,6 +128,13 @@ class MateriauCreate(BaseModel):
     fournisseur: Optional[str]=None
     prix_unitaire: float=0.0
 
+class MateriauUpdate(BaseModel):
+    nom:           Optional[str]   = None
+    unite:         Optional[str]   = None
+    stock_minimum: Optional[float] = None
+    fournisseur:   Optional[str]   = None
+    prix_unitaire: Optional[float] = None
+
 class MouvementCreate(BaseModel):
     materiau_id: int; of_id: Optional[int]=None
     type: str; quantite: float; motif: Optional[str]=None

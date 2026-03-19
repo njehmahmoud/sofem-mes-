@@ -38,3 +38,28 @@ def historique(limit: int = 50, db=Depends(get_db)):
         FROM mouvements_stock ms JOIN materiaux m ON ms.materiau_id=m.id
         LEFT JOIN ordres_fabrication o ON ms.of_id=o.id
         ORDER BY ms.created_at DESC LIMIT %s""", (limit,)))
+
+
+@router.put("/{mat_id}", dependencies=[Depends(require_manager_or_admin)])
+def update_materiau(mat_id: int, data: MateriauUpdate, db=Depends(get_db)):
+    mat = q(db, "SELECT id FROM materiaux WHERE id=%s", (mat_id,), one=True)
+    if not mat: raise HTTPException(404, "Matériau non trouvé")
+    fields, vals = [], []
+    for f, v in data.dict(exclude_none=True).items():
+        fields.append(f"{f}=%s"); vals.append(v)
+    if fields:
+        vals.append(mat_id)
+        exe(db, f"UPDATE materiaux SET {','.join(fields)} WHERE id=%s", vals)
+    return {"message": "Matériau mis à jour"}
+
+
+@router.delete("/{mat_id}", dependencies=[Depends(require_manager_or_admin)])
+def delete_materiau(mat_id: int, db=Depends(get_db)):
+    in_use = q(db, "SELECT COUNT(*) n FROM of_bom WHERE materiau_id=%s", (mat_id,), one=True)["n"]
+    if in_use > 0:
+        raise HTTPException(400, f"Matériau utilisé dans {in_use} OF(s) — suppression impossible")
+    in_bom = q(db, "SELECT COUNT(*) n FROM bom WHERE materiau_id=%s", (mat_id,), one=True)["n"]
+    if in_bom > 0:
+        raise HTTPException(400, f"Matériau utilisé dans {in_bom} BOM(s) produit — suppression impossible")
+    exe(db, "DELETE FROM materiaux WHERE id=%s", (mat_id,))
+    return {"message": "Matériau supprimé"}

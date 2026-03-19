@@ -8,36 +8,73 @@ async function loadProducts() {
     const [prods, mats] = await Promise.all([api('/api/produits'), api('/api/materiaux')]);
     _allMats = mats || [];
     const list = prods || [];
-    // Update next-code preview
+
+    // Next code preview
     const sofem = list.filter(p=>p.code.startsWith('SOFEM-')).sort((a,b)=>b.code.localeCompare(a.code));
     const nextNum = sofem.length ? parseInt(sofem[0].code.split('-')[1]||0)+1 : 1;
     if ($('prod-code-preview')) $('prod-code-preview').textContent = `SOFEM-${String(nextNum).padStart(3,'0')}`;
 
-    $('prods-tb').innerHTML = list.length===0 ? empty(5) : list.map(p => {
+    $('prods-tb').innerHTML = list.length===0 ? empty(6) : list.map(p => {
       const bomPills = (p.bom||[]).map(b =>
         `<span style="font-size:9px;font-family:'IBM Plex Mono',monospace;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;margin-right:3px">${b.materiau_nom} × ${b.quantite_par_unite}</span>`
       ).join('');
+      const prix = parseFloat(p.prix_vente_ht||0);
       return `<tr>
         <td><span class="of-num">${p.code}</span></td>
         <td><strong>${p.nom}</strong></td>
         <td style="color:var(--muted);font-size:10px">${p.description||'—'}</td>
         <td style="color:var(--muted)">${p.unite}</td>
-        <td>${bomPills||'<span style="font-size:10px;color:var(--muted)">— Aucun —</span>'}
-          <button class="fbtn" style="color:var(--accent);margin-left:4px" onclick="openBOMEditor(${p.id},'${p.nom.replace(/'/g,"\\'")}')">✎ BOM</button></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)">
+          ${prix > 0 ? prix.toFixed(3) + ' DT' : '—'}
+        </td>
+        <td>
+          ${bomPills||'<span style="font-size:10px;color:var(--muted)">— Aucun —</span>'}
+          <button class="fbtn" style="color:var(--accent);margin-left:4px"
+            onclick="openBOMEditor(${p.id},'${p.nom.replace(/'/g,"\\'")}')">✎ BOM</button>
+        </td>
+        <td>
+          <button class="fbtn" onclick="openEditProduit(${p.id},'${p.nom.replace(/'/g,"\\'")}','${p.unite}',${prix},'${(p.description||'').replace(/'/g,"\\'")}')">✎</button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) { toast('Erreur produits: ' + e.message,'err'); }
 }
 
+// ── CREATE ────────────────────────────────────────────────
 async function saveProduit() {
   if (!$('prod-nom').value) { toast('Nom requis','err'); return; }
   try {
     const res = await api('/api/produits','POST',{
-      nom: $('prod-nom').value,
-      description: $('prod-desc').value||null,
-      unite: $('prod-unite').value||'pcs'
+      nom:          $('prod-nom').value,
+      description:  $('prod-desc').value  || null,
+      unite:        $('prod-unite').value  || 'pcs',
+      prix_vente_ht: parseFloat($('prod-prix')?.value) || 0
     });
     toast(`${res.code} créé ✓`); closeModal('m-prod'); loadProducts();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+// ── EDIT ──────────────────────────────────────────────────
+function openEditProduit(id, nom, unite, prix, desc) {
+  $('prod-edit-id').value  = id;
+  $('prod-edit-nom').value  = nom;
+  $('prod-edit-unite').value = unite;
+  $('prod-edit-prix').value  = prix || 0;
+  $('prod-edit-desc').value  = desc || '';
+  openModal('m-prod-edit');
+}
+
+async function saveEditProduit() {
+  const id = $('prod-edit-id').value;
+  if (!id) return;
+  try {
+    await api(`/api/produits/${id}`, 'PUT', {
+      nom:           $('prod-edit-nom').value,
+      unite:         $('prod-edit-unite').value   || 'pcs',
+      prix_vente_ht: parseFloat($('prod-edit-prix').value) || 0,
+      description:   $('prod-edit-desc').value    || null
+    });
+    toast('Produit mis à jour ✓'); closeModal('m-prod-edit'); loadProducts();
   } catch(e) { toast(e.message,'err'); }
 }
 
