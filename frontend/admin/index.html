@@ -1465,5 +1465,51 @@ navigate('dashboard');
   </div>
 </div>
 
+
+<div class="overlay" id="m-of-dup">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-h">
+      <div class="modal-title">DUPLIQUER OF — <span id="dup-src-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-of-dup')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="dup-src-id">
+
+      <div id="dup-summary" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem;margin-bottom:1rem;font-size:11px;color:var(--muted)"></div>
+
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="dup-qte" min="1" value="1"></div>
+        <div class="fg"><label>Priorité</label>
+          <select id="dup-prio">
+            <option value="NORMAL">Normal</option>
+            <option value="HIGH">Haute</option>
+            <option value="URGENT">Urgent</option>
+            <option value="LOW">Basse</option>
+          </select></div>
+      </div>
+
+      <div class="fg"><label>Date Échéance *</label>
+        <input type="date" id="dup-date"></div>
+
+      <div class="fg"><label>Client</label>
+        <select id="dup-client"></select></div>
+
+      <div class="fg"><label>Chef Atelier</label>
+        <select id="dup-chef"></select></div>
+
+      <div class="fg"><label>Plan N°</label>
+        <input type="text" id="dup-plan" placeholder="Numéro de plan (optionnel)"></div>
+
+      <div class="fg"><label>Notes</label>
+        <textarea id="dup-notes" rows="2" placeholder="Notes spécifiques à ce nouvel OF..."></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-of-dup')">Annuler</button>
+      <button class="btn" onclick="confirmDuplicateOF()">⎘ Créer la copie</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
