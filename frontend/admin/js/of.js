@@ -29,7 +29,7 @@ function renderOrders(ofs) {
 
     return `<tr>
       <td><input type="checkbox" class="of-chk" value="${of.id}" ${of.statut!=='COMPLETED'?'disabled':''}></td>
-      <td><span class="of-num">${of.numero}</span></td>
+      <td><span class="of-num" style="cursor:pointer" onclick="openOFDetail(${of.id})" title="Voir détail">${of.numero}</span></td>
       <td>${blBadge} ${blStatut}</td>
       <td>${of.produit_nom}</td>
       <td style="font-size:11px;color:var(--muted)">${of.client_nom||'—'}</td>
@@ -507,5 +507,197 @@ async function confirmDuplicateOF() {
     toast(`✓ ${res.numero} créé`);
     closeModal('m-of-dup');
     loadOrders();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── OF DETAIL MODAL ──────────────────────────────────────
+
+let _ofdOfId = null;
+let _ofdOpsEdits = {};   // { op_id: { duree_reelle, notes } }
+let _ofdBomEdits = {};   // { materiau_id: quantite_requise }
+let _ofdOf = null;
+
+async function openOFDetail(ofId) {
+  _ofdOfId = ofId;
+  _ofdOpsEdits = {};
+  _ofdBomEdits = {};
+
+  try {
+    const of = await api(`/api/of/${ofId}`);
+    _ofdOf = of;
+    if (!of) return;
+
+    // Header
+    $('ofd-numero').textContent = of.numero;
+    $('ofd-subtitle').textContent =
+      `${of.produit_nom} · ${of.quantite} pcs · ${of.atelier||''}`;
+
+    // Info band
+    const cells = [
+      ['CLIENT',       of.client_nom  || '—'],
+      ['CHEF ATELIER', of.chef_projet_nom || '—'],
+      ['ÉCHÉANCE',     of.date_echeance || '—'],
+      ['STATUT',       of.statut],
+    ];
+    $('ofd-info').innerHTML = cells.map(([lbl, val]) => `
+      <div class="ofd-info-cell">
+        <div class="ofd-info-label">${lbl}</div>
+        <div class="ofd-info-value">${val}</div>
+      </div>`).join('');
+
+    // Render active tab
+    ofdTab('ops');
+    openModal('m-of-detail');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function closeOFDetail() {
+  closeModal('m-of-detail');
+  _ofdOfId = null; _ofdOf = null;
+  _ofdOpsEdits = {}; _ofdBomEdits = {};
+}
+
+function ofdTab(tab) {
+  ['ops','bom','cost'].forEach(t => {
+    $(`ofd-tab-${t}`)?.classList.toggle('active', t === tab);
+    const pane = $(`ofd-pane-${t}`);
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+  });
+  const saveBtn = $('ofd-save-btn');
+  if (saveBtn) {
+    saveBtn.style.display = tab === 'cost' ? 'none' : '';
+    saveBtn.textContent = tab === 'bom' ? '💾 Enregistrer matériaux' : '💾 Enregistrer opérations';
+    saveBtn.onclick = tab === 'bom' ? saveBOMChanges : saveOFDetailOps;
+  }
+  if (tab === 'ops') renderOFDetailOps();
+  if (tab === 'bom') renderOFDetailBOM();
+  if (tab === 'cost') renderOFDetailCost();
+}
+
+function renderOFDetailOps() {
+  const ops = _ofdOf?.operations || [];
+  const stCls = { COMPLETED:'b-completed', IN_PROGRESS:'b-inprogress', PENDING:'b-draft' };
+  const stLbl = { COMPLETED:'Terminé', IN_PROGRESS:'En cours', PENDING:'En attente' };
+
+  $('ofd-ops-tb').innerHTML = ops.length === 0
+    ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;font-size:11px">— Aucune opération —</td></tr>`
+    : ops.map((op, idx) => {
+      const dur = _ofdOpsEdits[op.id]?.duree_reelle ?? (op.duree_reelle || '');
+      const rowBg = idx % 2 === 0 ? 'background:var(--bg3)' : '';
+      const debut = op.debut ? String(op.debut).slice(0,16).replace('T',' ') : '—';
+      const fin   = op.fin   ? String(op.fin).slice(0,16).replace('T',' ') : '—';
+      return `<tr style="${rowBg}">
+        <td style="padding:7px 8px;font-weight:600;color:var(--text)">${op.operation_nom}</td>
+        <td style="padding:7px 8px;font-size:10px;color:var(--muted)">${op.operateurs_noms||'—'}</td>
+        <td style="padding:7px 8px;font-size:10px;color:var(--muted)">${op.machine_nom||'—'}</td>
+        <td style="padding:7px 8px;text-align:center">
+          <span class="badge ${stCls[op.statut]||'b-draft'}" style="font-size:8px">${stLbl[op.statut]||op.statut}</span>
+        </td>
+        <td style="padding:4px 8px;text-align:center">
+          <input type="number" min="0" value="${dur}"
+            style="width:70px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center"
+            oninput="_ofdOpsEdits[${op.id}] = _ofdOpsEdits[${op.id}]||{}; _ofdOpsEdits[${op.id}].duree_reelle=parseInt(this.value)||0">
+        </td>
+        <td style="padding:7px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${debut}</td>
+        <td style="padding:7px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${fin}</td>
+      </tr>`;
+    }).join('');
+}
+
+function renderOFDetailBOM() {
+  const bom = _ofdOf?.bom || [];
+  $('ofd-bom-tb').innerHTML = bom.length === 0
+    ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;font-size:11px">— Aucun matériau —</td></tr>`
+    : bom.map((b, idx) => {
+      const qte  = _ofdBomEdits[b.materiau_id] ?? b.quantite_requise;
+      const prix = parseFloat(b.prix_unitaire || 0);
+      const total = (parseFloat(qte) * prix).toFixed(3);
+      const rowBg = idx % 2 === 0 ? 'background:var(--bg3)' : '';
+      return `<tr style="${rowBg}">
+        <td style="padding:7px 8px;font-weight:600">${b.materiau_nom}</td>
+        <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${b.materiau_code||'—'}</td>
+        <td style="padding:7px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent)">${b.quantite_requise}</td>
+        <td style="padding:7px 8px;text-align:center;color:var(--muted)">${b.unite}</td>
+        <td style="padding:7px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px">${prix.toFixed(3)} DT</td>
+        <td style="padding:7px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green)">${total} DT</td>
+        <td style="padding:4px 8px;text-align:center">
+          <input type="number" min="0.001" step="0.001" value="${qte}"
+            style="width:80px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center"
+            oninput="_ofdBomEdits[${b.materiau_id}]=parseFloat(this.value)||${b.quantite_requise}; updateBOMRowTotal(this, ${prix})">
+        </td>
+      </tr>`;
+    }).join('');
+}
+
+function updateBOMRowTotal(input, prix) {
+  const row = input.closest('tr');
+  if (!row) return;
+  const cells = row.querySelectorAll('td');
+  const total = (parseFloat(input.value||0) * prix).toFixed(3);
+  cells[5].textContent = total + ' DT';
+}
+
+function renderOFDetailCost() {
+  const of = _ofdOf;
+  if (!of) return;
+  const matCost = parseFloat(of.cout_matieres || 0);
+  const moCost  = parseFloat(of.cout_main_oeuvre || 0);
+  const stCost  = parseFloat(of.cout_sous_traitance || 0);
+  const total   = parseFloat(of.cout_revient || 0);
+  const pv      = parseFloat(of.prix_vente_ht || 0) * parseInt(of.quantite || 1);
+  const marge   = pv > 0 ? (pv - total) : null;
+
+  const row = (lbl, val, highlight=false) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;
+      padding:.6rem 1rem;border-bottom:1px solid var(--border);
+      ${highlight?'background:var(--bg3);border-radius:4px;':''}">
+      <span style="font-size:12px;${highlight?'font-weight:700;color:var(--text)':'color:var(--muted)'}">${lbl}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;
+        color:${highlight?'var(--red)':'var(--text)'};font-size:${highlight?'14':'12'}px">${val}</span>
+    </div>`;
+
+  $('ofd-cost-content').innerHTML = `
+    <div style="max-width:400px;margin:0 auto">
+      ${row('Main d\'œuvre',   moCost.toFixed(3)  + ' DT')}
+      ${row('Matières',        matCost.toFixed(3) + ' DT')}
+      ${row('Sous-traitance',  stCost.toFixed(3)  + ' DT')}
+      ${row('COÛT DE REVIENT', total.toFixed(3)   + ' DT', true)}
+      ${pv > 0 ? row('Prix Vente HT',  pv.toFixed(3) + ' DT') : ''}
+      ${marge !== null ? row('MARGE BRUTE', (marge >= 0 ? '+' : '') + marge.toFixed(3) + ' DT',true) : ''}
+    </div>`;
+}
+
+async function saveOFDetailOps() {
+  if (!_ofdOfId || !Object.keys(_ofdOpsEdits).length) {
+    toast('Aucune modification à enregistrer', 'err'); return;
+  }
+  try {
+    const saves = Object.entries(_ofdOpsEdits).map(([opId, edits]) =>
+      api(`/api/of/${_ofdOfId}/operations/${opId}`, 'PUT', edits)
+    );
+    await Promise.all(saves);
+    toast(`${saves.length} opération(s) enregistrée(s) ✓`);
+    // Refresh OF data
+    _ofdOf = await api(`/api/of/${_ofdOfId}`);
+    _ofdOpsEdits = {};
+    renderOFDetailOps();
+    loadOrders();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function saveBOMChanges() {
+  if (!_ofdOfId || !Object.keys(_ofdBomEdits).length) {
+    toast('Aucune modification à enregistrer', 'err'); return;
+  }
+  try {
+    const bom = (_ofdOf?.bom || []).map(b => ({
+      materiau_id: b.materiau_id,
+      quantite_requise: _ofdBomEdits[b.materiau_id] ?? b.quantite_requise
+    }));
+    await api(`/api/of/${_ofdOfId}/bom`, 'PUT', bom);
+    toast('BOM enregistré ✓');
+    _ofdOf = await api(`/api/of/${_ofdOfId}`);
+    _ofdBomEdits = {};
+    renderOFDetailBOM();
   } catch(e) { toast(e.message, 'err'); }
 }

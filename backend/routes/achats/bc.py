@@ -105,7 +105,9 @@ def print_bc(bc_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends
     y=H-58*mm
     c.setFillColor(LIGHT); c.rect(0,y,W,16*mm,fill=1,stroke=0)
     c.setFillColor(GRAY);  c.setFont("Helvetica-Bold",7); c.drawString(15*mm,y+12*mm,"FOURNISSEUR")
-    c.setFillColor(DARK);  c.setFont("Helvetica-Bold",11); c.drawString(15*mm,y+7*mm,bc["fournisseur"])
+    fournisseur_display = bc["fournisseur"] if bc["fournisseur"] not in (
+    "A definir", "À définir", "", None) else "............................................"
+    c.setFillColor(DARK);  c.setFont("Helvetica-Bold",11); c.drawString(15*mm,y+7*mm,fournisseur_display)
     c.setFillColor(GRAY);  c.setFont("Helvetica-Bold",7); c.drawRightString(W-15*mm,y+12*mm,"STATUT")
     c.setFillColor(DARK);  c.setFont("Helvetica-Bold",10); c.drawRightString(W-15*mm,y+7*mm,bc["statut"])
 
