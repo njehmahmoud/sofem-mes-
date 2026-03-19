@@ -539,10 +539,13 @@ td{padding:.65rem 1rem;vertical-align:middle}
 
 <!-- NON-CONFORMITES -->
 <div class="page" id="page-nc">
-  <div class="sec-header"><span class="sec-title">⚠️ Non-Conformités</span>
+  <div class="ph">
+    <div><div class="ph-title">NON-<span>CONFORMITÉS</span></div>
+    <div class="ph-sub">// SUIVI ET TRAITEMENT DES DÉFAUTS</div></div>
     <button class="btn" onclick="openModal('modal-nc')">+ Nouvelle NC</button>
   </div>
-  <div class="card mt"><div id="nc-table"></div></div>
+  <div class="kpi-grid" id="nc-kpis" style="margin-bottom:1rem"></div>
+  <div class="sec"><div id="nc-table"></div></div>
 </div>
 
 <!-- FOURNISSEURS -->
@@ -594,49 +597,80 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-maintenance" onclick="if(event.target===this)closeModal('modal-maintenance')">
-  <div class="modal-box">
-    <div class="modal-title">Nouvel Ordre de Maintenance</div>
-    <div class="fg"><label>Titre *</label><input id="om-titre" placeholder="Description courte"></div>
-    <div class="frow">
-      <div class="fg"><label>Machine *</label><select id="om-machine"></select></div>
-      <div class="fg"><label>Type</label>
-        <select id="om-type"><option value="CORRECTIVE">Corrective</option><option value="PREVENTIVE">Préventive</option><option value="URGENCE">Urgence</option></select>
+<div class="overlay" id="modal-maintenance">
+  <div class="modal" style="max-width:580px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEL ORDRE DE MAINTENANCE</div>
+      <button class="x" onclick="closeModal('modal-maintenance')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fg"><label>Titre *</label>
+        <input id="om-titre" placeholder="Ex: Remplacement roulement Tour CNC"></div>
+      <div class="row2">
+        <div class="fg"><label>Machine *</label>
+          <select id="om-machine"><option value="">— Sélectionner —</option></select></div>
+        <div class="fg"><label>Type</label>
+          <select id="om-type">
+            <option value="CORRECTIVE">🔨 Corrective</option>
+            <option value="PREVENTIVE">🛡️ Préventive</option>
+            <option value="URGENCE">🚨 Urgence</option>
+          </select>
+        </div>
       </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Priorité</label>
-        <select id="om-priorite"><option value="NORMAL">Normal</option><option value="HAUTE">Haute</option><option value="URGENT">Urgent</option><option value="BASSE">Basse</option></select>
+      <div class="row2">
+        <div class="fg"><label>Priorité</label>
+          <select id="om-priorite">
+            <option value="BASSE">Basse</option>
+            <option value="NORMAL" selected>Normal</option>
+            <option value="HAUTE">Haute</option>
+            <option value="URGENT">🔴 URGENT</option>
+          </select>
+        </div>
+        <div class="fg"><label>Technicien assigné</label>
+          <select id="om-tech"><option value="">— Aucun —</option></select></div>
       </div>
-      <div class="fg"><label>Technicien</label><select id="om-tech"><option value="">— Aucun —</option></select></div>
+      <div class="row2">
+        <div class="fg"><label>Date Planifiée</label>
+          <input type="date" id="om-date"></div>
+        <div class="fg"><label>Durée estimée (min)</label>
+          <input type="number" id="om-duree" value="60" min="0"></div>
+      </div>
+      <div class="fg"><label>Description / Symptômes</label>
+        <textarea id="om-desc" rows="3" placeholder="Décrire le problème ou l'intervention..."></textarea></div>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Date Planifiée</label><input type="date" id="om-date"></div>
-      <div class="fg"><label>Durée estimée (min)</label><input type="number" id="om-duree" value="60"></div>
-    </div>
-    <div class="fg"><label>Description</label><textarea id="om-desc" rows="2"></textarea></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-maintenance')">Annuler</button>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-maintenance')">Annuler</button>
       <button class="btn" onclick="saveMaintenance()">Enregistrer</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-planning" onclick="if(event.target===this)closeModal('modal-planning')">
-  <div class="modal-box">
-    <div class="modal-title">Nouveau Créneau Planning</div>
-    <div class="fg"><label>Ordre de Fabrication *</label><select id="pl-of"></select></div>
-    <div class="frow">
-      <div class="fg"><label>Machine</label><select id="pl-machine"><option value="">— Aucune —</option></select></div>
-      <div class="fg"><label>Opérateur</label><select id="pl-op"><option value="">— Aucun —</option></select></div>
+<div class="overlay" id="modal-planning">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU CRÉNEAU PLANNING</div>
+      <button class="x" onclick="closeModal('modal-planning')">✕</button>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Début *</label><input type="datetime-local" id="pl-debut"></div>
-      <div class="fg"><label>Fin *</label><input type="datetime-local" id="pl-fin"></div>
+    <div class="modal-b">
+      <div class="fg"><label>Ordre de Fabrication *</label>
+        <select id="pl-of"><option value="">— Sélectionner un OF —</option></select></div>
+      <div class="row2">
+        <div class="fg"><label>Machine</label>
+          <select id="pl-machine"><option value="">— Aucune —</option></select></div>
+        <div class="fg"><label>Opérateur</label>
+          <select id="pl-op"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Début *</label>
+          <input type="datetime-local" id="pl-debut"></div>
+        <div class="fg"><label>Fin *</label>
+          <input type="datetime-local" id="pl-fin"></div>
+      </div>
+      <div class="fg"><label>Notes</label>
+        <textarea id="pl-notes" rows="2"></textarea></div>
     </div>
-    <div class="fg"><label>Notes</label><textarea id="pl-notes" rows="2"></textarea></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-planning')">Annuler</button>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-planning')">Annuler</button>
       <button class="btn" onclick="savePlanning()">Enregistrer</button>
     </div>
   </div>
@@ -701,48 +735,76 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-nc" onclick="if(event.target===this)closeModal('modal-nc')">
-  <div class="modal-box">
-    <div class="modal-title">Nouvelle Non-Conformité</div>
-    <div class="fg"><label>Type de défaut *</label><input id="nc-defaut" placeholder="Ex: Dimension hors tolérance"></div>
-    <div class="frow">
-      <div class="fg"><label>Gravité</label>
-        <select id="nc-gravite"><option value="MINEURE">Mineure</option><option value="MAJEURE">Majeure</option><option value="CRITIQUE">Critique</option></select>
-      </div>
-      <div class="fg"><label>OF lié</label><select id="nc-of"><option value="">— Aucun —</option></select></div>
+<div class="overlay" id="modal-nc">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE NON-CONFORMITÉ</div>
+      <button class="x" onclick="closeModal('modal-nc')">✕</button>
     </div>
-    <div class="fg"><label>Description</label><textarea id="nc-desc" rows="2"></textarea></div>
-    <div class="fg"><label>Action Corrective</label><textarea id="nc-action" rows="2"></textarea></div>
-    <div class="fg"><label>Responsable</label><select id="nc-resp"><option value="">— Aucun —</option></select></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-nc')">Annuler</button>
+    <div class="modal-b">
+      <div class="fg"><label>Type de Défaut *</label>
+        <input id="nc-defaut" placeholder="Ex: Dimension hors tolérance, Aspect visuel..."></div>
+      <div class="row2">
+        <div class="fg"><label>Gravité</label>
+          <select id="nc-gravite">
+            <option value="MINEURE">🟡 Mineure</option>
+            <option value="MAJEURE">🟠 Majeure</option>
+            <option value="CRITIQUE">🔴 Critique</option>
+          </select>
+        </div>
+        <div class="fg"><label>OF lié</label>
+          <select id="nc-of"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Description détaillée</label>
+        <textarea id="nc-desc" rows="2" placeholder="Décrire le défaut constaté..."></textarea></div>
+      <div class="fg"><label>Action Corrective</label>
+        <textarea id="nc-action" rows="2" placeholder="Action à mener pour corriger..."></textarea></div>
+      <div class="fg"><label>Responsable</label>
+        <select id="nc-resp"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nc')">Annuler</button>
       <button class="btn" onclick="saveNC()">Enregistrer</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-fournisseur" onclick="if(event.target===this)closeModal('modal-fournisseur')">
-  <div class="modal-box">
-    <div class="modal-title">Nouveau Fournisseur</div>
-    <div class="frow">
-      <div class="fg"><label>Nom *</label><input id="f-nom" placeholder="Raison sociale"></div>
-      <div class="fg"><label>Code</label><input id="f-code" placeholder="Auto si vide"></div>
+<div class="overlay" id="modal-fournisseur">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU FOURNISSEUR</div>
+      <button class="x" onclick="closeModal('modal-fournisseur')">✕</button>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Contact</label><input id="f-contact"></div>
-      <div class="fg"><label>Téléphone</label><input id="f-tel"></div>
+    <div class="modal-b">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="fourn-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">FOURN-XXX</div>
+      </div>
+      <div class="fg"><label>Raison Sociale *</label>
+        <input id="f-nom" placeholder="Ex: Aciers du Nord SARL"></div>
+      <div class="row2">
+        <div class="fg"><label>Contact</label>
+          <input id="f-contact" placeholder="Nom du responsable"></div>
+        <div class="fg"><label>Téléphone</label>
+          <input id="f-tel" placeholder="+216 7X XXX XXX"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Email</label>
+          <input id="f-email" type="email" placeholder="contact@fournisseur.tn"></div>
+        <div class="fg"><label>Matricule Fiscal</label>
+          <input id="f-mf" placeholder="XXXXXXXX/X/X/XXX"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Ville</label>
+          <input id="f-ville" value="Sfax"></div>
+        <div class="fg"><label>Pays</label>
+          <input id="f-pays" value="Tunisie"></div>
+      </div>
+      <div class="fg"><label>Adresse</label>
+        <textarea id="f-adresse" rows="2"></textarea></div>
     </div>
-    <div class="frow">
-      <div class="fg"><label>Email</label><input id="f-email" type="email"></div>
-      <div class="fg"><label>Ville</label><input id="f-ville" value="Sfax"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Pays</label><input id="f-pays" value="Tunisie"></div>
-      <div class="fg"><label>Matricule Fiscal</label><input id="f-mf"></div>
-    </div>
-    <div class="fg"><label>Adresse</label><textarea id="f-adresse" rows="2"></textarea></div>
-    <div class="modal-actions">
-      <button class="fbtn" onclick="closeModal('modal-fournisseur')">Annuler</button>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fournisseur')">Annuler</button>
       <button class="btn" onclick="saveFournisseur()">Enregistrer</button>
     </div>
   </div>
@@ -964,7 +1026,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="modal" style="width:560px">
     <div class="modal-h"><div class="modal-title">NOUVEAU BON DE COMMANDE</div><button class="x" onclick="closeModal('m-bc')">✕</button></div>
     <div class="modal-b">
-      <div class="fg"><label>Fournisseur *</label><input type="text" id="bc-four" placeholder="Nom du fournisseur"></div>
+      <div class="fg"><label>Fournisseur *</label><select id="bc-four"><option value="">— Sélectionner fournisseur —</option></select></div>
       <div class="fg"><label>DA lié (optionnel)</label><select id="bc-da"><option value="">— Aucun —</option></select></div>
       <div class="fg"><label>Notes</label><textarea id="bc-notes" rows="1"></textarea></div>
       <div style="border-top:1px solid var(--border);padding-top:.75rem">

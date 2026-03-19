@@ -17,8 +17,14 @@ async function loadMaintenance(){
   `;
 
   // Populate modal selects
-  if(machines) $('om-machine').innerHTML=machines.map(m=>`<option value="${m.id}">${m.nom} (${m.atelier})</option>`).join('');
-  if(ops) $('om-tech').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+  // Populate machine dropdown
+  const omMach = $('om-machine');
+  if (omMach && machines) omMach.innerHTML = '<option value="">— Sélectionner machine —</option>' +
+    machines.map(m => `<option value="${m.id}">${m.nom} · ${m.atelier} (${m.statut==='OPERATIONNELLE'?'✓':'⚠'} ${m.statut.replace('_',' ')})</option>`).join('');
+  // Populate technicien from operateurs
+  const omTech = $('om-tech');
+  if (omTech && ops) omTech.innerHTML = '<option value="">— Aucun —</option>' +
+    ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}${o.specialite?' · '+o.specialite:''}</option>`).join('');
 
   const pMap={BASSE:'b-low',NORMAL:'b-normal',HAUTE:'b-high',URGENT:'b-urgent'};
   const sMap={PLANIFIE:'b-draft',EN_COURS:'b-inprogress',TERMINE:'b-completed',ANNULE:'b-cancelled'};

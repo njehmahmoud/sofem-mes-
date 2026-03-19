@@ -9,9 +9,16 @@ async function loadPlanning(){
   if(!rows) return;
 
   // Populate modal selects
-  if(ofs) $('pl-of').innerHTML=ofs.map(o=>`<option value="${o.id}">${o.of_numero} — ${o.produit_nom||''}</option>`).join('');
-  if(machines) $('pl-machine').innerHTML='<option value="">— Aucune —</option>'+machines.map(m=>`<option value="${m.id}">${m.nom}</option>`).join('');
-  if(ops) $('pl-op').innerHTML='<option value="">— Aucun —</option>'+ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+  // OF dropdown — active OFs only (DRAFT, APPROVED, IN_PROGRESS)
+  if (ofs && $('pl-of')) {
+    const active = (ofs||[]).filter(o => !['COMPLETED','CANCELLED'].includes(o.statut));
+    $('pl-of').innerHTML = '<option value="">— Sélectionner un OF —</option>' +
+      active.map(o => `<option value="${o.id}">${o.numero} · ${o.produit_nom} (${o.statut.replace('_',' ')})</option>`).join('');
+  }
+  if (machines && $('pl-machine')) $('pl-machine').innerHTML = '<option value="">— Aucune —</option>' +
+    machines.filter(m=>m.statut==='OPERATIONNELLE').map(m=>`<option value="${m.id}">${m.nom} · ${m.atelier}</option>`).join('');
+  if (ops && $('pl-op')) $('pl-op').innerHTML = '<option value="">— Aucun —</option>' +
+    ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}${o.specialite?' ('+o.specialite+')':''}</option>`).join('');
 
   // Simple Gantt-style visual
   const ganttHTML = rows.length === 0 ? '<div style="color:var(--muted);font-size:12px;padding:1rem">Aucun créneau planifié.</div>' : (() => {

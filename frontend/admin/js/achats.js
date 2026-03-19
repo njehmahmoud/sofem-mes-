@@ -72,9 +72,17 @@ async function updateDA(id, statut) {
 // ── BC ────────────────────────────────────────────────────
 async function loadBC() {
   try {
-    const [bcs, das] = await Promise.all([api('/api/achats/bc'), api('/api/achats/da')]);
-    if (das) $('bc-da').innerHTML = '<option value="">— DA liée —</option>' +
-      das.filter(d=>d.statut==='APPROVED').map(d=>`<option value="${d.id}">${d.da_numero} — ${d.description.slice(0,30)}</option>`).join('');
+    const [bcs, das, fourns] = await Promise.all([
+      api('/api/achats/bc'), api('/api/achats/da'), api('/api/fournisseurs')
+    ]);
+    // Populate fournisseur dropdown
+    if (fourns && $('bc-four')) {
+      $('bc-four').innerHTML = '<option value="">— Sélectionner fournisseur —</option>' +
+        fourns.map(f => `<option value="${f.nom}">${f.nom}${f.ville?' · '+f.ville:''}</option>`).join('');
+    }
+    // Populate DA — only APPROVED
+    if (das && $('bc-da')) $('bc-da').innerHTML = '<option value="">— DA liée (optionnel) —</option>' +
+      das.filter(d=>d.statut==='APPROVED').map(d=>`<option value="${d.id}">${d.da_numero} — ${d.description.slice(0,30)} (${d.quantite} ${d.unite})</option>`).join('');
 
     $('bc-tb').innerHTML = (bcs||[]).length===0 ? empty(7) : bcs.map(bc => {
       const badge={DRAFT:'b-draft',ENVOYE:'b-approved',RECU:'b-completed',ANNULE:'b-cancelled',RECU_PARTIEL:'b-inprogress'}[bc.statut]||'b-draft';
