@@ -65,3 +65,91 @@ def create_br(data: BRCreate, db=Depends(get_db)):
     exe(db, "UPDATE bons_commande SET statut=%s WHERE id=%s",
         ("RECU" if data.statut == "COMPLET" else "RECU_PARTIEL", data.bc_id))
     return {"id": br_id, "br_numero": numero, "message": "BR créé — stock mis à jour"}
+
+
+@router.put("/{br_id}/confirmer", dependencies=[Depends(require_manager_or_admin)])
+def confirmer_reception(br_id: int, db=Depends(get_db)):
+    """
+    Confirm reception of an auto-generated BR (EN_ATTENTE).
+    Updates quantite_recue from BC line, updates stock, marks DA as RECEIVED.
+    """
+    br = q(db, "SELECT * FROM bons_reception WHERE id=%s", (br_id,), one=True)
+    if not br: raise HTTPException(404, "BR introuvable")
+    if br["statut"] not in ("EN_ATTENTE", "PARTIEL"):
+        raise HTTPException(400, f"BR deja traite (statut: {br['statut']})")
+
+    lignes = q(db, """
+        SELECT brl.id, brl.bc_ligne_id, brl.quantite_recue,
+               bcl.materiau_id, bcl.quantite as quantite_commandee,
+               bcl.unite, m.nom materiau_nom, m.stock_actuel
+        FROM br_lignes brl
+        JOIN bc_lignes bcl ON bcl.id = brl.bc_ligne_id
+        LEFT JOIN materiaux m ON m.id = bcl.materiau_id
+        WHERE brl.br_id = %s
+    """, (br_id,))
+
+    stock_updates = []
+    for l in lignes:
+        # Use commanded quantity as received if quantite_recue is 0
+        qte_recue = float(l["quantite_recue"])
+        if qte_recue == 0:
+            qte_recue = float(l["quantite_commandee"])
+            exe(db, "UPDATE br_lignes SET quantite_recue=%s WHERE id=%s",
+                (qte_recue, l["id"]))
+
+        if l["materiau_id"] and qte_recue > 0:
+            avant = float(l["stock_actuel"] or 0)
+            apres = avant + qte_recue
+            exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
+                (apres, l["materiau_id"]))
+            exe(db, """
+                INSERT INTO mouvements_stock
+                  (materiau_id, type, quantite, stock_avant, stock_apres, motif)
+                VALUES (%s, 'ENTREE', %s, %s, %s, %s)
+            """, (l["materiau_id"], qte_recue, avant, apres,
+                  f"Reception {br['br_numero']}"))
+            stock_updates.append({
+                "materiau": l["materiau_nom"],
+                "quantite": qte_recue,
+                "stock_avant": avant,
+                "stock_apres": apres
+            })
+
+    # Mark BR as COMPLET + set date
+    exe(db, """
+        UPDATE bons_reception
+        SET statut='COMPLET', date_reception=CURDATE()
+        WHERE id=%s
+    """, (br_id,))
+
+    # Mark BC as RECU
+    exe(db, "UPDATE bons_commande SET statut='RECU' WHERE id=%s", (br["bc_id"],))
+
+    # Mark DA as RECEIVED
+    da = q(db, "SELECT id FROM demandes_achat WHERE id=(SELECT da_id FROM bons_commande WHERE id=%s)",
+           (br["bc_id"],), one=True)
+    if da:
+        exe(db, "UPDATE demandes_achat SET statut='RECEIVED' WHERE id=%s", (da["id"],))
+
+    return {
+        "message": f"Reception confirmee — {len(stock_updates)} materiau(x) mis a jour",
+        "stock_updates": stock_updates
+    }
+
+
+@router.put("/{br_id}/quantite", dependencies=[Depends(require_manager_or_admin)])
+def update_br_quantite(br_id: int, quantite_recue: float, db=Depends(get_db)):
+    """Update the received quantity before confirming (partial reception)."""
+    br = q(db, "SELECT id, statut FROM bons_reception WHERE id=%s", (br_id,), one=True)
+    if not br: raise HTTPException(404, "BR introuvable")
+    if br["statut"] == "COMPLET":
+        raise HTTPException(400, "BR deja complete")
+    # Update first line (single-line auto-generated BR)
+    exe(db, """
+        UPDATE br_lignes SET quantite_recue=%s
+        WHERE br_id=%s
+        ORDER BY id LIMIT 1
+    """, (quantite_recue, br_id))
+    if br["statut"] == "EN_ATTENTE":
+        exe(db, "UPDATE bons_reception SET statut='PARTIEL' WHERE id=%s", (br_id,))
+    return {"message": "Quantite mise a jour"}

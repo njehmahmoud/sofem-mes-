@@ -23,22 +23,50 @@ async function loadDA() {
     if (ops) $('da-demandeur').innerHTML = '<option value="">— Aucun —</option>' +
       ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
 
-    $('da-tb').innerHTML = (das||[]).length===0 ? empty(9) : das.map(da => {
-      const badge = {PENDING:'b-draft',APPROVED:'b-approved',REJECTED:'b-cancelled',ORDERED:'b-inprogress'}[da.statut]||'b-draft';
+    $('da-tb').innerHTML = (das||[]).length===0 ? empty(10) : das.map(da => {
+      const badge = {PENDING:'b-draft',APPROVED:'b-approved',REJECTED:'b-cancelled',ORDERED:'b-inprogress',RECEIVED:'b-completed'}[da.statut]||'b-draft';
+      const statutLabel = {PENDING:'En attente',APPROVED:'Approuvée',REJECTED:'Rejetée',ORDERED:'Commandée',RECEIVED:'Reçue'}[da.statut]||da.statut;
+      // BC / BR links
+      const bc = da.bc;
+      let bcBrCell = '—';
+      if (bc) {
+        const brBadge = bc.br_statut === 'COMPLET'
+          ? '<span class="badge b-completed" style="font-size:8px">BR REÇU</span>'
+          : bc.br_statut === 'EN_ATTENTE'
+            ? '<span class="badge b-draft" style="font-size:8px">BR EN ATTENTE</span>'
+            : bc.br_statut === 'PARTIEL'
+              ? '<span class="badge b-inprogress" style="font-size:8px">BR PARTIEL</span>'
+              : '';
+        bcBrCell = `<div style="display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent)">${bc.bc_numero}</span>
+            <button class="btn btn-ghost btn-sm" style="font-size:8px;padding:1px 5px"
+              onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')" title="Imprimer BC">🖨️</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${bc.br_numero||'—'}</span>
+            ${brBadge}
+            ${bc.br_id && bc.br_statut !== 'COMPLET'
+              ? `<button class="btn btn-ghost btn-sm" style="font-size:8px;padding:1px 5px;color:var(--green)"
+                  onclick="confirmerReception(${bc.br_id},'${bc.br_numero}')" title="Confirmer réception">✓ Réception</button>`
+              : ''}
+          </div>
+        </div>`;
+      }
       return `<tr>
         <td><span class="of-num">${da.da_numero}</span></td>
-        <td style="font-size:11px;max-width:180px">${da.description}</td>
+        <td style="font-size:11px;max-width:160px">${da.description}</td>
         <td style="font-size:11px">${da.materiau_nom||'—'}</td>
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${da.quantite} ${da.unite}</td>
         <td><span class="badge ${da.urgence==='URGENT'?'b-urgent':'b-normal'}">${da.urgence}</span></td>
-        <td><span class="badge ${badge}">${da.statut}</span></td>
-        <td style="font-size:10px;color:var(--muted)">${(da.created_at||'').slice(0,10)}</td>
-        <td style="font-size:11px">${da.of_numero||'—'}</td>
-        <td style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="Besoins & Achats PDF">📋 BA</button>
+        <td><span class="badge ${badge}">${statutLabel}</span></td>
+        <td style="font-size:10px;color:var(--muted)">${da.of_numero||'—'}</td>
+        <td>${bcBrCell}</td>
+        <td style="display:flex;gap:3px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
           ${da.statut==='PENDING'
-            ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')">✓</button>
-               <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')">✕</button>`
+            ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')" title="Approuver">✓</button>
+               <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>`
             : ''}
         </td>
       </tr>`;
@@ -65,8 +93,24 @@ async function saveDA() {
 }
 
 async function updateDA(id, statut) {
-  try { await api(`/api/achats/da/${id}`,'PUT',{statut}); toast(`DA → ${statut} ✓`); loadDA(); }
-  catch(e) { toast(e.message,'err'); }
+  try {
+    const res = await api(`/api/achats/da/${id}`,'PUT',{statut});
+    if (statut === 'APPROVED' && res.bc_numero) {
+      toast(`DA approuvée ✓ — ${res.bc_numero} + ${res.br_numero} créés`);
+    } else {
+      toast(`DA → ${statut} ✓`);
+    }
+    loadDA(); loadBC(); loadBR();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function confirmerReception(brId, brNumero) {
+  if (!confirm(`Confirmer la réception ${brNumero} ?\nLe stock sera mis à jour automatiquement.`)) return;
+  try {
+    const res = await api(`/api/achats/br/${brId}/confirmer`, 'PUT');
+    toast(res.message + ' ✓');
+    loadDA(); loadBR();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 // ── BC ────────────────────────────────────────────────────
