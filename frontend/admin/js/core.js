@@ -74,9 +74,10 @@ function dateTd(d) {
 // Operations dots (dynamic)
 function dots(ops) {
   if (!ops?.length) return '—';
+  const cls = { COMPLETED: 'done', IN_PROGRESS: 'in_progress', PENDING: 'pending' };
   return `<div class="sdots">${ops.map(o => {
-    const st = (o.statut||'PENDING').toLowerCase();
-    return `<div class="sd ${st}" title="${o.operation_nom}"></div>`;
+    const c = cls[o.statut] || 'pending';
+    return `<div class="sd ${c}" title="${o.operation_nom} — ${o.statut}"></div>`;
   }).join('')}</div>`;
 }
 
