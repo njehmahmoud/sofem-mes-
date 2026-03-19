@@ -28,7 +28,14 @@ async function loadMaterials() {
           <div class="bar-w"><div class="bar-f ${cls}" style="width:${pct}%"></div></div>
         </td>
         <td style="display:flex;gap:3px">
-          <button class="fbtn" onclick="openEditMateriau(${m.id},'${m.nom.replace(/'/g,"\\'")}','${m.unite}',${m.stock_minimum},${prix},'${(m.fournisseur||'').replace(/'/g,"\\'")}')">✎</button>
+          <button class="fbtn"
+            data-id="${m.id}"
+            data-nom="${m.nom.replace(/"/g,'&quot;')}"
+            data-unite="${m.unite}"
+            data-min="${m.stock_minimum}"
+            data-prix="${prix}"
+            data-four="${(m.fournisseur||'').replace(/"/g,'&quot;')}"
+            onclick="openEditMateriauBtn(this)">✎</button>
           <button class="fbtn" style="color:var(--red)" onclick="deleteMateriau(${m.id},'${m.nom.replace(/'/g,"\\'")}')">🗑</button>
         </td>
       </tr>`;
@@ -83,6 +90,16 @@ function openEditMateriau(id, nom, unite, stockMin, prix, fourn) {
   $('mat-edit-min').value   = stockMin || 0;
   $('mat-edit-prix').value  = prix     || 0;
   $('mat-edit-four').value  = fourn    || '';
+  openModal('m-mat-edit');
+}
+
+function openEditMateriauBtn(btn) {
+  $('mat-edit-id').value    = btn.dataset.id;
+  $('mat-edit-nom').value   = btn.dataset.nom;
+  $('mat-edit-unite').value = btn.dataset.unite;
+  $('mat-edit-min').value   = btn.dataset.min  || 0;
+  $('mat-edit-prix').value  = btn.dataset.prix || 0;
+  $('mat-edit-four').value  = btn.dataset.four || '';
   openModal('m-mat-edit');
 }
 

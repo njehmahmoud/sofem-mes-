@@ -33,7 +33,13 @@ async function loadProducts() {
             onclick="openBOMEditor(${p.id},'${p.nom.replace(/'/g,"\\'")}')">✎ BOM</button>
         </td>
         <td>
-          <button class="fbtn" onclick="openEditProduit(${p.id},'${p.nom.replace(/'/g,"\\'")}','${p.unite}',${prix},'${(p.description||'').replace(/'/g,"\\'")}')">✎</button>
+          <button class="fbtn"
+            data-id="${p.id}"
+            data-nom="${p.nom.replace(/"/g,'&quot;')}"
+            data-unite="${p.unite}"
+            data-prix="${prix}"
+            data-desc="${(p.description||''). replace(/"/g,'&quot;')}"
+            onclick="openEditProduitBtn(this)">✎</button>
         </td>
       </tr>`;
     }).join('');
@@ -56,11 +62,20 @@ async function saveProduit() {
 
 // ── EDIT ──────────────────────────────────────────────────
 function openEditProduit(id, nom, unite, prix, desc) {
-  $('prod-edit-id').value  = id;
+  $('prod-edit-id').value   = id;
   $('prod-edit-nom').value  = nom;
   $('prod-edit-unite').value = unite;
   $('prod-edit-prix').value  = prix || 0;
   $('prod-edit-desc').value  = desc || '';
+  openModal('m-prod-edit');
+}
+
+function openEditProduitBtn(btn) {
+  $('prod-edit-id').value   = btn.dataset.id;
+  $('prod-edit-nom').value  = btn.dataset.nom;
+  $('prod-edit-unite').value = btn.dataset.unite;
+  $('prod-edit-prix').value  = btn.dataset.prix || 0;
+  $('prod-edit-desc').value  = btn.dataset.desc || '';
   openModal('m-prod-edit');
 }
 
