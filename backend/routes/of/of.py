@@ -346,9 +346,19 @@ def update_of(of_id: int, data: OFUpdate,
     return {"message": "OF mis à jour"}
 
 
+class DuplicateOverride(BaseModel):
+    quantite:       Optional[int]   = None
+    priorite:       Optional[str]   = None
+    date_echeance:  Optional[str]   = None
+    client_id:      Optional[int]   = None
+    chef_projet_id: Optional[int]   = None
+    plan_numero:    Optional[str]   = None
+    notes:          Optional[str]   = None
+
+
 @router.post("/{of_id}/duplicate", dependencies=[Depends(require_manager_or_admin)])
-def duplicate_of(of_id: int, db=Depends(get_db)):
-    """Duplicate an OF — copies header, operations, BOM. Creates fresh DRAFT."""
+def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=Depends(get_db)):
+    """Duplicate an OF with optional overrides for key fields."""
     src = q(db, "SELECT * FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
     if not src: raise HTTPException(404, "OF non trouvé")
 
@@ -369,9 +379,16 @@ def duplicate_of(of_id: int, db=Depends(get_db)):
            chef_projet_id,client_id,plan_numero,atelier,
            date_echeance,notes,sous_traitant,sous_traitant_op,sous_traitant_cout)
         VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (numero, src["produit_id"], src["quantite"], src["priorite"],
-          src["chef_projet_id"], src["client_id"], src["plan_numero"],
-          src["atelier"], src["date_echeance"], src["notes"],
+    """, (numero,
+          src["produit_id"],
+          data.quantite       or src["quantite"],
+          data.priorite       or src["priorite"],
+          data.chef_projet_id if data.chef_projet_id is not None else src["chef_projet_id"],
+          data.client_id      if data.client_id      is not None else src["client_id"],
+          data.plan_numero    if data.plan_numero    is not None else src["plan_numero"],
+          src["atelier"],
+          data.date_echeance  or src["date_echeance"],
+          data.notes          if data.notes          is not None else src["notes"],
           src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"]))
 
     # Copy operations

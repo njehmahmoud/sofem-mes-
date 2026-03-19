@@ -433,10 +433,79 @@ async function deleteOF(id) {
 
 // ── OF DUPLICATION ────────────────────────────────────────
 async function duplicateOF(id) {
-  if (!confirm('Dupliquer cet OF ? Un nouvel OF DRAFT sera créé avec les mêmes données.')) return;
   try {
-    const res = await api(`/api/of/${id}/duplicate`, 'POST');
-    toast(`${res.numero} créé ✓`);
+    // Load OF data + dropdowns in parallel
+    const [of, clients, ops] = await Promise.all([
+      api(`/api/of/${id}`),
+      api('/api/clients'),
+      api('/api/operateurs')
+    ]);
+    if (!of) return;
+
+    // Store source ID
+    $('dup-src-id').value       = id;
+    $('dup-src-num').textContent = of.numero;
+
+    // Pre-fill fields from source OF
+    $('dup-qte').value   = of.quantite || 1;
+    $('dup-prio').value  = of.priorite || 'NORMAL';
+    $('dup-plan').value  = of.plan_numero || '';
+    $('dup-notes').value = '';
+
+    // Default new date = today + 30 days
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    $('dup-date').value = d.toISOString().split('T')[0];
+
+    // Populate client dropdown
+    $('dup-client').innerHTML = '<option value="">— Aucun —</option>' +
+      (clients||[]).map(c =>
+        `<option value="${c.id}" ${c.id===of.client_id?'selected':''}>${c.nom}</option>`
+      ).join('');
+
+    // Populate chef dropdown
+    $('dup-chef').innerHTML = '<option value="">— Non assigné —</option>' +
+      (ops||[]).map(o =>
+        `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`
+      ).join('');
+
+    // Summary of what will be copied
+    const opCount  = (of.operations||[]).length;
+    const bomCount = (of.bom||[]).length;
+    $('dup-summary').innerHTML = `
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;
+        letter-spacing:1px;color:var(--muted);margin-bottom:.4rem">Sera copié :</div>
+      <div style="display:flex;gap:1.5rem">
+        <span>📋 Produit : <strong style="color:var(--text)">${of.produit_nom}</strong></span>
+        <span>⚙️ ${opCount} opération${opCount>1?'s':''}</span>
+        <span>📦 ${bomCount} matériau${bomCount>1?'x':''} BOM</span>
+        ${of.sous_traitant?`<span>🔧 Sous-traitance : ${of.sous_traitant}</span>`:''}
+      </div>`;
+
+    openModal('m-of-dup');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function confirmDuplicateOF() {
+  const id  = $('dup-src-id').value;
+  const qte = parseInt($('dup-qte').value);
+  const date = $('dup-date').value;
+
+  if (!qte || qte < 1) { toast('Quantité invalide', 'err'); return; }
+  if (!date) { toast('Date échéance obligatoire', 'err'); return; }
+
+  try {
+    const res = await api(`/api/of/${id}/duplicate`, 'POST', {
+      quantite:      qte,
+      priorite:      $('dup-prio').value,
+      date_echeance: date,
+      client_id:     $('dup-client').value ? parseInt($('dup-client').value) : null,
+      chef_projet_id:$('dup-chef').value   ? parseInt($('dup-chef').value)   : null,
+      plan_numero:   $('dup-plan').value   || null,
+      notes:         $('dup-notes').value  || null,
+    });
+    toast(`✓ ${res.numero} créé`);
+    closeModal('m-of-dup');
     loadOrders();
   } catch(e) { toast(e.message, 'err'); }
 }

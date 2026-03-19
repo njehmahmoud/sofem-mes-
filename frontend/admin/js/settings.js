@@ -175,16 +175,17 @@ function renderSettingsPage() {
       .sfull{grid-column:span 2}
       .stoggle{display:flex;align-items:center;justify-content:space-between;
         background:var(--bg3);border:1px solid var(--border);border-radius:6px;
-        padding:.5rem .75rem;cursor:pointer}
-      .stoggle label{font-size:11px;color:var(--text);cursor:pointer;flex:1}
+        padding:.5rem .75rem;cursor:pointer;gap:1rem}
+      .stoggle label{font-size:11px;color:var(--text);cursor:pointer;flex:1;min-width:0}
+      .toggle-wrap{display:flex;align-items:center;flex-shrink:0}
       .toggle-track{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
-      .toggle-track input{opacity:0;width:0;height:0}
+      .toggle-track input{opacity:0;width:0;height:0;position:absolute}
       .toggle-thumb{position:absolute;cursor:pointer;inset:0;border-radius:24px;
-        transition:.2s;border:1px solid var(--border)}
+        background:var(--bg2);border:1px solid var(--border);transition:.2s}
       .toggle-thumb:before{content:'';position:absolute;height:18px;width:18px;
-        bottom:2px;border-radius:50%;background:#fff;transition:.2s}
-      input:checked + .toggle-thumb{border-color:var(--red)}
-      input:checked + .toggle-thumb:before{transform:translateX(20px)}
+        left:2px;bottom:2px;border-radius:50%;background:var(--muted);transition:.2s}
+      input:checked + .toggle-thumb{background:var(--red);border-color:var(--red)}
+      input:checked + .toggle-thumb:before{transform:translateX(20px);background:#fff}
       .sfield label{font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;
         text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
       .sfield input,.sfield select,.sfield textarea{width:100%;background:var(--bg3);
@@ -228,13 +229,15 @@ function renderSystemField(f) {
 
   if (f.type === 'boolean') {
     const checked = val === true || val === 'true' || val === 1;
-    return `<div class="stoggle ${fullClass}" onclick="document.getElementById('${id}').click()">
-      <label for="${id}">${f.label}</label>
-      <label class="toggle-track">
-        <input type="checkbox" id="${id}" ${checked?'checked':''}
-          onclick="event.stopPropagation()" onchange="updateSettingLocal('${f.cle}',this.checked)">
-        <span class="toggle-thumb" style="background:${checked?'var(--red)':'var(--bg2)'}"></span>
-      </label>
+    return `<div class="stoggle ${fullClass}">
+      <label for="${id}" style="cursor:pointer">${f.label}</label>
+      <div class="toggle-wrap">
+        <label class="toggle-track">
+          <input type="checkbox" id="${id}" ${checked?'checked':''}
+            onchange="updateSettingLocal('${f.cle}',this.checked)">
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
     </div>`;
   }
 
@@ -388,13 +391,15 @@ function renderAffichageTab() {
           {k:'compact_table',   l:'Mode compact (lignes réduites)'},
         ].map(item => {
           const checked = d[item.k];
-          return `<div class="stoggle" onclick="document.getElementById('d-${item.k}').click()">
-            <label for="d-${item.k}">${item.l}</label>
-            <label class="toggle-track">
-              <input type="checkbox" id="d-${item.k}" ${checked?'checked':''}
-                onclick="event.stopPropagation()" onchange="_displaySettings['${item.k}']=this.checked">
-              <span class="toggle-thumb" style="background:${checked?'var(--red)':'var(--bg2)'}"></span>
-            </label>
+          return `<div class="stoggle">
+            <label for="d-${item.k}" style="cursor:pointer">${item.l}</label>
+            <div class="toggle-wrap">
+              <label class="toggle-track">
+                <input type="checkbox" id="d-${item.k}" ${checked?'checked':''}
+                  onchange="_displaySettings['${item.k}']=this.checked">
+                <span class="toggle-thumb"></span>
+              </label>
+            </div>
           </div>`;
         }).join('')}
       </div>
