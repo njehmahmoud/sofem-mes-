@@ -39,6 +39,7 @@ class ClientUpdate(BaseModel):
 # ── OPERATEURS ────────────────────────────────────────────
 class OperateurCreate(BaseModel):
     nom: str; prenom: str; specialite: str
+    role: str = "OPERATEUR"
     telephone: Optional[str]=None; email: Optional[str]=None
     taux_horaire: float = 0
     taux_piece: float = 0
@@ -48,6 +49,7 @@ class OperateurUpdate(BaseModel):
     nom: Optional[str]=None; prenom: Optional[str]=None
     specialite: Optional[str]=None; telephone: Optional[str]=None
     email: Optional[str]=None; actif: Optional[bool]=None
+    role: Optional[str]=None
     taux_horaire: Optional[float]=None
     taux_piece: Optional[float]=None
     type_taux: Optional[str]=None

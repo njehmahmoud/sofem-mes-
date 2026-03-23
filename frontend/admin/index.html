@@ -993,6 +993,13 @@ td{padding:.65rem 1rem;vertical-align:middle}
       </div>
       <div class="fg"><label>Spécialité</label>
         <input type="text" id="op-spec" placeholder="Ex: Ponçage, Fraisage, AutoCAD..."></div>
+      <div class="fg"><label>Rôle</label>
+        <select id="op-role" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);width:100%">
+          <option value="OPERATEUR">Opérateur</option>
+          <option value="CHEF_ATELIER">Chef d'Atelier</option>
+          <option value="TECHNICIEN">Technicien</option>
+          <option value="RESPONSABLE">Responsable</option>
+        </select></div>
       <div class="row2">
         <div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div>
         <div class="fg"><label>Email</label><input type="email" id="op-email"></div>
@@ -1638,6 +1645,29 @@ navigate('dashboard');
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeOFDetail()">Fermer</button>
       <button class="btn" onclick="saveOFDetailOps()" id="ofd-save-btn">💾 Enregistrer opérations</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- QUICK TIME EDIT MODAL -->
+<div class="overlay" id="m-quick-time">
+  <div class="modal" style="max-width:640px;width:95vw">
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">⏱ TEMPS OPÉRATIONS — <span id="qt-numero" style="color:var(--red)"></span></div>
+        <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px">
+          Modifiable avant et après impression PDF
+        </div>
+      </div>
+      <button class="x" onclick="closeModal('m-quick-time')">✕</button>
+    </div>
+    <div class="modal-b" style="max-height:65vh;overflow-y:auto;padding:0 1rem">
+      <div id="qt-ops-list"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-quick-time')">Annuler</button>
+      <button class="btn" style="background:#f59e0b;border-color:#f59e0b" onclick="saveQuickTime()">⏱ Enregistrer temps</button>
     </div>
   </div>
 </div>

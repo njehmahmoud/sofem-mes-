@@ -51,6 +51,7 @@ function renderOrders(ofs) {
           <button class="btn btn-ghost btn-sm" onclick="advanceOFSafe(${of.id},'${of.statut}')">▶</button>` : ''}
         ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED' ? `
           <button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openEditOF(${of.id})" title="Modifier">✎</button>` : ''}
+        <button class="btn btn-ghost btn-sm" style="color:#f59e0b" onclick="openQuickTime(${of.id},'${of.numero}')" title="Modifier temps opérations">⏱</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--blue)" onclick="duplicateOF(${of.id})" title="Dupliquer">⎘</button>
         ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
           <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteOF(${of.id})" title="Supprimer">🗑</button>` : ''}
@@ -177,8 +178,9 @@ function printFacture(ofId, type='interne') {
 async function openOFModal() {
   _ofOpsData = [];
   _ofBomData = [];
-  const [prods, ops, clients, machines, opTypes] = await Promise.all([
+  const [prods, ops, chefs, clients, machines, opTypes] = await Promise.all([
     api('/api/produits'), api('/api/operateurs'),
+    api('/api/operateurs?role=CHEF_ATELIER'),
     api('/api/clients'),  api('/api/machines'),
     api('/api/operation-types')
   ]);
@@ -190,8 +192,10 @@ async function openOFModal() {
   ).join('');
   $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
     (clients||[]).map(c => `<option value="${c.id}">${c.nom} (${c.code})</option>`).join('');
+  // Chef Atelier = only CHEF_ATELIER role, fallback to all if none defined yet
+  const chefList = chefs?.length ? chefs : ops;
   $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
-    (ops||[]).map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+    chefList.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
 
   // Store for use in operations builder
   window._opsCache = ops || [];
@@ -335,8 +339,9 @@ async function createOF() {
 async function openEditOF(ofId) {
   const of = await api(`/api/of/${ofId}`);
   if (!of) return;
-  const [prods, ops, clients, machines, opTypes] = await Promise.all([
+  const [prods, ops, chefs, clients, machines, opTypes] = await Promise.all([
     api('/api/produits'), api('/api/operateurs'),
+    api('/api/operateurs?role=CHEF_ATELIER'),
     api('/api/clients'),  api('/api/machines'),
     api('/api/operation-types')
   ]);
@@ -349,8 +354,9 @@ async function openEditOF(ofId) {
      ${p.id===of.produit_id?'selected':''}>${p.code} — ${p.nom}</option>`).join('');
   $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
     (clients||[]).map(c => `<option value="${c.id}" ${c.id===of.client_id?'selected':''}>${c.nom}</option>`).join('');
+  const chefList = chefs?.length ? chefs : ops;
   $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
-    (ops||[]).map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('');
+    chefList.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('');
   $('of-prio').value = of.priorite || 'NORMAL';
   $('of-atelier').value = of.atelier || 'Atelier A';
   $('of-date').value = of.date_echeance || '';
@@ -699,5 +705,99 @@ async function saveBOMChanges() {
     _ofdOf = await api(`/api/of/${_ofdOfId}`);
     _ofdBomEdits = {};
     renderOFDetailBOM();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+
+// ── QUICK TIME EDIT ───────────────────────────────────────
+let _qtOfId = null;
+
+async function openQuickTime(ofId, ofNumero) {
+  _qtOfId = ofId;
+  try {
+    const of = await api(`/api/of/${ofId}`);
+    if (!of?.operations?.length) { toast('Aucune opération sur cet OF', 'err'); return; }
+
+    $('qt-numero').textContent = ofNumero;
+
+    $('qt-ops-list').innerHTML = of.operations.map((op, idx) => {
+      const dur = op.duree_reelle || 0;
+      const h   = Math.floor(dur / 60);
+      const m   = dur % 60;
+      const stCls = { COMPLETED:'b-completed', IN_PROGRESS:'b-inprogress', PENDING:'b-draft' }[op.statut] || 'b-draft';
+      const stLbl = { COMPLETED:'✓', IN_PROGRESS:'⏳', PENDING:'—' }[op.statut] || '—';
+      return `
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;
+          border-bottom:1px solid var(--border);${idx%2===0?'':''}">
+          <span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;min-width:16px">${idx+1}</span>
+          <span style="flex:1;font-size:12px;font-weight:600">${op.operation_nom}</span>
+          <span style="font-size:10px;color:var(--muted);min-width:80px">${op.operateurs_noms||'—'}</span>
+          <span class="badge ${stCls}" style="font-size:8px;min-width:20px;text-align:center">${stLbl}</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <span style="font-size:8px;color:var(--muted);margin-bottom:1px">H</span>
+              <input type="number" min="0" max="999" value="${h}"
+                id="qt-h-${op.id}"
+                style="width:52px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;
+                  text-align:center"
+                oninput="updateQTTotal(${op.id})">
+            </div>
+            <span style="color:var(--muted);font-size:14px;margin-top:10px">:</span>
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <span style="font-size:8px;color:var(--muted);margin-bottom:1px">MIN</span>
+              <input type="number" min="0" max="59" value="${m}"
+                id="qt-m-${op.id}"
+                style="width:52px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;
+                  text-align:center"
+                oninput="updateQTTotal(${op.id})">
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <span style="font-size:8px;color:var(--muted);margin-bottom:1px">TOTAL</span>
+              <span id="qt-total-${op.id}"
+                style="width:60px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+                  color:var(--accent);text-align:center;padding:4px 0">
+                ${dur ? (h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m}min`) : '—'}
+              </span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Store op ids for save
+    window._qtOps = of.operations.map(o => o.id);
+    openModal('m-quick-time');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function updateQTTotal(opId) {
+  const h = parseInt($(`qt-h-${opId}`)?.value || 0);
+  const m = parseInt($(`qt-m-${opId}`)?.value || 0);
+  const total = h * 60 + m;
+  const el = $(`qt-total-${opId}`);
+  if (el) el.textContent = total > 0
+    ? (h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m}min`)
+    : '—';
+}
+
+async function saveQuickTime() {
+  if (!_qtOfId || !window._qtOps?.length) return;
+  const saves = window._qtOps.map(opId => {
+    const h = parseInt($(`qt-h-${opId}`)?.value || 0);
+    const m = parseInt($(`qt-m-${opId}`)?.value || 0);
+    const total = h * 60 + m;
+    return api(`/api/of/${_qtOfId}/operations/${opId}`, 'PUT', { duree_reelle: total });
+  });
+  try {
+    await Promise.all(saves);
+    toast(`Temps enregistrés ✓`);
+    closeModal('m-quick-time');
+    loadOrders();
+    // If detail modal is open, refresh it
+    if (_ofdOfId === _qtOfId) {
+      _ofdOf = await api(`/api/of/${_qtOfId}`);
+      renderOFDetailOps();
+    }
   } catch(e) { toast(e.message, 'err'); }
 }

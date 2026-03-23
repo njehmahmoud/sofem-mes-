@@ -9,13 +9,15 @@ router = APIRouter(prefix="/api/operateurs", tags=["operateurs"])
 
 
 @router.get("", dependencies=[Depends(require_any_role)])
-def list_operateurs(db=Depends(get_db)):
-    # Simple query — no heavy joins
-    ops = q(db, """
-        SELECT * FROM operateurs
-        WHERE actif = TRUE
-        ORDER BY nom
-    """)
+def list_operateurs(role: str = None, db=Depends(get_db)):
+    # Optional role filter: ?role=CHEF_ATELIER
+    sql = "SELECT * FROM operateurs WHERE actif = TRUE"
+    params = []
+    if role:
+        sql += " AND role = %s"
+        params.append(role)
+    sql += " ORDER BY nom"
+    ops = q(db, sql, params or None)
     return serialize(ops)
 
 
@@ -41,10 +43,11 @@ def get_operateur(op_id: int, db=Depends(get_db)):
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_operateur(data: OperateurCreate, db=Depends(get_db)):
     oid = exe(db, """
-        INSERT INTO operateurs (nom,prenom,specialite,telephone,email,
+        INSERT INTO operateurs (nom,prenom,specialite,role,telephone,email,
                                 taux_horaire,taux_piece,type_taux)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (data.nom, data.prenom, data.specialite, data.telephone, data.email,
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (data.nom, data.prenom, data.specialite, data.role,
+          data.telephone, data.email,
           data.taux_horaire, data.taux_piece, data.type_taux))
     return {"id": oid, "message": "Opérateur créé"}
 
