@@ -1,11 +1,19 @@
-"""SOFEM MES v6.0 — Main Entry Point"""
+"""SOFEM MES v6.0 — Main Entry Point (patched)
+Fixes:
+  - @app.on_event("startup") replaced with lifespan context manager (FastAPI ≥ 0.93)
+  - CORS: reads CORS_ORIGINS env var; falls back to ["*"] only if not set
+"""
 
-import os, logging
+import os
+import logging
 from pathlib import Path
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
 from database import init_db
 
 # ── OF module
@@ -27,21 +35,21 @@ from routes.achats.fa import router as fa_router
 # ── Standalone routes
 from routes.clients          import router as clients_router
 from routes.operation_types  import router as op_types_router
-from routes.settings          import router as settings_router
-from routes.facture      import router as facture_router
-from routes.operateurs   import router as operateurs_router
-from routes.bl           import router as bl_router
-from routes.materiaux    import router as materiaux_router
-from routes.dashboard    import router as dashboard_router
-from routes.rapports     import router as rapports_router
-from routes.auth_routes  import router as auth_router
-from routes.machines     import router as machines_router
-from routes.maintenance  import router as maintenance_router
-from routes.planification import router as planification_router
-from routes.qualite      import router as qualite_router
-from routes.fournisseurs import router as fournisseurs_router
-from routes.analytics    import router as analytics_router
-from routes.notifications import router as notifications_router
+from routes.settings         import router as settings_router
+from routes.facture          import router as facture_router
+from routes.operateurs       import router as operateurs_router
+from routes.bl               import router as bl_router
+from routes.materiaux        import router as materiaux_router
+from routes.dashboard        import router as dashboard_router
+from routes.rapports         import router as rapports_router
+from routes.auth_routes      import router as auth_router
+from routes.machines         import router as machines_router
+from routes.maintenance      import router as maintenance_router
+from routes.planification    import router as planification_router
+from routes.qualite          import router as qualite_router
+from routes.fournisseurs     import router as fournisseurs_router
+from routes.analytics        import router as analytics_router
+from routes.notifications    import router as notifications_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sofem-mes")
@@ -49,16 +57,38 @@ logger = logging.getLogger("sofem-mes")
 BASE_DIR     = Path(__file__).parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
-app = FastAPI(title="SOFEM MES API v6.0", version="6.0.0",
-              description="Manufacturing Execution System — SOFEM Sfax · SMARTMOVE")
+# ── CORS ──────────────────────────────────────────────────
+_cors_env = os.environ.get("CORS_ORIGINS", "")
+CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()] if _cors_env else ["*"]
+if CORS_ORIGINS == ["*"]:
+    logger.warning(
+        "⚠️  CORS_ORIGINS not set — allowing all origins. "
+        "Set CORS_ORIGINS=https://your-domain.railway.app in production."
+    )
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
 
-@app.on_event("startup")
-def startup():
+# ── Lifespan (replaces deprecated @app.on_event) ─────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     init_db()
     logger.info(f"✅ Frontend: {FRONTEND_DIR}")
+    yield
+    # shutdown logic here if needed
+
+
+app = FastAPI(
+    title="SOFEM MES API v6.0",
+    version="6.0.0",
+    description="Manufacturing Execution System — SOFEM Sfax · SMARTMOVE",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ── Register all routers ──────────────────────────────────
 app.include_router(auth_router)
@@ -97,43 +127,45 @@ app.include_router(fournisseurs_router)
 app.include_router(analytics_router)
 app.include_router(notifications_router)
 
-# ── Health ───────────────────────────────────────────────
+
+# ── Health ────────────────────────────────────────────────
 @app.get("/api/health")
 def health():
     return {"status": "ok", "version": "6.0.0"}
 
-# ── Frontend ─────────────────────────────────────────────
+
+# ── Frontend ──────────────────────────────────────────────
 @app.get("/admin",    include_in_schema=False)
 @app.get("/admin/",   include_in_schema=False)
 def admin():
     return FileResponse(str(FRONTEND_DIR / "admin" / "index.html"))
+
 
 @app.get("/operator",  include_in_schema=False)
 @app.get("/operator/", include_in_schema=False)
 def operator():
     return FileResponse(str(FRONTEND_DIR / "operator" / "index.html"))
 
+
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
+
 
 assets_dir = FRONTEND_DIR / "assets"
 if assets_dir.exists():
     app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
-# Serve admin JS files
 admin_js = FRONTEND_DIR / "admin" / "js"
 if admin_js.exists():
     app.mount("/admin/js", StaticFiles(directory=str(admin_js)), name="admin-js")
     app.mount("/js",       StaticFiles(directory=str(admin_js)), name="js-root")
 
-# Serve admin CSS
 admin_css = FRONTEND_DIR / "admin" / "css"
 if admin_css.exists():
     app.mount("/admin/css", StaticFiles(directory=str(admin_css)), name="admin-css")
     app.mount("/css",       StaticFiles(directory=str(admin_css)), name="css-root")
 
-# Serve page fragments (analytics, modals)
 admin_pages = FRONTEND_DIR / "admin" / "pages"
 if admin_pages.exists():
     app.mount("/admin/pages", StaticFiles(directory=str(admin_pages)), name="admin-pages")
