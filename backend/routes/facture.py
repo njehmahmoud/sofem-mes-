@@ -128,6 +128,27 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
 
     draw_header(c, W, H, colors, "FACTURE", fac_num+suffix, now)
 
+    FOOTER_H = 14*2.835   # footer height in points
+    SAFE_Y   = FOOTER_H + 30*mm  # trigger new page below this
+
+    page_num = [1]
+
+    def fac_draw_footer():
+        draw_footer(c,W,colors,fac_num+suffix,now,S_NOM,S_TAG,S_ADDR,S_VILLE,S_WEB,S_MF,PDF_PIED)
+
+    def fac_new_page():
+        fac_draw_footer()
+        c.showPage()
+        page_num[0] += 1
+        # Mini continuation header
+        c.setFillColor(colors.HexColor("#111")); c.rect(0, H-12*mm, W, 12*mm, fill=1, stroke=0)
+        c.setFillColor(colors.HexColor("#D42B2B")); c.rect(0, H-13*mm, W, 1*mm, fill=1, stroke=0)
+        c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 9)
+        c.drawString(15*mm, H-8*mm, f"{S_NOM}  ·  FACTURE {fac_num+suffix}  (suite)")
+        c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 7)
+        c.drawRightString(W-15*mm, H-8*mm, f"Page {page_num[0]}")
+        return H - 18*mm
+
     # Info band
     y = H - 63*mm
     c.setFillColor(LIGHT); c.rect(0,y,W,22*mm,fill=1,stroke=0)
@@ -163,8 +184,6 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
         c.setFillColor(DARK); c.setFont("Helvetica-Bold",9); c.drawString(20*mm,y,title)
         return y - 8*mm
 
-    # Dynamic operations - no fixed stages
-
     if type == "interne":
         y_cur = sec_title("ÉTAPES DE PRODUCTION", y_cur)
         cols_e=[15*mm,75*mm,130*mm,175*mm]
@@ -173,11 +192,17 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_e[i]+2*mm,y_cur-3*mm,h)
         y_cur-=6*mm
         for idx,e in enumerate(of["etapes"]):
+            if y_cur < SAFE_Y:
+                y_cur = fac_new_page()
+                # re-draw ops table header
+                c.setFillColor(DARK); c.rect(15*mm,y_cur-6*mm,W-30*mm,8*mm,fill=1,stroke=0)
+                for i,h in enumerate(["ÉTAPE","STATUT","OPÉRATEUR","DURÉE"]):
+                    c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_e[i]+2*mm,y_cur-3*mm,h)
+                y_cur-=6*mm
             sn = e.get("etape") or e.get("operation_nom","—")
             rh=8*mm; y_cur-=rh
             if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
             duree = "—"
-            # Use duree_reelle first (most accurate), then calculate from debut/fin
             if e.get("duree_reelle"):
                 mins = int(e["duree_reelle"])
                 duree = f"{mins//60}h {mins%60}min" if mins >= 60 else f"{mins} min"
@@ -199,6 +224,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm,y_cur,W-15*mm,y_cur)
 
         y_cur-=10*mm
+        if y_cur < SAFE_Y + 30*mm: y_cur = fac_new_page()
         y_cur=sec_title("MATÉRIAUX CONSOMMÉS (ESTIMATIF)",y_cur)
         cols_m=[15*mm,100*mm,145*mm,175*mm]
         c.setFillColor(DARK); c.rect(15*mm,y_cur-6*mm,W-30*mm,8*mm,fill=1,stroke=0)
@@ -206,6 +232,12 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_m[i]+2*mm,y_cur-3*mm,h)
         y_cur-=6*mm
         for idx,m in enumerate(materiaux):
+            if y_cur < SAFE_Y:
+                y_cur = fac_new_page()
+                c.setFillColor(DARK); c.rect(15*mm,y_cur-6*mm,W-30*mm,8*mm,fill=1,stroke=0)
+                for i,h in enumerate(["MATÉRIAU","CODE","UNITÉ","QTÉ ESTIMÉE"]):
+                    c.setFillColor(WHITE); c.setFont("Helvetica-Bold",7); c.drawString(cols_m[i]+2*mm,y_cur-3*mm,h)
+                y_cur-=6*mm
             cons=float(m.get("quantite_estimee") or 0)
             rh=8*mm; y_cur-=rh
             if idx%2==0: c.setFillColor(LIGHT); c.rect(15*mm,y_cur,W-30*mm,rh,fill=1,stroke=0)
@@ -216,7 +248,11 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             c.setFont("Helvetica-Bold",7.5); c.drawString(cols_m[3]+2*mm,y_cur+2.5*mm,str(cons))
             c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm,y_cur,W-15*mm,y_cur)
 
-    # Totals
+    # ── DÉTAIL FINANCIER — needs ~90mm, force new page if not enough ──
+    FINANCIAL_NEEDED = 90*mm
+    if y_cur < SAFE_Y + FINANCIAL_NEEDED:
+        y_cur = fac_new_page()
+
     y_cur-=14*mm
     lbl_sec="DÉTAIL FINANCIER" if type=="interne" else "FACTURE CLIENT"
     y_cur=sec_title(lbl_sec,y_cur)
@@ -234,7 +270,8 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     c.setFont("Helvetica-Bold",8); c.drawString(cols_p[3]+2*mm,y_cur+2.5*mm,f"{ht:.3f} TND")
 
     y_cur-=12*mm; bx=W-85*mm
-    for lbl,val,bg,fg in [("Total HT",f"{ht:.3f} TND",LIGHT,DARK),(f"TVA (19%)",f"{tva:.3f} TND",LIGHT,GRAY),("TOTAL TTC",f"{ttc:.3f} TND",DARK,WHITE)]:
+    tva_label = f"TVA ({round(TVA_RATE*100)}%)"
+    for lbl,val,bg,fg in [("Total HT",f"{ht:.3f} TND",LIGHT,DARK),(tva_label,f"{tva:.3f} TND",LIGHT,GRAY),("TOTAL TTC",f"{ttc:.3f} TND",DARK,WHITE)]:
         rh=9*mm if lbl!="TOTAL TTC" else 11*mm
         c.setFillColor(bg); c.rect(bx,y_cur-rh,W-15*mm-bx,rh,fill=1,stroke=0)
         c.setFillColor(fg); c.setFont("Helvetica-Bold",9 if lbl!="TOTAL TTC" else 11)
@@ -249,7 +286,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
     c.setFillColor(GRAY); c.setFont("Helvetica",8); c.drawCentredString(W-45*mm,y_sig-6*mm,"Signature & Cachet")
     c.line(W-70*mm,y_sig-18*mm,W-20*mm,y_sig-18*mm)
 
-    draw_footer(c,W,colors,fac_num+suffix,now,S_NOM,S_TAG,S_ADDR,S_VILLE,S_WEB,S_MF,PDF_PIED)
+    fac_draw_footer()
     c.save(); buf.seek(0)
     return StreamingResponse(io.BytesIO(buf.read()),media_type="application/pdf",
         headers={"Content-Disposition":f'inline; filename="{fac_num}{suffix}.pdf"'})
