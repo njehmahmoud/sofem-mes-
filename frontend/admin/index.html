@@ -33,7 +33,9 @@
   <div class="nav-group">
     <div class="nav-lbl">Principal</div>
     <div class="nav-item active" data-p="dashboard">▣ Tableau de Bord</div>
+    <div class="nav-item" data-p="operator-dashboard">👤 Mon Espace</div>
     <div class="nav-item" data-p="orders">📋 Ordres de Fab.</div>
+    <div class="nav-item" data-p="calendar">📅 Calendrier</div>
     <div class="nav-item" data-p="monitor">📡 Monitoring</div>
     <div class="nav-item" data-p="bl">🚚 Bons de Livraison</div>
   </div>
@@ -79,6 +81,7 @@
     <div class="nav-item" data-p="settings">⚙️ Paramètres</div>
     <div class="nav-item" data-p="op-types">⚙️ Opérations</div>
     <div class="nav-item" data-p="reports">📊 Rapports</div>
+    <div class="nav-item" data-p="activity">📜 Activité</div>
   </div>
   <div class="sidebar-footer">SOFEM MES v6.0<br>SMARTMOVE · 2025</div>
 </nav>
@@ -463,11 +466,47 @@
 
 
 
+<!-- OPERATOR DASHBOARD -->
+<div class="page" id="page-operator-dashboard">
+  <div class="ph">
+    <div><div class="ph-title">MON <span>ESPACE</span></div><div class="ph-sub">// VUE PERSONNALISÉE OPÉRATEUR</div></div>
+    <button class="btn btn-ghost" onclick="loadOperatorDashboard()">↺ Actualiser</button>
+  </div>
+  <div id="opd-container"><div class="loading"><div class="spin"></div></div></div>
+</div>
+
+<!-- CALENDAR -->
+<div class="page" id="page-calendar">
+  <div class="ph">
+    <div><div class="ph-title">CALEN<span>DRIER</span></div><div class="ph-sub">// ORDRES DE FABRICATION PAR DATE D'ÉCHÉANCE</div></div>
+    <button class="btn btn-ghost" onclick="loadCalendar()">↺ Actualiser</button>
+  </div>
+  <div class="sec"><div id="cal-container"><div class="loading"><div class="spin"></div></div></div></div>
+</div>
+
+<!-- ACTIVITY LOG -->
+<div class="page" id="page-activity">
+  <div class="ph">
+    <div><div class="ph-title">HISTORIQUE <span>ACTIVITÉ</span></div><div class="ph-sub">// LOGS UTILISATEURS ET ACTIONS SYSTÈME</div></div>
+    <button class="btn btn-ghost" onclick="loadActivity()">↺ Actualiser</button>
+  </div>
+  <div class="sec">
+    <div class="sec-h">
+      <div class="sec-title">JOURNAL <span class="ac">D'ACTIVITÉ</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="exportTable('activity-tb','activite')">⬇ CSV</button>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Date/Heure</th><th>Action</th><th>Utilisateur</th><th>Type</th><th>ID</th><th>Détail</th></tr></thead>
+      <tbody id="activity-tb"><tr><td colspan="6" class="loading"><div class="spin"></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
 <!-- ANALYTIQUE — PRODUCTION -->
 <div class="page" id="page-analytics-production">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
-    <button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button>
+    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsProduction()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button></div>
   </div>
   <div class="kpi-grid" id="anp-kpis"></div>
   <div class="grid2">
@@ -499,7 +538,7 @@
 <div class="page" id="page-analytics-achats">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
-    <button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button>
+    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsAchats()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button></div>
   </div>
   <div class="kpi-grid" id="ana-kpis"></div>
   <div class="grid2">
@@ -531,7 +570,7 @@
 <div class="page" id="page-analytics-operateurs">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · HEURES · COÛTS MO</div></div>
-    <button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button>
+    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsOperateurs()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button></div>
   </div>
   <div class="kpi-grid" id="ano-kpis"></div>
   <div class="grid2">
@@ -559,7 +598,7 @@
 <div class="page" id="page-analytics-qualite">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NON-CONFORMITÉS · DÉFAUTS</div></div>
-    <button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button>
+    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsQualite()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button></div>
   </div>
   <div class="kpi-grid" id="anq-kpis"></div>
   <div class="grid2">
@@ -1585,6 +1624,11 @@
 <script src="/admin/js/settings.js"></script>
 <script src="/admin/js/reports.js"></script>
 <script src="/admin/js/monitor.js"></script>
+<script src="/admin/js/notifications.js"></script>
+<script src="/admin/js/export.js"></script>
+<script src="/admin/js/calendar.js"></script>
+<script src="/admin/js/activity.js"></script>
+<script src="/admin/js/operator_dashboard.js"></script>
 <script src="/admin/js/analytics.js"></script>
 <script>
 window.pageLoaders = {
@@ -1614,6 +1658,9 @@ window.pageLoaders = {
   'analytics-achats':      loadAnalyticsAchats,
   'analytics-operateurs':  loadAnalyticsOperateurs,
   'analytics-qualite':     loadAnalyticsQualite,
+  'calendar':              loadCalendar,
+  'activity':              loadActivity,
+  'operator-dashboard':    loadOperatorDashboard,
 };
 const _u = getUserInfo();
 if (!localStorage.getItem('token')) window.location.href = '/';
