@@ -1296,35 +1296,39 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <script src="/admin/js/analytics.js"></script>
 <script>
 window.pageLoaders = {
-  dashboard:    loadDashboard,
-  orders:       loadOrders,
-  monitor:      loadMonitor,
-  bl:           loadBL,
-  materials:    loadMaterials,
-  operators:    loadOperators,
-  products:     loadProducts,
-  clients:      loadClients,
-  da:           loadDA,
-  bc:           loadBC,
-  br:           loadBR,
-  fa:           loadFA,
-  qualite:      loadQualite,
-  nc:           loadNC,
-  machines:     loadMachines,
-  maintenance:  loadMaintenance,
-  planning:     loadPlanning,
-  fournisseurs: loadFournisseurs,
-  users:        loadUsers,
-  'op-types':   loadOpTypes,
-  settings:     loadSettings,
-  reports:      loadReports,
+  dashboard:               loadDashboard,
+  orders:                  loadOrders,
+  monitor:                 loadMonitor,
+  bl:                      loadBL,
+  materials:               loadMaterials,
+  operators:               loadOperators,
+  products:                loadProducts,
+  clients:                 loadClients,
+  da:                      loadDA,
+  bc:                      loadBC,
+  br:                      loadBR,
+  fa:                      loadFA,
+  qualite:                 loadQualite,
+  nc:                      loadNC,
+  machines:                loadMachines,
+  maintenance:             loadMaintenance,
+  planning:                loadPlanning,
+  fournisseurs:            loadFournisseurs,
+  users:                   loadUsers,
+  'op-types':              loadOpTypes,
+  settings:                loadSettings,
+  reports:                 loadReports,
+  'analytics-production':  loadAnalyticsProduction,
+  'analytics-achats':      loadAnalyticsAchats,
+  'analytics-operateurs':  loadAnalyticsOperateurs,
+  'analytics-qualite':     loadAnalyticsQualite,
 };
 const _u = getUserInfo();
 if (!localStorage.getItem('token')) window.location.href = '/';
 if ($('user-info'))   $('user-info').textContent   = _u.prenom ? `${_u.prenom} ${_u.nom}` : 'Admin';
 if ($('role-badge'))  $('role-badge').textContent  = _u.role || 'ADMIN';
 if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
-navigate('dashboard');
+// Navigation handled by core.js DOMContentLoaded (restores last page from hash/localStorage)
 </script>
 
 <!-- STOCK WARNING MODAL -->
@@ -1687,7 +1691,7 @@ navigate('dashboard');
     <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="anp-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="kpi-grid" id="anp-kpis"></div>
   <div class="grid2">
     <div class="sec">
       <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">12 derniers mois</span></div>
@@ -1719,7 +1723,7 @@ navigate('dashboard');
     <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="ana-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="kpi-grid" id="ana-kpis"></div>
   <div class="grid2">
     <div class="sec">
       <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span id="ana-valeur" style="font-size:9px;color:var(--accent);font-family:'IBM Plex Mono',monospace"></span></div>
@@ -1751,7 +1755,7 @@ navigate('dashboard');
     <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · HEURES · COÛTS MO</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="ano-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="kpi-grid" id="ano-kpis"></div>
   <div class="grid2">
     <div class="sec" style="grid-column:1/-1">
       <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">PAR OPÉRATEUR</span></div></div>
@@ -1779,7 +1783,7 @@ navigate('dashboard');
     <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NON-CONFORMITÉS · DÉFAUTS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="anq-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="kpi-grid" id="anq-kpis"></div>
   <div class="grid2">
     <div class="sec">
       <div class="sec-h"><div class="sec-title">TAUX CONFORMITÉ <span class="ac">/ MOIS</span></div></div>

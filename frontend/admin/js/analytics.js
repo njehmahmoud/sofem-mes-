@@ -51,8 +51,7 @@ function typeBadge(type) {
 // A — ANALYTIQUE PRODUCTION
 // ══════════════════════════════════════════════════════════
 async function loadAnalyticsProduction() {
-  const container = $('anp-kpis');
-  if (container) container.innerHTML = '<div class="loading"><div class="spin"></div>CHARGEMENT...</div>';
+
   try {
     const d = await api('/api/analytics/production');
     if (!d) return;
@@ -134,7 +133,7 @@ async function loadAnalyticsProduction() {
 // B — ANALYTIQUE ACHATS & STOCK
 // ══════════════════════════════════════════════════════════
 async function loadAnalyticsAchats() {
-  if ($('ana-kpis')) $('ana-kpis').innerHTML = '<div class="loading"><div class="spin"></div>CHARGEMENT...</div>';
+
   try {
     const d = await api('/api/analytics/achats');
     if (!d) return;
@@ -230,7 +229,7 @@ async function loadAnalyticsAchats() {
 // C — ANALYTIQUE OPÉRATEURS
 // ══════════════════════════════════════════════════════════
 async function loadAnalyticsOperateurs() {
-  if ($('ano-kpis')) $('ano-kpis').innerHTML = '<div class="loading"><div class="spin"></div>CHARGEMENT...</div>';
+
   try {
     const d = await api('/api/analytics/operateurs');
     if (!d) return;
@@ -310,7 +309,7 @@ async function loadAnalyticsOperateurs() {
 // D — ANALYTIQUE QUALITÉ
 // ══════════════════════════════════════════════════════════
 async function loadAnalyticsQualite() {
-  if ($('anq-kpis')) $('anq-kpis').innerHTML = '<div class="loading"><div class="spin"></div>CHARGEMENT...</div>';
+
   try {
     const d = await api('/api/analytics/qualite');
     if (!d) return;
