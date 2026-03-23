@@ -125,6 +125,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="tab active" onclick="switchTab(this,'tab-active')">EN COURS</div>
       <div class="tab" onclick="switchTab(this,'tab-all')">TOUS MES OFs</div>
       <div class="tab" onclick="switchTab(this,'tab-stock')">STOCK</div>
+      <div class="tab" onclick="switchTab(this,'tab-da');loadMyDA()">📝 DEMANDES ACHAT</div>
     </div>
 
     <!-- Active OFs -->
@@ -147,10 +148,36 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
         <div class="loading"><div class="spin"></div>CHARGEMENT...</div>
       </div>
     </div>
+
+    <!-- Demandes Achat -->
+    <div class="tab-content" id="tab-da">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">MES DEMANDES D'ACHAT</div>
+        <button class="btn btn-sm" onclick="showDAForm()">+ Nouvelle Demande</button>
+      </div>
+      <div id="da-form" style="display:none;padding:1rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3)">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:.5rem;margin-bottom:.5rem">
+          <input type="text" id="op-da-desc" placeholder="Description du besoin *"
+            style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem;color:var(--text);font-size:12px;outline:none">
+          <input type="number" id="op-da-qte" value="1" min="0.01" step="0.01"
+            style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem;color:var(--text);font-size:12px;outline:none">
+          <input type="text" id="op-da-unite" value="pcs"
+            style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem;color:var(--text);font-size:12px;outline:none">
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <select id="op-da-urgence" style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem;color:var(--text);font-size:12px;flex:1">
+            <option value="NORMAL">Normal</option><option value="URGENT">URGENT</option>
+          </select>
+          <button class="btn btn-sm" onclick="submitDA()">Envoyer</button>
+          <button class="btn btn-ghost btn-sm" onclick="$('da-form').style.display='none'">Annuler</button>
+        </div>
+      </div>
+      <div id="op-da-list"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></div>
+    </div>
   </div>
 </main>
 
-<footer class="footer">SOFEM MES v2.0 · SMARTMOVE · © 2025</footer>
+<footer class="footer">SOFEM MES v3.0 · SMARTMOVE · © 2025</footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -308,6 +335,47 @@ function switchTab(btn, tabId) {
 loadData();
 // Auto-refresh every 3 seconds
 setInterval(loadData, 3000);
+
+// ── DEMANDES ACHAT (Operator) ─────────────────────────────
+function showDAForm(){ $('da-form').style.display='block'; }
+
+async function loadMyDA(){
+  try{
+    const das = await api('/api/achats/da');
+    if(!das){$('op-da-list').innerHTML='<div class="empty">Erreur chargement</div>';return;}
+    const myDas = das.filter(d => d.demandeur_id === operateur_id || true); // show all for now
+    $('op-da-list').innerHTML = myDas.length===0
+      ? '<div class="empty">Aucune demande d\'achat</div>'
+      : myDas.map(da=>{
+          const sc = da.statut==='APPROVED'?'color:var(--green)':da.statut==='REJECTED'?'color:var(--red)':da.statut==='ORDERED'?'color:var(--blue)':'color:var(--muted)';
+          return `<div style="padding:.8rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem">
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:500">${da.description}</div>
+              <div style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${da.da_numero} · ${da.quantite} ${da.unite} · ${da.urgence}</div>
+            </div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;${sc}">${da.statut}</span>
+          </div>`;
+        }).join('');
+  }catch(e){ $('op-da-list').innerHTML=`<div class="empty">Erreur: ${e.message}</div>`; }
+}
+
+async function submitDA(){
+  const desc=$('op-da-desc').value;
+  if(!desc){toast('Description requise','err');return;}
+  try{
+    await api('/api/achats/da',{method:'POST',body:JSON.stringify({
+      description:desc,
+      quantite:parseFloat($('op-da-qte').value||1),
+      unite:$('op-da-unite').value||'pcs',
+      urgence:$('op-da-urgence').value,
+      demandeur_id:operateur_id||null
+    })});
+    toast('Demande envoyée au manager ✓');
+    $('da-form').style.display='none';
+    $('op-da-desc').value='';
+    loadMyDA();
+  }catch(e){toast(e.message,'err');}
+}
 </script>
 </body>
 </html>

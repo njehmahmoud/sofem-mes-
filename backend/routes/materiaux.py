@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
-from models import MateriauCreate, MouvementCreate
+from models import MateriauCreate, MateriauUpdate, MouvementCreate
 
 router = APIRouter(prefix="/api/materiaux", tags=["materiaux"])
 
@@ -16,9 +16,16 @@ def list_materiaux(db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_materiau(data: MateriauCreate, db=Depends(get_db)):
-    mid = exe(db, "INSERT INTO materiaux (code,nom,unite,stock_actuel,stock_minimum,fournisseur) VALUES (%s,%s,%s,%s,%s,%s)",
-              (data.code, data.nom, data.unite, data.stock_actuel, data.stock_minimum, data.fournisseur))
-    return {"id": mid, "message": "Matériau créé"}
+    # Auto-generate MAT-xxx code if not provided
+    if not data.code:
+        last = q(db, "SELECT code FROM materiaux WHERE code LIKE 'MAT-%' ORDER BY id DESC LIMIT 1", one=True)
+        try:
+            n = int(last["code"].split("-")[1]) + 1 if last else 1
+        except: n = 1
+        data.code = f"MAT-{str(n).zfill(3)}"
+    mid = exe(db, "INSERT INTO materiaux (code,nom,unite,stock_actuel,stock_minimum,fournisseur,prix_unitaire) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+              (data.code, data.nom, data.unite, data.stock_actuel, data.stock_minimum, data.fournisseur, data.prix_unitaire))
+    return {"id": mid, "code": data.code, "message": "Matériau créé"}
 
 @router.post("/mouvement", dependencies=[Depends(require_any_role)])
 def mouvement_stock(data: MouvementCreate, db=Depends(get_db)):
@@ -38,3 +45,28 @@ def historique(limit: int = 50, db=Depends(get_db)):
         FROM mouvements_stock ms JOIN materiaux m ON ms.materiau_id=m.id
         LEFT JOIN ordres_fabrication o ON ms.of_id=o.id
         ORDER BY ms.created_at DESC LIMIT %s""", (limit,)))
+
+
+@router.put("/{mat_id}", dependencies=[Depends(require_manager_or_admin)])
+def update_materiau(mat_id: int, data: MateriauUpdate, db=Depends(get_db)):
+    mat = q(db, "SELECT id FROM materiaux WHERE id=%s", (mat_id,), one=True)
+    if not mat: raise HTTPException(404, "Matériau non trouvé")
+    fields, vals = [], []
+    for f, v in data.dict(exclude_none=True).items():
+        fields.append(f"{f}=%s"); vals.append(v)
+    if fields:
+        vals.append(mat_id)
+        exe(db, f"UPDATE materiaux SET {','.join(fields)} WHERE id=%s", vals)
+    return {"message": "Matériau mis à jour"}
+
+
+@router.delete("/{mat_id}", dependencies=[Depends(require_manager_or_admin)])
+def delete_materiau(mat_id: int, db=Depends(get_db)):
+    in_use = q(db, "SELECT COUNT(*) n FROM of_bom WHERE materiau_id=%s", (mat_id,), one=True)["n"]
+    if in_use > 0:
+        raise HTTPException(400, f"Matériau utilisé dans {in_use} OF(s) — suppression impossible")
+    in_bom = q(db, "SELECT COUNT(*) n FROM bom WHERE materiau_id=%s", (mat_id,), one=True)["n"]
+    if in_bom > 0:
+        raise HTTPException(400, f"Matériau utilisé dans {in_bom} BOM(s) produit — suppression impossible")
+    exe(db, "DELETE FROM materiaux WHERE id=%s", (mat_id,))
+    return {"message": "Matériau supprimé"}

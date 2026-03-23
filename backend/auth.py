@@ -52,6 +52,17 @@ def decode_token(token: str) -> dict:
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     return decode_token(credentials.credentials)
 
+
+def get_pdf_user(token: str = None,
+                 credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))) -> dict:
+    """Accepts token from query param OR Authorization header — for PDF endpoints opened via window.open()"""
+    if token:
+        return decode_token(token)
+    if credentials:
+        return decode_token(credentials.credentials)
+    from fastapi import HTTPException
+    raise HTTPException(401, "Non authentifié")
+
 def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user["role"] != "ADMIN":
         raise HTTPException(403, "Accès réservé aux administrateurs")
@@ -66,3 +77,6 @@ def require_any_role(user: dict = Depends(get_current_user)) -> dict:
     if user["role"] not in ("ADMIN", "MANAGER", "OPERATOR"):
         raise HTTPException(403, "Accès non autorisé")
     return user
+
+# Backwards-compatibility aliases
+require_role = require_any_role
