@@ -192,10 +192,16 @@ async function openOFModal() {
   ).join('');
   $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
     (clients||[]).map(c => `<option value="${c.id}">${c.nom} (${c.code})</option>`).join('');
-  // Chef Atelier = only CHEF_ATELIER role, fallback to all if none defined yet
-  const chefList = chefs?.length ? chefs : ops;
+  // Chef Atelier = only CHEF_ATELIER role
   $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
-    chefList.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+    (chefs?.length
+      ? chefs.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('')
+      : ops.map(o => `<option value="${o.id}" style="color:var(--muted)">${o.prenom} ${o.nom} (aucun chef défini)</option>`).join('')
+    );
+  if (!chefs?.length) {
+    const lbl = $('of-chef').closest?.('.fg')?.querySelector?.('label');
+    if (lbl) lbl.innerHTML = 'Chef Atelier <span style="color:var(--accent);font-size:9px">⚠ Définir rôle dans Opérateurs</span>';
+  }
 
   // Store for use in operations builder
   window._opsCache = ops || [];
@@ -354,9 +360,11 @@ async function openEditOF(ofId) {
      ${p.id===of.produit_id?'selected':''}>${p.code} — ${p.nom}</option>`).join('');
   $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
     (clients||[]).map(c => `<option value="${c.id}" ${c.id===of.client_id?'selected':''}>${c.nom}</option>`).join('');
-  const chefList = chefs?.length ? chefs : ops;
   $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
-    chefList.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('');
+    (chefs?.length
+      ? chefs.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('')
+      : ops.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('')
+    );
   $('of-prio').value = of.priorite || 'NORMAL';
   $('of-atelier').value = of.atelier || 'Atelier A';
   $('of-date').value = of.date_echeance || '';
