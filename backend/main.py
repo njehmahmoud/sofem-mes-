@@ -125,7 +125,13 @@ if admin_js.exists():
     app.mount("/admin/js", StaticFiles(directory=str(admin_js)), name="admin-js")
     app.mount("/js",       StaticFiles(directory=str(admin_js)), name="js-root")
 
+# Serve admin CSS
 admin_css = FRONTEND_DIR / "admin" / "css"
 if admin_css.exists():
     app.mount("/admin/css", StaticFiles(directory=str(admin_css)), name="admin-css")
     app.mount("/css",       StaticFiles(directory=str(admin_css)), name="css-root")
+
+# Serve page fragments (analytics, modals)
+admin_pages = FRONTEND_DIR / "admin" / "pages"
+if admin_pages.exists():
+    app.mount("/admin/pages", StaticFiles(directory=str(admin_pages)), name="admin-pages")
