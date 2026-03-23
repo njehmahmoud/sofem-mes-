@@ -1681,124 +1681,120 @@ navigate('dashboard');
 </div>
 
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- ANALYTIQUE — PRODUCTION                                 -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — PRODUCTION -->
 <div class="page" id="page-analytics-production">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="anp-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="kpi-grid" id="anp-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="grid2">
     <div class="sec">
-      <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div></div>
-      <div id="anp-chart" style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:.5rem"></div>
+      <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">12 derniers mois</span></div>
+      <div class="chart" id="anp-chart" style="height:110px"><div class="loading"><div class="spin"></div></div></div>
     </div>
     <div class="sec">
-      <div class="sec-h"><div class="sec-title">STATUTS <span class="ac">EN COURS</span></div></div>
-      <div id="anp-statuts"></div>
+      <div class="sec-h"><div class="sec-title">STATUTS <span class="ac">PRODUCTION</span></div></div>
+      <div id="anp-statuts"><div class="loading"><div class="spin"></div></div></div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="grid2" style="margin-top:1.25rem">
     <div class="sec">
       <div class="sec-h"><div class="sec-title">OFs <span class="ac">EN RETARD</span></div></div>
       <div class="tw"><table>
-        <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Statut</th><th>Jours retard</th></tr></thead>
-        <tbody id="anp-retards"></tbody>
+        <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Statut</th><th>Retard</th></tr></thead>
+        <tbody id="anp-retards"><tr><td colspan="5" class="loading"><div class="spin"></div></td></tr></tbody>
       </table></div>
     </div>
     <div class="sec">
       <div class="sec-h"><div class="sec-title">CHARGE <span class="ac">PAR ATELIER</span></div></div>
-      <div id="anp-ateliers"></div>
+      <div id="anp-ateliers"><div class="loading"><div class="spin"></div></div></div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- ANALYTIQUE — ACHATS & STOCK                            -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — ACHATS & STOCK -->
 <div class="page" id="page-analytics-achats">
   <div class="ph">
     <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="ana-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="kpi-grid" id="ana-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="grid2">
     <div class="sec">
-      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace" id="ana-valeur"></span></div>
-      <div id="ana-stock"></div>
+      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span id="ana-valeur" style="font-size:9px;color:var(--accent);font-family:'IBM Plex Mono',monospace"></span></div>
+      <div id="ana-stock"><div class="loading"><div class="spin"></div></div></div>
     </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">FLUX <span class="ac">ACHATS (DA → FA)</span></div></div>
-      <div id="ana-da-statuts" style="margin-bottom:.75rem"></div>
-      <div class="sec-h" style="margin-top:.5rem"><div class="sec-title">TOP <span class="ac">FOURNISSEURS</span></div></div>
-      <div id="ana-fournisseurs"></div>
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">FLUX <span class="ac">DEMANDES ACHAT</span></div></div>
+        <div id="ana-da-statuts"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">TOP <span class="ac">FOURNISSEURS</span></div></div>
+        <div id="ana-fournisseurs"><div class="loading"><div class="spin"></div></div></div>
+      </div>
     </div>
   </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">MOUVEMENTS <span class="ac">RÉCENTS</span></div></div>
+  <div class="sec" style="margin-top:1.25rem">
+    <div class="sec-h"><div class="sec-title">MOUVEMENTS <span class="ac">STOCK RÉCENTS</span></div></div>
     <div class="tw"><table>
-      <thead><tr><th>Type</th><th>Matériau</th><th>Quantité</th><th>Avant</th><th>Après</th><th>Motif</th><th>Date</th></tr></thead>
-      <tbody id="ana-mouvements"></tbody>
+      <thead><tr><th>Type</th><th>Matériau</th><th>Quantité</th><th>Stock avant</th><th>Stock après</th><th>Motif</th><th>Date</th></tr></thead>
+      <tbody id="ana-mouvements"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
     </table></div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- ANALYTIQUE — OPÉRATEURS                                -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — OPÉRATEURS -->
 <div class="page" id="page-analytics-operateurs">
   <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · COÛTS · SPÉCIALITÉS</div></div>
+    <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · HEURES · COÛTS MO</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="ano-kpis"></div>
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem">
-    <div class="sec">
+  <div class="kpi-grid" id="ano-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="grid2">
+    <div class="sec" style="grid-column:1/-1">
       <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">PAR OPÉRATEUR</span></div></div>
       <div class="tw"><table>
-        <thead><tr><th>Opérateur</th><th>Rôle</th><th>Spécialité</th><th>Opérations terminées</th><th>Durée totale</th><th>OFs impliqués</th><th>Taux horaire</th></tr></thead>
-        <tbody id="ano-perf"></tbody>
+        <thead><tr><th>Opérateur</th><th>Rôle</th><th>Spécialité</th><th>Ops terminées</th><th>Durée totale</th><th>OFs impliqués</th><th>Taux</th></tr></thead>
+        <tbody id="ano-perf"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
       </table></div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:1rem">
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">SPÉCIALITÉS</div></div>
-        <div id="ano-specialites"></div>
-      </div>
-    </div>
   </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">COÛT MO <span class="ac">PAR TYPE OPÉRATION</span></div></div>
-    <div id="ano-cout-ops"></div>
+  <div class="grid2" style="margin-top:1.25rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">RÉPARTITION <span class="ac">SPÉCIALITÉS</span></div></div>
+      <div id="ano-specialites"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">COÛT MO <span class="ac">PAR OPÉRATION</span></div></div>
+      <div id="ano-cout-ops"><div class="loading"><div class="spin"></div></div></div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- ANALYTIQUE — QUALITÉ                                   -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — QUALITÉ -->
 <div class="page" id="page-analytics-qualite">
   <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NCs · TYPES DE DÉFAUTS</div></div>
+    <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NON-CONFORMITÉS · DÉFAUTS</div></div>
     <button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button>
   </div>
-  <div class="kpi-grid" id="anq-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="kpi-grid" id="anq-kpis"><div class="loading"><div class="spin"></div></div></div>
+  <div class="grid2">
     <div class="sec">
       <div class="sec-h"><div class="sec-title">TAUX CONFORMITÉ <span class="ac">/ MOIS</span></div></div>
-      <div id="anq-chart" style="display:flex;align-items:flex-end;gap:4px;height:100px;padding:.5rem"></div>
+      <div class="chart" id="anq-chart" style="height:100px"><div class="loading"><div class="spin"></div></div></div>
     </div>
     <div class="sec">
       <div class="sec-h"><div class="sec-title">TYPES <span class="ac">DE DÉFAUTS</span></div></div>
-      <div id="anq-defauts"></div>
+      <div id="anq-defauts"><div class="loading"><div class="spin"></div></div></div>
     </div>
   </div>
-  <div class="sec">
+  <div class="sec" style="margin-top:1.25rem">
     <div class="sec-h"><div class="sec-title">NON-CONFORMITÉS <span class="ac">OUVERTES</span></div></div>
     <div class="tw"><table>
       <thead><tr><th>NC N°</th><th>OF</th><th>Produit</th><th>Type défaut</th><th>Gravité</th><th>Responsable</th><th>Âge</th><th>Action corrective</th></tr></thead>
-      <tbody id="anq-nc"></tbody>
+      <tbody id="anq-nc"><tr><td colspan="8" class="loading"><div class="spin"></div></td></tr></tbody>
     </table></div>
   </div>
 </div>
