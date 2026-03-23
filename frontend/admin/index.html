@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOFEM MES v6.6 — Admin</title>
+<title>SOFEM MES v6.0 — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--red:#D42B2B;--red-d:#A01F1F;--red-g:rgba(212,43,43,0.15);--bg:#0E0F11;--bg2:#14161A;--bg3:#1C1F25;--border:rgba(255,255,255,0.07);--text:#E8E9EB;--muted:#6B7280;--accent:#F5A623;--green:#22C55E;--blue:#3B82F6}
@@ -213,6 +213,13 @@ td{padding:.65rem 1rem;vertical-align:middle}
   <div class="nav-group">
     <div class="nav-lbl">Fournisseurs</div>
     <div class="nav-item" data-p="fournisseurs">🤝 Fournisseurs</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-lbl" style="color:#D42B2B">Analytique</div>
+    <div class="nav-item" data-p="analytics-production">📊 Production</div>
+    <div class="nav-item" data-p="analytics-achats">💰 Achats &amp; Stock</div>
+    <div class="nav-item" data-p="analytics-operateurs">👥 Opérateurs</div>
+    <div class="nav-item" data-p="analytics-qualite">🎯 Qualité</div>
   </div>
   <div class="nav-group" id="admin-only-nav">
     <div class="nav-lbl">Admin</div>
@@ -1286,6 +1293,7 @@ td{padding:.65rem 1rem;vertical-align:middle}
 <script src="/admin/js/users.js"></script>
 <script src="/admin/js/operation_types.js"></script>
 <script src="/admin/js/settings.js"></script>
+  <script src="/admin/js/analytics.js"></script>
 <script>
 window.pageLoaders = {
   dashboard:    loadDashboard,
@@ -1669,6 +1677,129 @@ navigate('dashboard');
       <button class="btn btn-ghost" onclick="closeModal('m-quick-time')">Annuler</button>
       <button class="btn" style="background:#f59e0b;border-color:#f59e0b" onclick="saveQuickTime()">⏱ Enregistrer temps</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — PRODUCTION                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-analytics-production">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="anp-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div></div>
+      <div id="anp-chart" style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:.5rem"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">STATUTS <span class="ac">EN COURS</span></div></div>
+      <div id="anp-statuts"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">OFs <span class="ac">EN RETARD</span></div></div>
+      <div class="tw"><table>
+        <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Statut</th><th>Jours retard</th></tr></thead>
+        <tbody id="anp-retards"></tbody>
+      </table></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">CHARGE <span class="ac">PAR ATELIER</span></div></div>
+      <div id="anp-ateliers"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — ACHATS & STOCK                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-analytics-achats">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="ana-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace" id="ana-valeur"></span></div>
+      <div id="ana-stock"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">FLUX <span class="ac">ACHATS (DA → FA)</span></div></div>
+      <div id="ana-da-statuts" style="margin-bottom:.75rem"></div>
+      <div class="sec-h" style="margin-top:.5rem"><div class="sec-title">TOP <span class="ac">FOURNISSEURS</span></div></div>
+      <div id="ana-fournisseurs"></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">MOUVEMENTS <span class="ac">RÉCENTS</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Type</th><th>Matériau</th><th>Quantité</th><th>Avant</th><th>Après</th><th>Motif</th><th>Date</th></tr></thead>
+      <tbody id="ana-mouvements"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — OPÉRATEURS                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-analytics-operateurs">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · COÛTS · SPÉCIALITÉS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="ano-kpis"></div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">PAR OPÉRATEUR</span></div></div>
+      <div class="tw"><table>
+        <thead><tr><th>Opérateur</th><th>Rôle</th><th>Spécialité</th><th>Opérations terminées</th><th>Durée totale</th><th>OFs impliqués</th><th>Taux horaire</th></tr></thead>
+        <tbody id="ano-perf"></tbody>
+      </table></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">SPÉCIALITÉS</div></div>
+        <div id="ano-specialites"></div>
+      </div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">COÛT MO <span class="ac">PAR TYPE OPÉRATION</span></div></div>
+    <div id="ano-cout-ops"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ANALYTIQUE — QUALITÉ                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-analytics-qualite">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NCs · TYPES DE DÉFAUTS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="anq-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">TAUX CONFORMITÉ <span class="ac">/ MOIS</span></div></div>
+      <div id="anq-chart" style="display:flex;align-items:flex-end;gap:4px;height:100px;padding:.5rem"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">TYPES <span class="ac">DE DÉFAUTS</span></div></div>
+      <div id="anq-defauts"></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="sec-title">NON-CONFORMITÉS <span class="ac">OUVERTES</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>NC N°</th><th>OF</th><th>Produit</th><th>Type défaut</th><th>Gravité</th><th>Responsable</th><th>Âge</th><th>Action corrective</th></tr></thead>
+      <tbody id="anq-nc"></tbody>
+    </table></div>
   </div>
 </div>
 

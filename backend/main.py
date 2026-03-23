@@ -40,6 +40,7 @@ from routes.maintenance  import router as maintenance_router
 from routes.planification import router as planification_router
 from routes.qualite      import router as qualite_router
 from routes.fournisseurs import router as fournisseurs_router
+from routes.analytics    import router as analytics_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sofem-mes")
@@ -92,6 +93,7 @@ app.include_router(maintenance_router)
 app.include_router(planification_router)
 app.include_router(qualite_router)
 app.include_router(fournisseurs_router)
+app.include_router(analytics_router)
 
 # ── Health ───────────────────────────────────────────────
 @app.get("/api/health")
