@@ -7,22 +7,24 @@ async function loadOperators() {
       const tauxStr = o.type_taux==='PIECE' ? `${o.taux_piece} TND/pcs`
                     : o.type_taux==='BOTH'  ? `${o.taux_horaire} TND/h + ${o.taux_piece} TND/pcs`
                     :                         `${o.taux_horaire} TND/h`;
+      const roleLabel = {CHEF_ATELIER:'Chef Atelier',RESPONSABLE:'Responsable',TECHNICIEN:'Technicien',OPERATEUR:'Opérateur'}[o.role||'OPERATEUR']||'Opérateur';
+      const roleCls   = {CHEF_ATELIER:'b-approved',RESPONSABLE:'b-inprogress',TECHNICIEN:'b-normal',OPERATEUR:'b-draft'}[o.role||'OPERATEUR']||'b-draft';
       return `<tr>
-        <td><div style="width:32px;height:32px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#fff">${init(o)}</div></td>
+        <td>
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--red);display:flex;
+            align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;
+            font-size:14px;color:#fff;flex-shrink:0">${init(o)}</div>
+        </td>
         <td>${o.prenom}</td>
         <td><strong>${o.nom}</strong></td>
-        <td><span class="badge b-draft">${o.specialite}</span></td>
-        <td>${o.role === 'CHEF_ATELIER' ? '<span class="badge b-approved" style="font-size:9px">CHEF ATELIER</span>'
-               : o.role === 'RESPONSABLE' ? '<span class="badge b-inprogress" style="font-size:9px">RESPONSABLE</span>'
-               : o.role === 'TECHNICIEN'  ? '<span class="badge b-draft" style="font-size:9px">TECHNICIEN</span>'
-               : '<span style="color:var(--muted);font-size:10px">Opérateur</span>'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${o.telephone||'—'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)">${tauxStr}</td>
-        <td>—</td>
+        <td><span class="badge b-draft">${o.specialite||'—'}</span></td>
+        <td><span class="badge ${roleCls}" style="font-size:9px">${roleLabel}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">${o.telephone||'—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent)">${tauxStr}</td>
         <td><span class="badge b-completed">ACTIF</span></td>
         <td>
-          <button class="fbtn" onclick="openEditOperateur(${JSON.stringify(o).replace(/"/g,'&quot;')})">✎</button>
-          <button class="fbtn" style="color:var(--red)" onclick="deleteOperateur(${o.id})">✕</button>
+          <button class="fbtn" onclick="openEditOperateur(${JSON.stringify(o).replace(/"/g,'&quot;')})" title="Modifier">✎</button>
+          <button class="fbtn" style="color:var(--red)" onclick="deleteOperateur(${o.id})" title="Désactiver">✕</button>
         </td>
       </tr>`;
     }).join('');
