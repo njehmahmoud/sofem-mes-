@@ -176,8 +176,6 @@ td{padding:.65rem 1rem;vertical-align:middle}
 </header>
 
 <div class="layout">
-
-<div class="layout">
 <nav class="sidebar">
   <div class="nav-group">
     <div class="nav-lbl">Principal</div>
@@ -280,21 +278,12 @@ td{padding:.65rem 1rem;vertical-align:middle}
       <tbody id="dash-ofs"><tr><td colspan="7"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
     </table></div>
   </div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span class="badge b-urgent" id="stock-ct">—</span></div>
-      <div id="dash-mats"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:1.25rem">
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><div id="chart-taux" style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted)">—</div></div>
-        <div class="chart" id="dash-chart"></div>
-      </div>
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
-        <div id="dash-ops"></div>
-      </div>
-    </div>
+  <div style="margin-top:.75rem;padding:.75rem 1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:.75rem">
+    <span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace">ANALYTIQUES DÉTAILLÉES →</span>
+    <button class="fbtn" onclick="navigate('analytics-production')">📊 Production</button>
+    <button class="fbtn" onclick="navigate('analytics-achats')">💰 Achats & Stock</button>
+    <button class="fbtn" onclick="navigate('analytics-operateurs')">👥 Opérateurs</button>
+    <button class="fbtn" onclick="navigate('analytics-qualite')">🎯 Qualité</button>
   </div>
 </div>
 
@@ -863,8 +852,6 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-</main>
-
 
 <!-- OPERATION TYPES -->
 <div class="page" id="page-op-types">
@@ -881,20 +868,6 @@ td{padding:.65rem 1rem;vertical-align:middle}
   </div>
 </div>
 
-
-<!-- SETTINGS -->
-<div class="page" id="page-settings">
-  <div class="ph">
-    <div>
-      <div class="ph-title">PARA<span>MÈTRES</span></div>
-      <div class="ph-sub">// CONFIGURATION SYSTÈME SOFEM MES</div>
-    </div>
-    <button class="btn" onclick="saveAllSettings()">💾 Tout Sauvegarder</button>
-  </div>
-  <div id="settings-container">
-    <div class="loading"><div class="spin"></div></div>
-  </div>
-</div>
 
 </main>
 </div>
