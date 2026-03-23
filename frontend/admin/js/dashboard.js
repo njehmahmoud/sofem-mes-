@@ -49,32 +49,82 @@ async function loadDashboard() {
         </tr>`).join('');
     }
 
-    // Stock alerts
-    if (mats && $('dash-alerts')) {
+    // Stock — render to dash-mats (correct ID)
+    if (mats && $('dash-mats')) {
       const alerts = mats.filter(m => parseFloat(m.stock_actuel) <= parseFloat(m.stock_minimum));
-      $('dash-alerts').innerHTML = alerts.length === 0
-        ? '<div style="color:var(--green);font-size:11px;padding:.5rem">✓ Tous les stocks OK</div>'
-        : alerts.map(m => `
-          <div class="mat-item">
-            <div style="flex:1">
-              <div class="mat-name">${m.nom}</div>
-              <div class="mat-ref">${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</div>
+      const low    = mats.filter(m => {
+        const pct = m.stock_minimum > 0 ? m.stock_actuel / m.stock_minimum : 1;
+        return pct > 1 && pct < 1.5;
+      });
+      if ($('stock-ct')) $('stock-ct').textContent = alerts.length || '✓';
+      if ($('stock-ct')) $('stock-ct').className = alerts.length ? 'badge b-urgent' : 'badge b-completed';
+
+      if (!mats.length) {
+        $('dash-mats').innerHTML = '<div style="color:var(--muted);font-size:11px;padding:1rem">Aucun matériau</div>';
+      } else {
+        // Show all materials with stock bar, alerts first
+        const sorted = [...mats].sort((a,b) => {
+          const pa = a.stock_minimum > 0 ? a.stock_actuel/a.stock_minimum : 999;
+          const pb = b.stock_minimum > 0 ? b.stock_actuel/b.stock_minimum : 999;
+          return pa - pb;
+        });
+        $('dash-mats').innerHTML = sorted.slice(0, 12).map(m => {
+          const pct    = m.stock_minimum > 0 ? Math.min(m.stock_actuel / m.stock_minimum, 2) : 1;
+          const pctVal = m.stock_minimum > 0 ? Math.round(m.stock_actuel / m.stock_minimum * 100) : 100;
+          const cls    = pct <= 1 ? 'd' : pct < 1.5 ? 'w' : 'ok';
+          const badge  = pct <= 1
+            ? '<span class="badge b-urgent" style="font-size:8px">ALERTE</span>'
+            : pct < 1.5
+              ? '<span class="badge b-inprogress" style="font-size:8px">BAS</span>'
+              : '';
+          return \`<div class="mat-item">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                <span class="mat-name" style="font-size:11px">\${m.nom}</span>
+                \${badge}
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem">
+                <div class="bar-w"><div class="bar-f \${cls}" style="width:\${Math.min(pct*50,100)}%"></div></div>
+                <span class="bar-pct \${cls}">\${pctVal}%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">\${m.stock_actuel} / \${m.stock_minimum} \${m.unite}</span>
+              </div>
             </div>
-            <span class="badge b-urgent">ALERTE</span>
-          </div>`).join('');
+          </div>\`;
+        }).join('');
+      }
     }
 
-    // OF par mois chart
-    if (dash.graphique?.length && $('dash-chart')) {
-      const max = Math.max(...dash.graphique.map(d => d.total), 1);
-      $('dash-chart').innerHTML = dash.graphique.map((d, i, arr) =>
-        `<div class="bc">
-          <div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1">
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--text);margin-bottom:2px">${d.total}</span>
-            <div class="bf${i===arr.length-1?' cur':''}" style="width:100%;height:${Math.round(d.total/max*80)}%"></div>
-          </div>
-          <div class="bl">${(d.mois||'').slice(0,3)}</div>
-        </div>`).join('');
+    // OF par mois — improved chart with total count + taux completion
+    if ($('dash-chart')) {
+      const data = dash.graphique || [];
+      if (!data.length) {
+        $('dash-chart').innerHTML = '<div style="color:var(--muted);font-size:11px;padding:1rem;text-align:center">Aucune donnée</div>';
+      } else {
+        const max = Math.max(...data.map(d => d.total), 1);
+        if ($('chart-taux')) $('chart-taux').textContent = \`Taux: \${dash.taux_completion ?? 0}%\`;
+        $('dash-chart').innerHTML = \`
+          <div style="display:flex;align-items:flex-end;gap:6px;height:100%;padding:0 8px">
+            \${data.map((d, i, arr) => {
+              const isCurrent = i === arr.length - 1;
+              const h = Math.max(Math.round(d.total / max * 80), 4);
+              return \`<div class="bc" style="position:relative" title="\${d.mois}: \${d.total} OF">
+                <div style="position:relative;width:100%;display:flex;flex-direction:column;
+                  align-items:center;justify-content:flex-end;flex:1">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;
+                    color:\${isCurrent?'var(--text)':'var(--muted)'};margin-bottom:3px;font-weight:\${isCurrent?700:400}">\${d.total}</span>
+                  <div class="bf\${isCurrent?' cur':''}"
+                    style="width:100%;height:\${h}%;border-radius:3px 3px 0 0;
+                      background:\${isCurrent?'var(--red)':'rgba(212,43,43,0.45)'};
+                      transition:height .6s ease"></div>
+                </div>
+                <div class="bl" style="font-size:8px;color:\${isCurrent?'var(--red)':'var(--muted)'};
+                  font-weight:\${isCurrent?700:400};margin-top:4px;white-space:nowrap">
+                  \${(d.mois||'').slice(0,6)}
+                </div>
+              </div>\`;
+            }).join('')}
+          </div>\`;
+      }
     }
 
   } catch(e) { toast('Erreur dashboard: ' + e.message, 'err'); }
