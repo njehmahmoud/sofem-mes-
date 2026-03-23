@@ -248,9 +248,10 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             c.setFont("Helvetica-Bold",7.5); c.drawString(cols_m[3]+2*mm,y_cur+2.5*mm,str(cons))
             c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm,y_cur,W-15*mm,y_cur)
 
-    # ── DÉTAIL FINANCIER — needs ~90mm, force new page if not enough ──
-    FINANCIAL_NEEDED = 90*mm
-    if y_cur < SAFE_Y + FINANCIAL_NEEDED:
+    # ── DÉTAIL FINANCIER — new page only if genuinely not enough space ──
+    # Need ~100mm: title(8) + table(22) + totals(30) + sig(40)
+    # Only trigger if remaining space < 100mm (absolute from bottom)
+    if y_cur < 100*mm:
         y_cur = fac_new_page()
 
     y_cur-=14*mm
