@@ -471,29 +471,1164 @@
 
 
 
+<!-- ANALYTIQUE — PRODUCTION -->
+<div class="page" id="page-analytics-production">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="anp-kpis"></div>
+  <div class="grid2">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">12 derniers mois</span></div>
+      <div class="chart" id="anp-chart" style="height:110px"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">STATUTS <span class="ac">PRODUCTION</span></div></div>
+      <div id="anp-statuts"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:1.25rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">OFs <span class="ac">EN RETARD</span></div></div>
+      <div class="tw"><table>
+        <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Statut</th><th>Retard</th></tr></thead>
+        <tbody id="anp-retards"><tr><td colspan="5" class="loading"><div class="spin"></div></td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">CHARGE <span class="ac">PAR ATELIER</span></div></div>
+      <div id="anp-ateliers"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTIQUE — ACHATS & STOCK -->
+<div class="page" id="page-analytics-achats">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="ana-kpis"></div>
+  <div class="grid2">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span id="ana-valeur" style="font-size:9px;color:var(--accent);font-family:'IBM Plex Mono',monospace"></span></div>
+      <div id="ana-stock"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">FLUX <span class="ac">DEMANDES ACHAT</span></div></div>
+        <div id="ana-da-statuts"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><div class="sec-title">TOP <span class="ac">FOURNISSEURS</span></div></div>
+        <div id="ana-fournisseurs"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sec" style="margin-top:1.25rem">
+    <div class="sec-h"><div class="sec-title">MOUVEMENTS <span class="ac">STOCK RÉCENTS</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Type</th><th>Matériau</th><th>Quantité</th><th>Stock avant</th><th>Stock après</th><th>Motif</th><th>Date</th></tr></thead>
+      <tbody id="ana-mouvements"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ANALYTIQUE — OPÉRATEURS -->
+<div class="page" id="page-analytics-operateurs">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · HEURES · COÛTS MO</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="ano-kpis"></div>
+  <div class="grid2">
+    <div class="sec" style="grid-column:1/-1">
+      <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">PAR OPÉRATEUR</span></div></div>
+      <div class="tw"><table>
+        <thead><tr><th>Opérateur</th><th>Rôle</th><th>Spécialité</th><th>Ops terminées</th><th>Durée totale</th><th>OFs impliqués</th><th>Taux</th></tr></thead>
+        <tbody id="ano-perf"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:1.25rem">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">RÉPARTITION <span class="ac">SPÉCIALITÉS</span></div></div>
+      <div id="ano-specialites"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">COÛT MO <span class="ac">PAR OPÉRATION</span></div></div>
+      <div id="ano-cout-ops"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTIQUE — QUALITÉ -->
+<div class="page" id="page-analytics-qualite">
+  <div class="ph">
+    <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NON-CONFORMITÉS · DÉFAUTS</div></div>
+    <button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-grid" id="anq-kpis"></div>
+  <div class="grid2">
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">TAUX CONFORMITÉ <span class="ac">/ MOIS</span></div></div>
+      <div class="chart" id="anq-chart" style="height:100px"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><div class="sec-title">TYPES <span class="ac">DE DÉFAUTS</span></div></div>
+      <div id="anq-defauts"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+  <div class="sec" style="margin-top:1.25rem">
+    <div class="sec-h"><div class="sec-title">NON-CONFORMITÉS <span class="ac">OUVERTES</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>NC N°</th><th>OF</th><th>Produit</th><th>Type défaut</th><th>Gravité</th><th>Responsable</th><th>Âge</th><th>Action corrective</th></tr></thead>
+      <tbody id="anq-nc"><tr><td colspan="8" class="loading"><div class="spin"></div></td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+
 </main>
 </div>
 
 
+<div class="overlay" id="m-of">
+  <div class="modal" style="max-width:700px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEL ORDRE DE FABRICATION</div>
+      <button class="x" onclick="closeModal('m-of')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="row2">
+        <div class="fg"><label>Produit *</label>
+          <select id="of-prod" onchange="onOFProductChange()"></select></div>
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="of-qte" min="1" value="1" oninput="onOFQtyChange()"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Client</label><select id="of-client"></select></div>
+        <div class="fg"><label>Chef Atelier</label><select id="of-chef"></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Priorité</label>
+          <select id="of-prio">
+            <option value="LOW">Basse</option>
+            <option value="NORMAL" selected>Normale</option>
+            <option value="HIGH">Haute</option>
+            <option value="URGENT">URGENT</option>
+          </select></div>
+        <div class="fg"><label>Atelier</label>
+          <input type="text" id="of-atelier" value="Atelier A"></div>
+        <div class="fg"><label>Date échéance *</label>
+          <input type="date" id="of-date"></div>
+      </div>
+      <div class="fg"><label>Plan N°</label>
+        <input type="text" id="of-plan" placeholder="Référence plan / dessin"></div>
+      <div style="margin-top:.75rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Opérations de Production</span>
+          <button class="btn" style="font-size:9px;padding:2px 8px" onclick="addOFOperation()">+ Ajouter</button>
+        </div>
+        <div id="of-ops-list"></div>
+      </div>
+      <div style="margin-top:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">
+          Matériaux BOM
+          <span id="bom-stock-warn" style="margin-left:.5rem;font-size:9px"></span>
+        </div>
+        <div id="of-bom-preview"><span style="color:var(--muted);font-size:11px">— Sélectionnez un produit —</span></div>
+      </div>
+      <div style="margin-top:.6rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">Sous-Traitance (optionnel)</div>
+        <div class="row2">
+          <div class="fg"><label>Sous-traitant</label><input type="text" id="of-st-nom"></div>
+          <div class="fg"><label>Opération</label><input type="text" id="of-st-op"></div>
+          <div class="fg"><label>Coût (TND)</label><input type="number" id="of-st-cout" value="0" step="0.001"></div>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:.5rem"><label>Notes</label>
+        <textarea id="of-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-of')">Annuler</button>
+      <button class="btn" onclick="createOF()">Créer OF + BL</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-client">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">CLIENT</div>
+      <button class="x" onclick="closeModal('m-client')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="client-edit-id">
+      <div class="row2">
+        <div class="fg"><label>Nom *</label><input type="text" id="client-nom"></div>
+        <div class="fg"><label>Matricule Fiscal</label><input type="text" id="client-mf" placeholder="MF..."></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Téléphone</label><input type="text" id="client-tel"></div>
+        <div class="fg"><label>Email</label><input type="email" id="client-email"></div>
+        <div class="fg"><label>Ville</label><input type="text" id="client-ville" value="Sfax"></div>
+      </div>
+      <div class="fg"><label>Adresse</label><textarea id="client-adresse" rows="2"></textarea></div>
+      <div class="fg"><label>Notes</label><textarea id="client-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-client')">Annuler</button>
+      <button class="btn" onclick="saveClient()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-op">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">OPÉRATEUR</div>
+      <button class="x" onclick="closeModal('m-op')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="op-edit-id">
+      <div class="row2">
+        <div class="fg"><label>Prénom *</label><input type="text" id="op-prenom"></div>
+        <div class="fg"><label>Nom *</label><input type="text" id="op-nom"></div>
+      </div>
+      <div class="fg"><label>Spécialité</label>
+        <input type="text" id="op-spec" placeholder="Ex: Ponçage, Fraisage, AutoCAD..."></div>
+      <div class="fg"><label>Rôle</label>
+        <select id="op-role" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);width:100%">
+          <option value="OPERATEUR">Opérateur</option>
+          <option value="CHEF_ATELIER">Chef d'Atelier</option>
+          <option value="TECHNICIEN">Technicien</option>
+          <option value="RESPONSABLE">Responsable</option>
+        </select></div>
+      <div class="row2">
+        <div class="fg"><label>Téléphone</label><input type="text" id="op-tel"></div>
+        <div class="fg"><label>Email</label><input type="email" id="op-email"></div>
+      </div>
+      <div class="fg"><label>Type Taux</label>
+        <select id="op-taux-type" onchange="onTauxTypeChange()">
+          <option value="HORAIRE">Taux Horaire</option>
+          <option value="PIECE">Taux à la Pièce</option>
+          <option value="BOTH">Les Deux</option>
+        </select></div>
+      <div id="taux-h-row" class="fg"><label>Taux Horaire (TND/h)</label>
+        <input type="number" id="op-taux-h" value="0" min="0" step="0.001"></div>
+      <div id="taux-p-row" class="fg" style="display:none"><label>Taux Pièce (TND/pcs)</label>
+        <input type="number" id="op-taux-p" value="0" min="0" step="0.001"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-op')">Annuler</button>
+      <button class="btn" onclick="saveOperateur()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-op-edit">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">MODIFIER OPÉRATEUR</div><button class="x" onclick="closeModal('m-op-edit')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="op-edit-id">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="op-edit-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="op-edit-nom"></div></div>
+      <div class="fg"><label>Spécialité *</label><select id="op-edit-spec"><option>AutoCAD</option><option>Découpage</option><option>Pliage</option><option>Soudage</option><option>Ponçage</option></select></div>
+      <div class="row2"><div class="fg"><label>Téléphone</label><input type="text" id="op-edit-tel"></div><div class="fg"><label>Email</label><input type="email" id="op-edit-email"></div></div>
+      <div class="fg"><label>Statut</label><select id="op-edit-actif"><option value="1">Actif</option><option value="0">Inactif</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-op-edit')">Annuler</button><button class="btn" onclick="updateOperateur()">Enregistrer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-da">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVELLE DEMANDE D'ACHAT</div><button class="x" onclick="closeModal('m-da')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Description *</label>
+        <input type="text" id="da-desc" placeholder="Ex: Acier Rond 40 10m"></div>
+      <div class="row2">
+        <div class="fg"><label>Matériau lié</label>
+          <select id="da-mat"><option value="">— Aucun —</option></select></div>
+        <div class="fg"><label>OF lié</label>
+          <select id="da-of"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Objet (pour BA PDF)</label>
+        <textarea id="da-objet" rows="2" placeholder="Détail de la demande — apparaît sur le BA PDF"></textarea></div>
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="da-qte" min="0.01" step="0.01" value="1"></div>
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="da-unite" value="pcs"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Urgence</label>
+          <select id="da-urgence"><option value="NORMAL">Normal</option><option value="URGENT">URGENT</option></select></div>
+        <div class="fg"><label>Demandeur</label>
+          <select id="da-demandeur"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="da-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-da')">Annuler</button><button class="btn" onclick="saveDA()">Créer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-bc">
+  <div class="modal" style="width:560px">
+    <div class="modal-h"><div class="modal-title">NOUVEAU BON DE COMMANDE</div><button class="x" onclick="closeModal('m-bc')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Fournisseur *</label><select id="bc-four"><option value="">— Sélectionner fournisseur —</option></select></div>
+      <div class="fg"><label>DA lié (optionnel)</label><select id="bc-da"><option value="">— Aucun —</option></select></div>
+      <div class="fg"><label>Notes</label><textarea id="bc-notes" rows="1"></textarea></div>
+      <div style="border-top:1px solid var(--border);padding-top:.75rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <div class="sec-title">LIGNES</div>
+          <button class="btn btn-ghost btn-sm" onclick="addBCLine()">+ Ligne</button>
+        </div>
+        <div id="bc-lines"></div>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-bc')">Annuler</button><button class="btn" onclick="saveBC()">Créer BC</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-br">
+  <div class="modal" style="width:540px">
+    <div class="modal-h"><div class="modal-title">NOUVEAU BON DE RÉCEPTION</div><button class="x" onclick="closeModal('m-br')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Bon de Commande *</label><select id="br-bc" onchange="loadBCLines()"><option value="">— Sélectionner BC —</option></select></div>
+      <div class="fg"><label>Date de Réception *</label><input type="date" id="br-date"></div>
+      <div class="fg"><label>Statut</label><select id="br-statut"><option value="COMPLET">Complet</option><option value="PARTIEL">Partiel</option></select></div>
+      <div id="br-lines" style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem"></div>
+      <div class="fg"><label>Notes</label><textarea id="br-notes" rows="1"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-br')">Annuler</button><button class="btn btn-green" onclick="saveBR()">Créer BR + Mettre à jour stock</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-fa">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVELLE FACTURE D'ACHAT</div><button class="x" onclick="closeModal('m-fa')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Bon de Commande *</label><select id="fa-bc"><option value="">— Sélectionner BC —</option></select></div>
+      <div class="fg"><label>Fournisseur *</label><input type="text" id="fa-four"></div>
+      <div class="fg"><label>Date Facture *</label><input type="date" id="fa-date"></div>
+      <div class="fg"><label>Notes</label><textarea id="fa-notes" rows="1"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-fa')">Annuler</button><button class="btn" onclick="saveFA()">Créer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-mv">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">MOUVEMENT DE STOCK</div><button class="x" onclick="closeModal('m-mv')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg"><label>Matériau *</label><select id="mv-mat"></select></div>
+      <div class="row2">
+        <div class="fg"><label>Type *</label><select id="mv-type"><option value="ENTREE">Entrée</option><option value="SORTIE">Sortie</option><option value="AJUSTEMENT">Ajustement</option></select></div>
+        <div class="fg"><label>Quantité *</label><input type="number" id="mv-qte" step="0.01" min="0.01" value="1"></div>
+      </div>
+      <div class="fg"><label>Motif</label><input type="text" id="mv-motif"></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mv')">Annuler</button><button class="btn btn-green" onclick="saveMouvement()">Enregistrer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-mat">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEAU MATÉRIAU</div><button class="x" onclick="closeModal('m-mat')">✕</button></div>
+    <div class="modal-b">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="mat-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">MAT-XXX</div>
+      </div>
+      <div class="fg"><label>Nom *</label><input type="text" id="mat-nom" placeholder="Ex: Tole Acier S235 3mm"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité *</label><input type="text" id="mat-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Unitaire (DT)</label><input type="number" id="mat-prix" step="0.001" value="0"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Stock actuel</label><input type="number" id="mat-stock" value="0" step="0.01"></div>
+        <div class="fg"><label>Stock minimum</label><input type="number" id="mat-min" value="0" step="0.01"></div>
+      </div>
+      <div class="fg"><label>Fournisseur</label>
+        <select id="mat-fourn-sel" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-size:12px;width:100%">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-mat')">Annuler</button><button class="btn" onclick="saveMateriau()">Créer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-prod">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEAU PRODUIT</div>
+      <button class="x" onclick="closeModal('m-prod')">✕</button></div>
+    <div class="modal-b">
+      <div class="fg" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="prod-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">SOFEM-XXX</div>
+      </div>
+      <div class="fg"><label>Nom *</label><input type="text" id="prod-nom"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label><input type="text" id="prod-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Vente HT (DT/unité)</label><input type="number" id="prod-prix" step="0.001" value="0" placeholder="Ex: 85.000"></div>
+      </div>
+      <div class="fg"><label>Description</label><textarea id="prod-desc" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-prod')">Annuler</button>
+      <button class="btn" onclick="saveProduit()">Créer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-bl-livrer">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">📦 MARQUER COMME LIVRÉ</div><button class="x" onclick="closeModal('m-bl-livrer')">✕</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="bl-livrer-id">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem;margin-bottom:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Bon de Livraison</div>
+        <div id="bl-livrer-num" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">—</div>
+      </div>
+      <div class="fg"><label>Destinataire *</label><input type="text" id="bl-dest" placeholder="Nom du client / destinataire"></div>
+      <div class="fg"><label>Adresse de livraison *</label><textarea id="bl-adresse" rows="2" placeholder="Adresse complète"></textarea></div>
+      <div class="fg"><label>Date de livraison *</label><input type="date" id="bl-date-liv"></div>
+      <div class="fg"><label>Notes</label><textarea id="bl-liv-notes" rows="2"></textarea></div>
+      <div style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.25);border-radius:6px;padding:.6rem .75rem;font-size:11px;color:var(--muted)">
+        ⚠️ Cette action va <strong style="color:var(--text)">clôturer l'OF associé</strong> et générer le PDF de livraison.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bl-livrer')">Annuler</button>
+      <button class="btn" style="background:var(--green)" onclick="confirmLivraison()">✓ Confirmer Livraison + PDF</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-user">
+  <div class="modal">
+    <div class="modal-h"><div class="modal-title">NOUVEL UTILISATEUR</div><button class="x" onclick="closeModal('m-user')">✕</button></div>
+    <div class="modal-b">
+      <div class="row2"><div class="fg"><label>Prénom *</label><input type="text" id="usr-prenom"></div><div class="fg"><label>Nom *</label><input type="text" id="usr-nom"></div></div>
+      <div class="row2">
+        <div class="fg"><label>Rôle *</label><select id="usr-role"><option value="ADMIN">Admin</option><option value="MANAGER">Manager</option><option value="OPERATOR" selected>Opérateur</option></select></div>
+        <div class="fg"><label>PIN * (4 chiffres)</label><input type="password" id="usr-pin" maxlength="4" placeholder="••••"></div>
+      </div>
+      <div class="fg"><label>Opérateur lié (si rôle Opérateur)</label><select id="usr-op"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="closeModal('m-user')">Annuler</button><button class="btn" onclick="saveUser()">Créer</button></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-bom">
+  <div class="modal" style="max-width:540px;width:96vw">
+    <div class="modal-h">
+      <div class="modal-title">BOM — <span id="bom-prod-title" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-bom')">✕</button>
+    </div>
+    <div class="modal-b">
+      <table style="width:100%">
+        <thead><tr><th>Matériau</th><th>Qté/unité produit</th><th>Unité</th><th></th></tr></thead>
+        <tbody id="bom-lines-body"></tbody>
+      </table>
+      <div style="display:flex;gap:.5rem;margin-top:.75rem;align-items:center">
+        <select id="bom-add-mat" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px"></select>
+        <button class="btn" style="white-space:nowrap" onclick="bomAddLine()">+ Ajouter</button>
+      </div>
+      <div style="margin-top:.4rem;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
+        Quantités <strong style="color:var(--text)">par unité produite</strong> — multipliées par la qté OF.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bom')">Annuler</button>
+      <button class="btn" onclick="saveBOM()">💾 Sauvegarder BOM</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- STOCK WARNING MODAL -->
+<div class="overlay" id="m-stock-warning">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-h">
+      <div class="modal-title" style="color:var(--red)">⚠️ STOCK INSUFFISANT</div>
+      <button class="x" onclick="closeModal('m-stock-warning')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">
+        La production est <strong style="color:var(--red)">bloquée</strong> — matériaux manquants :
+      </div>
+      <div id="stock-warning-list"></div>
+      <div id="stock-das-created" style="margin-top:.75rem;display:none">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">✓ Demandes Achat auto-créées</div>
+        <div id="stock-das-list"></div>
+      </div>
+      <div style="margin-top:.75rem;background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.2);border-radius:6px;padding:.6rem;font-size:11px;color:var(--muted)">
+        Les DAs ont été créées. Une fois les matériaux réceptionnés et le stock mis à jour, vous pourrez démarrer la production.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal('m-stock-warning')">Compris</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- BL EDIT MODAL -->
+<div class="overlay" id="m-bl-edit">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER BL — <span id="bl-edit-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-bl-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="bl-edit-id">
+      <div class="fg"><label>Destinataire</label><input type="text" id="bl-edit-dest"></div>
+      <div class="fg"><label>Adresse</label><textarea id="bl-edit-adresse" rows="2"></textarea></div>
+      <div class="fg"><label>Notes</label><textarea id="bl-edit-notes" rows="2"></textarea></div>
+      <div style="margin-top:.75rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">Historique des versions</div>
+        <div id="bl-version-history" style="max-height:150px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-bl-edit')">Annuler</button>
+      <button class="btn" onclick="saveBLEdit()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- BL NOT READY MODAL -->
+<div class="overlay" id="m-bl-notready">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title" style="color:var(--accent)">⚠️ OF NON TERMINÉ</div>
+      <button class="x" onclick="closeModal('m-bl-notready')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div style="font-size:12px;margin-bottom:.5rem">Impossible de marquer ce BL comme livré.</div>
+      <div style="font-size:11px;color:var(--muted)">L'ordre de fabrication associé doit être <strong style="color:var(--green)">TERMINÉ</strong> avant de pouvoir effectuer la livraison.</div>
+      <div id="bl-notready-statut" style="margin-top:.75rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal('m-bl-notready')">OK</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- OPERATION TYPE MODAL -->
+<div class="overlay" id="m-op-type">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE OPÉRATION</div>
+      <button class="x" onclick="closeModal('m-op-type')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="opt-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="opt-nom" placeholder="Ex: Fraisage, Tournage..."></div>
+      <div class="fg"><label>Description</label>
+        <input type="text" id="opt-desc" placeholder="Description courte"></div>
+      <div class="fg"><label>Ordre d'affichage</label>
+        <input type="number" id="opt-ordre" value="0" min="0"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-op-type')">Annuler</button>
+      <button class="btn" onclick="saveOpType()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- PRODUIT EDIT MODAL -->
+<div class="overlay" id="m-prod-edit">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER PRODUIT</div>
+      <button class="x" onclick="closeModal('m-prod-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="prod-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="prod-edit-nom"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="prod-edit-unite" value="pcs"></div>
+        <div class="fg"><label>Prix Vente HT (DT/unité)</label>
+          <input type="number" id="prod-edit-prix" step="0.001" value="0"></div>
+      </div>
+      <div class="fg"><label>Description</label>
+        <textarea id="prod-edit-desc" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-prod-edit')">Annuler</button>
+      <button class="btn" onclick="saveEditProduit()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MATERIAU EDIT MODAL -->
+<div class="overlay" id="m-mat-edit">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-h">
+      <div class="modal-title">MODIFIER MATÉRIAU</div>
+      <button class="x" onclick="closeModal('m-mat-edit')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="mat-edit-id">
+      <div class="fg"><label>Nom *</label>
+        <input type="text" id="mat-edit-nom"></div>
+      <div class="row2">
+        <div class="fg"><label>Unité</label>
+          <input type="text" id="mat-edit-unite"></div>
+        <div class="fg"><label>Stock Minimum</label>
+          <input type="number" id="mat-edit-min" step="0.001" value="0"></div>
+      </div>
+      <div class="fg"><label>Prix Unitaire (DT)</label>
+        <input type="number" id="mat-edit-prix" step="0.001" value="0"></div>
+      <div class="fg"><label>Fournisseur</label>
+        <select id="mat-edit-four-sel" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-size:12px;width:100%">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-mat-edit')">Annuler</button>
+      <button class="btn" onclick="saveEditMateriau()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-of-dup">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-h">
+      <div class="modal-title">DUPLIQUER OF — <span id="dup-src-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-of-dup')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="dup-src-id">
+
+      <div id="dup-summary" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem;margin-bottom:1rem;font-size:11px;color:var(--muted)"></div>
+
+      <div class="row2">
+        <div class="fg"><label>Quantité *</label>
+          <input type="number" id="dup-qte" min="1" value="1"></div>
+        <div class="fg"><label>Priorité</label>
+          <select id="dup-prio">
+            <option value="NORMAL">Normal</option>
+            <option value="HIGH">Haute</option>
+            <option value="URGENT">Urgent</option>
+            <option value="LOW">Basse</option>
+          </select></div>
+      </div>
+
+      <div class="fg"><label>Date Échéance *</label>
+        <input type="date" id="dup-date"></div>
+
+      <div class="fg"><label>Client</label>
+        <select id="dup-client"></select></div>
+
+      <div class="fg"><label>Chef Atelier</label>
+        <select id="dup-chef"></select></div>
+
+      <div class="fg"><label>Plan N°</label>
+        <input type="text" id="dup-plan" placeholder="Numéro de plan (optionnel)"></div>
+
+      <div class="fg"><label>Notes</label>
+        <textarea id="dup-notes" rows="2" placeholder="Notes spécifiques à ce nouvel OF..."></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-of-dup')">Annuler</button>
+      <button class="btn" onclick="confirmDuplicateOF()">⎘ Créer la copie</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="m-br-confirm">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-h">
+      <div class="modal-title">CONFIRMER RÉCEPTION — <span id="br-confirm-num" style="color:var(--red)"></span></div>
+      <button class="x" onclick="closeModal('m-br-confirm')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="br-confirm-id">
+
+      <!-- Material info -->
+      <div id="br-confirm-info" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem;margin-bottom:1rem;font-size:11px;color:var(--muted)"></div>
+
+      <div class="row2">
+        <div class="fg">
+          <label>Quantité commandée</label>
+          <input type="number" id="br-confirm-qte-cmd" disabled
+            style="opacity:.5;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+        </div>
+        <div class="fg">
+          <label>Quantité reçue *</label>
+          <input type="number" id="br-confirm-qte-recue" min="0.001" step="0.001"
+            style="background:var(--bg3);border:1px solid var(--green);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-weight:600">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fg">
+          <label>Prix unitaire HT (DT)</label>
+          <input type="number" id="br-confirm-prix" min="0" step="0.001" value="0"
+            oninput="updateBRTotal()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+        </div>
+        <div class="fg">
+          <label>Total HT (DT)</label>
+          <input type="number" id="br-confirm-total" disabled
+            style="opacity:.7;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-weight:600">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Notes réception</label>
+        <textarea id="br-confirm-notes" rows="2" placeholder="Observations, état de la marchandise..."></textarea>
+      </div>
+
+      <!-- Reception status indicator -->
+      <div id="br-confirm-status" style="margin-top:.5rem;font-size:11px;padding:.5rem .75rem;border-radius:4px;display:none"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-br-confirm')">Annuler</button>
+      <button class="btn" style="background:var(--green)" onclick="submitConfirmerReception()">✓ Confirmer Réception</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- OF DETAIL MODAL -->
+<div class="overlay" id="m-of-detail">
+  <div class="modal" style="max-width:860px;width:96vw">
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">DÉTAIL OF — <span id="ofd-numero" style="color:var(--red)"></span></div>
+        <div id="ofd-subtitle" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px"></div>
+      </div>
+      <button class="x" onclick="closeOFDetail()">✕</button>
+    </div>
+    <div class="modal-b" style="padding:0;max-height:78vh;overflow-y:auto">
+
+      <!-- INFO BAND -->
+      <div id="ofd-info" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)">
+      </div>
+
+      <!-- TABS -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg2)">
+        <button id="ofd-tab-ops" class="ofd-tab active" onclick="ofdTab('ops')">⚙️ Opérations</button>
+        <button id="ofd-tab-bom" class="ofd-tab" onclick="ofdTab('bom')">📦 Matériaux</button>
+        <button id="ofd-tab-cost" class="ofd-tab" onclick="ofdTab('cost')">💰 Coûts</button>
+      </div>
+
+      <!-- OPERATIONS TAB -->
+      <div id="ofd-pane-ops" style="padding:1rem">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">OPÉRATION</th>
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">OPÉRATEUR(S)</th>
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">MACHINE</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">STATUT</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">DURÉE (min)</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">DÉBUT</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">FIN</th>
+            </tr>
+          </thead>
+          <tbody id="ofd-ops-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- BOM TAB -->
+      <div id="ofd-pane-bom" style="padding:1rem;display:none">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">MATÉRIAU</th>
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">CODE</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">QTÉ REQUISE</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">UNITÉ</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">PRIX UNIT.</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">TOTAL</th>
+              <th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;letter-spacing:1px">MODIFIER QTÉ</th>
+            </tr>
+          </thead>
+          <tbody id="ofd-bom-tb"></tbody>
+        </table>
+        <div style="margin-top:.75rem;display:flex;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="saveBOMChanges()" style="color:var(--green)">💾 Enregistrer matériaux</button>
+        </div>
+      </div>
+
+      <!-- COST TAB -->
+      <div id="ofd-pane-cost" style="padding:1rem;display:none">
+        <div id="ofd-cost-content"></div>
+      </div>
+
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeOFDetail()">Fermer</button>
+      <button class="btn" onclick="saveOFDetailOps()" id="ofd-save-btn">💾 Enregistrer opérations</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- QUICK TIME EDIT MODAL -->
+<div class="overlay" id="m-quick-time">
+  <div class="modal" style="max-width:640px;width:95vw">
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">⏱ TEMPS OPÉRATIONS — <span id="qt-numero" style="color:var(--red)"></span></div>
+        <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px">
+          Modifiable avant et après impression PDF
+        </div>
+      </div>
+      <button class="x" onclick="closeModal('m-quick-time')">✕</button>
+    </div>
+    <div class="modal-b" style="max-height:65vh;overflow-y:auto;padding:0 1rem">
+      <div id="qt-ops-list"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-quick-time')">Annuler</button>
+      <button class="btn" style="background:#f59e0b;border-color:#f59e0b" onclick="saveQuickTime()">⏱ Enregistrer temps</button>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- MODALS v4 -->
+<div class="overlay" id="modal-machine">
+  <div class="modal" style="max-width:600px;width:97vw">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE MACHINE</div>
+      <button class="x" onclick="closeModal('modal-machine')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="m-edit-id">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="m-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">MCH-XXX</div>
+      </div>
+      <div class="fg"><label>Nom *</label><input id="m-nom" placeholder="Ex: Tour CNC HAAS"></div>
+      <div class="row2">
+        <div class="fg"><label>Type</label><input id="m-type" placeholder="Ex: Tour CNC, Fraiseuse..."></div>
+        <div class="fg"><label>Atelier</label>
+          <select id="m-atelier">
+            <option value="Atelier A">Atelier A</option>
+            <option value="Atelier B">Atelier B</option>
+            <option value="Atelier C">Atelier C</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Marque</label><input id="m-marque" placeholder="Ex: HAAS, DMG..."></div>
+        <div class="fg"><label>Modèle</label><input id="m-modele"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>N° Série</label><input id="m-serie"></div>
+        <div class="fg"><label>Date Acquisition</label><input type="date" id="m-date"></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-machine')">Annuler</button>
+      <button class="btn" onclick="saveMachine()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-maintenance">
+  <div class="modal" style="max-width:580px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEL ORDRE DE MAINTENANCE</div>
+      <button class="x" onclick="closeModal('modal-maintenance')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fg"><label>Titre *</label>
+        <input id="om-titre" placeholder="Ex: Remplacement roulement Tour CNC"></div>
+      <div class="row2">
+        <div class="fg"><label>Machine *</label>
+          <select id="om-machine"><option value="">— Sélectionner —</option></select></div>
+        <div class="fg"><label>Type</label>
+          <select id="om-type">
+            <option value="CORRECTIVE">🔨 Corrective</option>
+            <option value="PREVENTIVE">🛡️ Préventive</option>
+            <option value="URGENCE">🚨 Urgence</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Priorité</label>
+          <select id="om-priorite">
+            <option value="BASSE">Basse</option>
+            <option value="NORMAL" selected>Normal</option>
+            <option value="HAUTE">Haute</option>
+            <option value="URGENT">🔴 URGENT</option>
+          </select>
+        </div>
+        <div class="fg"><label>Technicien assigné</label>
+          <select id="om-tech"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Date Planifiée</label>
+          <input type="date" id="om-date"></div>
+        <div class="fg"><label>Durée estimée (min)</label>
+          <input type="number" id="om-duree" value="60" min="0"></div>
+      </div>
+      <div class="fg"><label>Description / Symptômes</label>
+        <textarea id="om-desc" rows="3" placeholder="Décrire le problème ou l'intervention..."></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-maintenance')">Annuler</button>
+      <button class="btn" onclick="saveMaintenance()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-planning">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU CRÉNEAU PLANNING</div>
+      <button class="x" onclick="closeModal('modal-planning')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fg"><label>Ordre de Fabrication *</label>
+        <select id="pl-of"><option value="">— Sélectionner un OF —</option></select></div>
+      <div class="row2">
+        <div class="fg"><label>Machine</label>
+          <select id="pl-machine"><option value="">— Aucune —</option></select></div>
+        <div class="fg"><label>Opérateur</label>
+          <select id="pl-op"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Début *</label>
+          <input type="datetime-local" id="pl-debut"></div>
+        <div class="fg"><label>Fin *</label>
+          <input type="datetime-local" id="pl-fin"></div>
+      </div>
+      <div class="fg"><label>Notes</label>
+        <textarea id="pl-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-planning')">Annuler</button>
+      <button class="btn" onclick="savePlanning()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-qualite">
+  <div class="modal" style="max-width:620px;width:97vw">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU CONTRÔLE QUALITÉ</div>
+      <button class="x" onclick="closeModal('modal-qualite')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="row2">
+        <div class="fg"><label>OF lié</label>
+          <select id="cq-of" onchange="onCQOFChange()">
+            <option value="">— Aucun —</option>
+          </select>
+        </div>
+        <div class="fg"><label>Type Contrôle</label>
+          <select id="cq-type">
+            <option value="EN_COURS">En Cours Production</option>
+            <option value="FINAL">Final (réception)</option>
+            <option value="RECEPTION">Réception matières</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Opérateur / Contrôleur</label>
+          <select id="cq-op"><option value="">— Aucun —</option></select>
+        </div>
+        <div class="fg"><label>Date Contrôle *</label>
+          <input type="date" id="cq-date">
+        </div>
+      </div>
+      <div class="fg"><label>Critères Contrôlés</label>
+        <input type="text" id="cq-criteres" placeholder="Ex: Dimensions, Aspect visuel, Fonctionnel...">
+      </div>
+      <div class="row2" style="margin-top:.5rem">
+        <div class="fg"><label>Qté Contrôlée</label>
+          <input type="number" id="cq-total" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+        <div class="fg"><label>Qté Conforme</label>
+          <input type="number" id="cq-ok" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+        <div class="fg"><label>Qté Rebut</label>
+          <input type="number" id="cq-rebut" value="0" min="0" oninput="updateCQResultat()">
+        </div>
+      </div>
+      <!-- Live result badge -->
+      <div id="cq-resultat" style="margin-top:.5rem;padding:.5rem .75rem;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Résultat</span>
+        <span id="cq-resultat-badge" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">— Saisir les quantités —</span>
+      </div>
+      <div class="fg" style="margin-top:.5rem"><label>Notes</label>
+        <textarea id="cq-notes" rows="2" placeholder="Observations, défauts constatés..."></textarea>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-qualite')">Annuler</button>
+      <button class="btn" onclick="saveControle()">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-nc">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVELLE NON-CONFORMITÉ</div>
+      <button class="x" onclick="closeModal('modal-nc')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fg"><label>Type de Défaut *</label>
+        <input id="nc-defaut" placeholder="Ex: Dimension hors tolérance, Aspect visuel..."></div>
+      <div class="row2">
+        <div class="fg"><label>Gravité</label>
+          <select id="nc-gravite">
+            <option value="MINEURE">🟡 Mineure</option>
+            <option value="MAJEURE">🟠 Majeure</option>
+            <option value="CRITIQUE">🔴 Critique</option>
+          </select>
+        </div>
+        <div class="fg"><label>OF lié</label>
+          <select id="nc-of"><option value="">— Aucun —</option></select></div>
+      </div>
+      <div class="fg"><label>Description détaillée</label>
+        <textarea id="nc-desc" rows="2" placeholder="Décrire le défaut constaté..."></textarea></div>
+      <div class="fg"><label>Action Corrective</label>
+        <textarea id="nc-action" rows="2" placeholder="Action à mener pour corriger..."></textarea></div>
+      <div class="fg"><label>Responsable</label>
+        <select id="nc-resp"><option value="">— Aucun —</option></select></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nc')">Annuler</button>
+      <button class="btn" onclick="saveNC()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-fournisseur">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-title">NOUVEAU FOURNISSEUR</div>
+      <button class="x" onclick="closeModal('modal-fournisseur')">✕</button>
+    </div>
+    <div class="modal-b">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;margin-bottom:.5rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Code Auto-Généré</span>
+        <div id="fourn-code-preview" style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--red);font-weight:600;margin-top:2px">FOURN-XXX</div>
+      </div>
+      <div class="fg"><label>Raison Sociale *</label>
+        <input id="f-nom" placeholder="Ex: Aciers du Nord SARL"></div>
+      <div class="row2">
+        <div class="fg"><label>Contact</label>
+          <input id="f-contact" placeholder="Nom du responsable"></div>
+        <div class="fg"><label>Téléphone</label>
+          <input id="f-tel" placeholder="+216 7X XXX XXX"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Email</label>
+          <input id="f-email" type="email" placeholder="contact@fournisseur.tn"></div>
+        <div class="fg"><label>Matricule Fiscal</label>
+          <input id="f-mf" placeholder="XXXXXXXX/X/X/XXX"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label>Ville</label>
+          <input id="f-ville" value="Sfax"></div>
+        <div class="fg"><label>Pays</label>
+          <input id="f-pays" value="Tunisie"></div>
+      </div>
+      <div class="fg"><label>Adresse</label>
+        <textarea id="f-adresse" rows="2"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fournisseur')">Annuler</button>
+      <button class="btn" onclick="saveFournisseur()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script src="/admin/js/core.js"></script>
+<script src="/admin/js/dashboard.js"></script>
+<script src="/admin/js/of.js"></script>
+<script src="/admin/js/materials.js"></script>
+<script src="/admin/js/operators.js"></script>
+<script src="/admin/js/products.js"></script>
+<script src="/admin/js/clients.js"></script>
+<script src="/admin/js/bl.js"></script>
+<script src="/admin/js/achats.js"></script>
+<script src="/admin/js/qualite.js"></script>
+<script src="/admin/js/nc.js"></script>
+<script src="/admin/js/machines.js"></script>
+<script src="/admin/js/maintenance.js"></script>
+<script src="/admin/js/planning.js"></script>
+<script src="/admin/js/fournisseurs.js"></script>
+<script src="/admin/js/users.js"></script>
+<script src="/admin/js/operation_types.js"></script>
+<script src="/admin/js/settings.js"></script>
+<script src="/admin/js/reports.js"></script>
+<script src="/admin/js/monitor.js"></script>
+<script src="/admin/js/analytics.js"></script>
 <script>
-// Fragment loader — loads pages/analytics.html and pages/modals.html
-async function loadFragments() {
-  const targets = [
-    { url: '/admin/pages/analytics.html', target: 'main' },
-    { url: '/admin/pages/modals.html',    target: 'body' },
-  ];
-  for (const t of targets) {
-    try {
-      const html = await fetch(t.url).then(r => r.text());
-      if (t.target === 'main') {
-        document.querySelector('main.main').insertAdjacentHTML('beforeend', html);
-      } else {
-        document.body.insertAdjacentHTML('beforeend', html);
-      }
-    } catch(e) { console.warn('Fragment load failed:', t.url, e); }
-  }
-}
-loadFragments();
+window.pageLoaders = {
+  dashboard:               loadDashboard,
+  orders:                  loadOrders,
+  monitor:                 loadMonitor,
+  bl:                      loadBL,
+  materials:               loadMaterials,
+  operators:               loadOperators,
+  products:                loadProducts,
+  clients:                 loadClients,
+  da:                      loadDA,
+  bc:                      loadBC,
+  br:                      loadBR,
+  fa:                      loadFA,
+  qualite:                 loadQualite,
+  nc:                      loadNC,
+  machines:                loadMachines,
+  maintenance:             loadMaintenance,
+  planning:                loadPlanning,
+  fournisseurs:            loadFournisseurs,
+  users:                   loadUsers,
+  'op-types':              loadOpTypes,
+  settings:                loadSettings,
+  reports:                 loadReports,
+  'analytics-production':  loadAnalyticsProduction,
+  'analytics-achats':      loadAnalyticsAchats,
+  'analytics-operateurs':  loadAnalyticsOperateurs,
+  'analytics-qualite':     loadAnalyticsQualite,
+};
+const _u = getUserInfo();
+if (!localStorage.getItem('token')) window.location.href = '/';
+if ($('user-info'))  $('user-info').textContent  = _u.prenom ? `${_u.prenom} ${_u.nom}` : 'Admin';
+if ($('role-badge')) $('role-badge').textContent = _u.role || 'ADMIN';
+if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
+// Navigation handled by core.js DOMContentLoaded (restores last page from hash/localStorage)
 </script>
 </body>
 </html>
