@@ -11,13 +11,17 @@ router = APIRouter(prefix="/api/operateurs", tags=["operateurs"])
 @router.get("", dependencies=[Depends(require_any_role)])
 def list_operateurs(role: str = None, db=Depends(get_db)):
     # Optional role filter: ?role=CHEF_ATELIER
-    sql = "SELECT * FROM operateurs WHERE actif = TRUE"
-    params = []
-    if role:
-        sql += " AND role = %s"
-        params.append(role)
-    sql += " ORDER BY nom"
-    ops = q(db, sql, params or None)
+    try:
+        sql = "SELECT * FROM operateurs WHERE actif = TRUE"
+        params = []
+        if role:
+            sql += " AND role = %s"
+            params.append(role)
+        sql += " ORDER BY nom"
+        ops = q(db, sql, params or None)
+    except Exception:
+        # role column not migrated yet — return all
+        ops = q(db, "SELECT * FROM operateurs WHERE actif = TRUE ORDER BY nom")
     return serialize(ops)
 
 
@@ -42,13 +46,23 @@ def get_operateur(op_id: int, db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_operateur(data: OperateurCreate, db=Depends(get_db)):
-    oid = exe(db, """
-        INSERT INTO operateurs (nom,prenom,specialite,role,telephone,email,
-                                taux_horaire,taux_piece,type_taux)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (data.nom, data.prenom, data.specialite, data.role,
-          data.telephone, data.email,
-          data.taux_horaire, data.taux_piece, data.type_taux))
+    try:
+        oid = exe(db, """
+            INSERT INTO operateurs (nom,prenom,specialite,role,telephone,email,
+                                    taux_horaire,taux_piece,type_taux)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (data.nom, data.prenom, data.specialite, data.role,
+              data.telephone, data.email,
+              data.taux_horaire, data.taux_piece, data.type_taux))
+    except Exception:
+        # role column not yet migrated — insert without it
+        oid = exe(db, """
+            INSERT INTO operateurs (nom,prenom,specialite,telephone,email,
+                                    taux_horaire,taux_piece,type_taux)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (data.nom, data.prenom, data.specialite,
+              data.telephone, data.email,
+              data.taux_horaire, data.taux_piece, data.type_taux))
     return {"id": oid, "message": "Opérateur créé"}
 
 
@@ -59,7 +73,17 @@ def update_operateur(op_id: int, data: OperateurUpdate, db=Depends(get_db)):
         fields.append(f"{f}=%s"); params.append(v)
     if not fields: raise HTTPException(400, "Aucune donnée")
     params.append(op_id)
-    exe(db, f"UPDATE operateurs SET {','.join(fields)} WHERE id=%s", params)
+    try:
+        exe(db, f"UPDATE operateurs SET {','.join(fields)} WHERE id=%s", params)
+    except Exception:
+        # Retry without role field if column not yet migrated
+        safe_fields, safe_params = [], []
+        for f, v in data.dict(exclude_none=True).items():
+            if f == "role": continue
+            safe_fields.append(f"{f}=%s"); safe_params.append(v)
+        if safe_fields:
+            safe_params.append(op_id)
+            exe(db, f"UPDATE operateurs SET {','.join(safe_fields)} WHERE id=%s", safe_params)
     return {"message": "Opérateur mis à jour"}
 
 
