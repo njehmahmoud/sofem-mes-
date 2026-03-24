@@ -1438,35 +1438,59 @@
 </div>
 
 <div class="overlay" id="modal-planning">
-  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
+  <div class="modal" style="max-width:700px;width:97vw;max-height:90vh;overflow-y:auto">
     <div class="modal-h">
       <div class="modal-title">NOUVEAU CRÉNEAU PLANNING</div>
       <button class="x" onclick="closeModal('modal-planning')">✕</button>
     </div>
     <div class="modal-b">
+
       <!-- OF Picker -->
       <div class="fg">
         <label>Ordre de Fabrication *</label>
         <input type="hidden" id="pl-of">
         <div id="pl-of-display" onclick="openOFPicker()"
-          style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.55rem .75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s;min-height:38px"
+          style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem .85rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s;min-height:40px"
           onmouseenter="this.style.borderColor='var(--red)'" onmouseleave="this.style.borderColor='var(--border)'">
           <span id="pl-of-label" style="color:var(--muted);font-size:12px">— Cliquer pour sélectionner un OF —</span>
           <span style="font-size:10px;color:var(--muted)">▼</span>
         </div>
       </div>
+
+      <!-- OF info preview (populated on selection) -->
+      <div id="pl-of-info" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.65rem .85rem">
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Produit</div>
+            <div id="pl-info-produit" style="font-size:12px;font-weight:600;color:var(--text);margin-top:2px">—</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Client</div>
+            <div id="pl-info-client" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Quantité</div>
+            <div id="pl-info-qte" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Échéance</div>
+            <div id="pl-info-deadline" style="font-size:12px;color:var(--red);margin-top:2px;font-family:'IBM Plex Mono',monospace">—</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Priorité</div>
+            <div id="pl-info-prio" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
+        </div>
+      </div>
+
+      <!-- Section: Affectation -->
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:.25rem">Affectation</div>
       <div class="row2">
         <div class="fg"><label>Machine</label>
           <select id="pl-machine"><option value="">— Aucune —</option></select></div>
         <div class="fg"><label>Opérateur</label>
           <select id="pl-op"><option value="">— Aucun —</option></select></div>
       </div>
+
+      <!-- Section: Planification -->
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:.25rem">Planification</div>
       <div class="row2">
-        <div class="fg"><label>Début *</label>
+        <div class="fg"><label>Date de début *</label>
           <input type="datetime-local" id="pl-debut"></div>
-        <div class="fg"><label>Fin *</label>
+        <div class="fg"><label>Date de fin *</label>
           <input type="datetime-local" id="pl-fin"></div>
       </div>
+
       <div class="fg"><label>Notes</label>
         <textarea id="pl-notes" rows="2"></textarea></div>
     </div>
@@ -1645,7 +1669,7 @@
 <script src="/admin/js/nc.js"></script>
 <script src="/admin/js/machines.js"></script>
 <script src="/admin/js/maintenance.js"></script>
-<script src="/admin/js/planning.js"></script>
+<script src="/admin/js/planning.js?v=2"></script>
 <script src="/admin/js/fournisseurs.js"></script>
 <script src="/admin/js/users.js"></script>
 <script src="/admin/js/operation_types.js"></script>

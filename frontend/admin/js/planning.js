@@ -1,6 +1,6 @@
 // ── planning.js ─────────────────────────────────────────
 
-let _planningOFs = [];   // cache for OF picker
+let _planningOFs = [];
 
 const STATUS_COLOR = {
   DRAFT:       '#6B7280',
@@ -16,6 +16,7 @@ const STATUS_LABEL = {
   COMPLETED:   'Terminé',
   CANCELLED:   'Annulé',
 };
+const PRIO_LABEL = { LOW:'Basse', NORMAL:'Normale', HIGH:'Haute', URGENT:'URGENT' };
 
 async function loadPlanning(){
   const [rows, ofs, machines, ops] = await Promise.all([
@@ -26,41 +27,40 @@ async function loadPlanning(){
   ]);
   if(!rows) return;
 
-  // Cache active OFs for picker
   _planningOFs = (ofs||[]).filter(o => !['COMPLETED','CANCELLED'].includes(o.statut));
 
-  // Populate machine & operator selects
   if (machines && $('pl-machine')) $('pl-machine').innerHTML = '<option value="">— Aucune —</option>' +
     machines.filter(m=>m.statut==='OPERATIONNELLE').map(m=>`<option value="${m.id}">${m.nom} · ${m.atelier}</option>`).join('');
   if (ops && $('pl-op')) $('pl-op').innerHTML = '<option value="">— Aucun —</option>' +
     ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}${o.specialite?' ('+o.specialite+')':''}</option>`).join('');
 
-  // Simple Gantt-style visual
+  // Gantt
   const ganttHTML = rows.length === 0
     ? '<div style="color:var(--muted);font-size:12px;padding:1rem">Aucun créneau planifié.</div>'
     : (() => {
-      const dates = rows.flatMap(r=>[new Date(r.date_debut),new Date(r.date_fin)]);
-      const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
-      const totalMs = maxD-minD || 1;
-      const colors=['#D42B2B','#3B82F6','#22C55E','#F59E0B','#8B5CF6','#EC4899'];
-      return `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem">Gantt — Planning Production</div>
-    <div style="position:relative;min-height:${rows.length*36+20}px">
-      ${rows.map((r,i)=>{
-        const left=((new Date(r.date_debut)-minD)/totalMs*100).toFixed(1);
-        const width=Math.max(((new Date(r.date_fin)-new Date(r.date_debut))/totalMs*100).toFixed(1),1);
-        const color=colors[i%colors.length];
-        return `<div style="position:absolute;top:${i*36}px;left:0;right:0;height:28px">
-          <div style="position:absolute;left:${left}%;width:${width}%;height:100%;background:${color}22;border:1px solid ${color};border-radius:4px;display:flex;align-items:center;padding:0 6px;overflow:hidden;cursor:default" title="${r.of_numero} | ${r.machine_nom||''} | ${r.date_debut} → ${r.date_fin}">
-            <span style="font-size:10px;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.of_numero}${r.machine_nom?' · '+r.machine_nom:''}</span>
-          </div>
+        const dates = rows.flatMap(r=>[new Date(r.date_debut),new Date(r.date_fin)]);
+        const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
+        const totalMs = maxD - minD || 1;
+        const colors = ['#D42B2B','#3B82F6','#22C55E','#F59E0B','#8B5CF6','#EC4899'];
+        return `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem">Gantt — Planning Production</div>
+        <div style="position:relative;min-height:${rows.length*36+20}px">
+          ${rows.map((r,i)=>{
+            const left  = ((new Date(r.date_debut)-minD)/totalMs*100).toFixed(1);
+            const width = Math.max(((new Date(r.date_fin)-new Date(r.date_debut))/totalMs*100).toFixed(1),1);
+            const color = colors[i%colors.length];
+            return `<div style="position:absolute;top:${i*36}px;left:0;right:0;height:28px">
+              <div style="position:absolute;left:${left}%;width:${width}%;height:100%;background:${color}22;border:1px solid ${color};border-radius:4px;display:flex;align-items:center;padding:0 6px;overflow:hidden;cursor:default"
+                title="${r.of_numero} | ${r.machine_nom||''} | ${r.date_debut} → ${r.date_fin}">
+                <span style="font-size:10px;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.of_numero}${r.machine_nom?' · '+r.machine_nom:''}</span>
+              </div>
+            </div>`;
+          }).join('')}
         </div>`;
-      }).join('')}
-    </div>`;
-    })();
-  $('planning-gantt').innerHTML=`<div style="padding:1rem">${ganttHTML}</div>`;
+      })();
+  $('planning-gantt').innerHTML = `<div style="padding:1rem">${ganttHTML}</div>`;
 
-  const sMap={PLANIFIE:'b-draft',EN_COURS:'b-inprogress',TERMINE:'b-completed',ANNULE:'b-cancelled'};
-  $('planning-table').innerHTML=`
+  const sMap = {PLANIFIE:'b-draft',EN_COURS:'b-inprogress',TERMINE:'b-completed',ANNULE:'b-cancelled'};
+  $('planning-table').innerHTML = `
     <table><thead><tr><th>OF</th><th>Produit</th><th>Machine</th><th>Opérateur</th><th>Début</th><th>Fin</th><th>Statut</th><th></th></tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${r.of_numero}</td>
@@ -71,8 +71,7 @@ async function loadPlanning(){
       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${r.date_fin?.replace('T',' ').slice(0,16)||'—'}</td>
       <td><span class="badge ${sMap[r.statut]||'b-draft'}">${r.statut}</span></td>
       <td><button class="fbtn" style="color:var(--red)" onclick="deletePlanning(${r.id})">✕</button></td>
-    </tr>`).join('')}</tbody></table>
-  `;
+    </tr>`).join('')}</tbody></table>`;
 }
 
 // ── OF Card Picker ────────────────────────────────────────
@@ -109,14 +108,16 @@ function renderOFCards(ofs){
     return;
   }
   $('of-picker-list').innerHTML = ofs.map(o => {
-    const color = STATUS_COLOR[o.statut] || '#6B7280';
-    const label = STATUS_LABEL[o.statut] || o.statut;
-    const deadline = o.date_echeance ? o.date_echeance.slice(0,10) : '—';
+    const color    = STATUS_COLOR[o.statut] || '#6B7280';
+    const label    = STATUS_LABEL[o.statut] || o.statut;
+    const deadline = o.date_echeance ? String(o.date_echeance).slice(0,10) : '—';
     const progress = o.progression != null ? Math.round(o.progression) : null;
-    const clientSafe = (o.client_nom||'').replace(/'/g,"\\'");
-    const produitSafe = (o.produit_nom||'').replace(/'/g,"\\'");
+    const cSafe    = (o.client_nom||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const pSafe    = (o.produit_nom||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const prio     = PRIO_LABEL[o.priorite] || o.priorite || '—';
+    const qte      = o.quantite || '—';
     return `
-    <div onclick="selectOF(${o.id}, '${o.numero}', '${produitSafe}', '${clientSafe}', '${label}')"
+    <div onclick="selectOF(${o.id},'${o.numero}','${pSafe}','${cSafe}','${label}','${qte}','${deadline}','${prio}')"
       style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;cursor:pointer;
              transition:border-color .15s,transform .1s;position:relative;overflow:hidden"
       onmouseenter="this.style.borderColor='${color}';this.style.transform='translateY(-1px)'"
@@ -128,14 +129,13 @@ function renderOFCards(ofs){
                      border:1px solid ${color}44;border-radius:4px;padding:1px 6px;letter-spacing:1px">${label}</span>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:.25rem;padding-left:.25rem;
-                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        ${o.produit_nom||'—'}
-      </div>
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.produit_nom||'—'}</div>
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;padding-left:.25rem;margin-top:.4rem">
-        ${o.client_nom ? `<span style="font-size:10px;color:var(--muted)">👤 ${o.client_nom}</span>` : ''}
-        <span style="font-size:10px;color:var(--muted)">📦 Qté: <b style="color:var(--text)">${o.quantite}</b></span>
+        ${o.client_nom?`<span style="font-size:10px;color:var(--muted)">👤 ${o.client_nom}</span>`:''}
+        <span style="font-size:10px;color:var(--muted)">📦 Qté: <b style="color:var(--text)">${qte}</b></span>
         <span style="font-size:10px;color:var(--muted)">📅 ${deadline}</span>
-        ${o.atelier ? `<span style="font-size:10px;color:var(--muted)">🏭 ${o.atelier}</span>` : ''}
+        ${o.atelier?`<span style="font-size:10px;color:var(--muted)">🏭 ${o.atelier}</span>`:''}
+        <span style="font-size:10px;color:var(--muted)">⚡ ${prio}</span>
       </div>
       ${progress !== null ? `
       <div style="margin-top:.6rem;padding-left:.25rem">
@@ -148,48 +148,80 @@ function renderOFCards(ofs){
   }).join('');
 }
 
-function selectOF(id, numero, produit, client, statut){
+function selectOF(id, numero, produit, client, statut, qte, deadline, prio){
   $('pl-of').value = id;
+
+  // Update picker field label
   const clientPart = client ? ` · ${client}` : '';
   $('pl-of-label').textContent = `${numero} — ${produit}${clientPart}`;
   $('pl-of-label').style.color = 'var(--text)';
   $('pl-of-label').style.fontWeight = '500';
+
+  // Populate info preview
+  $('pl-info-produit').textContent  = produit || '—';
+  $('pl-info-client').textContent   = client  || '—';
+  $('pl-info-qte').textContent      = qte     || '—';
+  $('pl-info-deadline').textContent = deadline || '—';
+  $('pl-info-prio').textContent     = prio     || '—';
+  $('pl-of-info').style.display     = 'block';
+
+  // Pre-fill start date from today if empty
+  if (!$('pl-debut').value) {
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    $('pl-debut').value = now.toISOString().slice(0,16);
+  }
+
   closeOFPicker();
 }
 
-// ── Save / Delete ─────────────────────────────────────────
+// ── Open / Reset modal ────────────────────────────────────
 
 function openPlanningModal(){
-  $('pl-of').value = '';
+  $('pl-of').value             = '';
   $('pl-of-label').textContent = '— Cliquer pour sélectionner un OF —';
-  $('pl-of-label').style.color = 'var(--muted)';
+  $('pl-of-label').style.color      = 'var(--muted)';
   $('pl-of-label').style.fontWeight = 'normal';
+  $('pl-of-info').style.display     = 'none';
   if($('pl-machine')) $('pl-machine').value = '';
-  if($('pl-op'))      $('pl-op').value = '';
+  if($('pl-op'))      $('pl-op').value      = '';
   $('pl-debut').value = '';
   $('pl-fin').value   = '';
   $('pl-notes').value = '';
   openModal('modal-planning');
 }
 
+// ── Save ──────────────────────────────────────────────────
+
 async function savePlanning(){
   const ofId = parseInt($('pl-of').value);
   if(!ofId){ alert('Veuillez sélectionner un OF.'); return; }
-  const data={
+  if(!$('pl-debut').value){ alert('Date de début obligatoire.'); return; }
+  if(!$('pl-fin').value)  { alert('Date de fin obligatoire.');   return; }
+
+  const data = {
     of_id:        ofId,
-    machine_id:   $('pl-machine').value  ? parseInt($('pl-machine').value)  : null,
-    operateur_id: $('pl-op').value       ? parseInt($('pl-op').value)       : null,
+    machine_id:   $('pl-machine').value ? parseInt($('pl-machine').value) : null,
+    operateur_id: $('pl-op').value      ? parseInt($('pl-op').value)      : null,
     date_debut:   $('pl-debut').value.replace('T',' '),
     date_fin:     $('pl-fin').value.replace('T',' '),
-    notes:        $('pl-notes').value||null
+    notes:        $('pl-notes').value || null
   };
-  if(!data.date_debut||!data.date_fin){alert('Dates obligatoires');return;}
-  const r=await api('/api/planning','POST',data);
-  if(r){closeModal('modal-planning');loadPlanning();}
+
+  const r = await api('/api/planning','POST', data);
+  if(r){
+    closeModal('modal-planning');
+    loadPlanning();
+    // Refresh calendar so the new slot appears immediately
+    if(typeof loadCalendar === 'function') loadCalendar();
+  }
 }
 
+// ── Delete ────────────────────────────────────────────────
+
 async function deletePlanning(id){
-  if(!confirm('Supprimer ce créneau ?'))return;
+  if(!confirm('Supprimer ce créneau ?')) return;
   await api(`/api/planning/${id}`,'DELETE');
   loadPlanning();
+  if(typeof loadCalendar === 'function') loadCalendar();
 }
