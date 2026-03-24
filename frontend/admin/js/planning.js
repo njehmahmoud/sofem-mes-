@@ -175,6 +175,25 @@ function selectOF(id, numero, produit, client, statut, qte, deadline, prio){
   closeOFPicker();
 }
 
+// ── Duration indicator ────────────────────────────────────
+
+function updatePlDuration(){
+  const d1 = $('pl-debut').value, d2 = $('pl-fin').value;
+  if(!d1 || !d2){ $('pl-duration').style.display='none'; return; }
+  const ms = new Date(d2) - new Date(d1);
+  if(ms <= 0){ $('pl-duration').style.display='none'; return; }
+  const totalH = Math.floor(ms / 3600000);
+  const days   = Math.floor(totalH / 24);
+  const hours  = totalH % 24;
+  const mins   = Math.floor((ms % 3600000) / 60000);
+  let txt = '';
+  if(days)  txt += `${days}j `;
+  if(hours) txt += `${hours}h `;
+  if(mins && !days) txt += `${mins}min`;
+  $('pl-duration-txt').textContent = txt.trim() + ' de durée';
+  $('pl-duration').style.display = 'block';
+}
+
 // ── Open / Reset modal ────────────────────────────────────
 
 function openPlanningModal(){
@@ -187,6 +206,7 @@ function openPlanningModal(){
   if($('pl-op'))      $('pl-op').value      = '';
   $('pl-debut').value = '';
   $('pl-fin').value   = '';
+  $('pl-duration').style.display = 'none';
   $('pl-notes').value = '';
   openModal('modal-planning');
 }
