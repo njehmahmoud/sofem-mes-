@@ -7,9 +7,16 @@ const MONTH_FR = ['Janvier','Février','Mars','Avril','Mai','Juin',
                   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const DAY_FR   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
+let _calPlannings = [];
+
 async function loadCalendar() {
   try {
-    _calOFs = await api('/api/of?limit=200') || [];
+    [_calOFs, _calPlannings] = await Promise.all([
+      api('/api/of?limit=200') || [],
+      api('/api/planning')     || []
+    ]);
+    _calOFs      = _calOFs      || [];
+    _calPlannings = _calPlannings || [];
     renderCalendar();
   } catch(e) { toast('Erreur calendrier: '+e.message,'err'); }
 }
@@ -40,7 +47,7 @@ function renderCalendar() {
     </div>
     <div id="cal-legend" style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap">
       ${[['var(--red)','URGENT'],['var(--accent)','HAUTE'],['var(--blue)','NORMALE'],
-         ['var(--muted)','BASSE'],['var(--green)','TERMINÉ']].map(([c,l])=>
+         ['var(--muted)','BASSE'],['var(--green)','TERMINÉ'],['#8B5CF6','PLANIFIÉ']].map(([c,l])=>
         `<div style="display:flex;align-items:center;gap:4px;font-size:9px;
           font-family:'IBM Plex Mono',monospace;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:${c}"></div>${l}
@@ -154,13 +161,26 @@ function renderWeekView() {
 }
 
 function getOFsForDate(dateStr) {
-  return _calOFs.filter(of => {
+  const ofs = _calOFs.filter(of => {
     if (!of.date_echeance) return false;
     return String(of.date_echeance).slice(0,10) === dateStr;
   });
+  const plans = (_calPlannings||[]).filter(p => {
+    if (!p.date_debut) return false;
+    return String(p.date_debut).slice(0,10) === dateStr;
+  }).map(p => ({
+    ...p,
+    _isPlanning: true,
+    numero:      p.of_numero || '—',
+    produit_nom: p.produit_nom || p.machine_nom || 'Créneau planifié',
+    statut:      'PLANIFIE',
+    priorite:    'NORMAL',
+  }));
+  return [...ofs, ...plans];
 }
 
 function calOFColor(of) {
+  if (of._isPlanning)        return '#8B5CF6'; // purple for planning slots
   if (of.statut === 'COMPLETED') return 'var(--green)';
   if (of.priorite === 'URGENT')  return 'var(--red)';
   if (of.priorite === 'HAUTE')   return 'var(--accent)';
