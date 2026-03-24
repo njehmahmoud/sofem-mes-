@@ -389,7 +389,7 @@
 <!-- PLANIFICATION -->
 <div class="page" id="page-planning">
   <div class="sec-header"><span class="sec-title">📅 Planification Production</span>
-    <button class="btn" onclick="openModal('modal-planning')">+ Nouveau Créneau</button>
+    <button class="btn" onclick="openPlanningModal()">+ Nouveau Créneau</button>
   </div>
   <div class="card mt"><div id="planning-gantt"></div></div>
   <div class="card mt"><div id="planning-table"></div></div>
@@ -1444,8 +1444,17 @@
       <button class="x" onclick="closeModal('modal-planning')">✕</button>
     </div>
     <div class="modal-b">
-      <div class="fg"><label>Ordre de Fabrication *</label>
-        <select id="pl-of"><option value="">— Sélectionner un OF —</option></select></div>
+      <!-- OF Picker -->
+      <div class="fg">
+        <label>Ordre de Fabrication *</label>
+        <input type="hidden" id="pl-of">
+        <div id="pl-of-display" onclick="openOFPicker()"
+          style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.55rem .75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s;min-height:38px"
+          onmouseenter="this.style.borderColor='var(--red)'" onmouseleave="this.style.borderColor='var(--border)'">
+          <span id="pl-of-label" style="color:var(--muted);font-size:12px">— Cliquer pour sélectionner un OF —</span>
+          <span style="font-size:10px;color:var(--muted)">▼</span>
+        </div>
+      </div>
       <div class="row2">
         <div class="fg"><label>Machine</label>
           <select id="pl-machine"><option value="">— Aucune —</option></select></div>
@@ -1464,6 +1473,25 @@
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal('modal-planning')">Annuler</button>
       <button class="btn" onclick="savePlanning()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- OF Picker Modal -->
+<div class="overlay" id="modal-of-picker" style="z-index:1100">
+  <div class="modal" style="max-width:780px;width:97vw;max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-h">
+      <div class="modal-title">SÉLECTIONNER UN OF</div>
+      <button class="x" onclick="closeOFPicker()">✕</button>
+    </div>
+    <!-- Search bar -->
+    <div style="padding:.75rem 1.25rem;border-bottom:1px solid var(--border)">
+      <input id="of-picker-search" type="text" placeholder="🔍  Rechercher par numéro, produit, client, statut…"
+        oninput="filterOFPicker(this.value)"
+        style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none">
+    </div>
+    <!-- Cards -->
+    <div id="of-picker-list" style="flex:1;overflow-y:auto;padding:1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.6rem">
     </div>
   </div>
 </div>

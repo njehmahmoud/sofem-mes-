@@ -1,4 +1,22 @@
 // ── planning.js ─────────────────────────────────────────
+
+let _planningOFs = [];   // cache for OF picker
+
+const STATUS_COLOR = {
+  DRAFT:       '#6B7280',
+  APPROVED:    '#3B82F6',
+  IN_PROGRESS: '#F59E0B',
+  COMPLETED:   '#22C55E',
+  CANCELLED:   '#EF4444',
+};
+const STATUS_LABEL = {
+  DRAFT:       'Brouillon',
+  APPROVED:    'Approuvé',
+  IN_PROGRESS: 'En cours',
+  COMPLETED:   'Terminé',
+  CANCELLED:   'Annulé',
+};
+
 async function loadPlanning(){
   const [rows, ofs, machines, ops] = await Promise.all([
     api('/api/planning'),
@@ -8,25 +26,24 @@ async function loadPlanning(){
   ]);
   if(!rows) return;
 
-  // Populate modal selects
-  // OF dropdown — active OFs only (DRAFT, APPROVED, IN_PROGRESS)
-  if (ofs && $('pl-of')) {
-    const active = (ofs||[]).filter(o => !['COMPLETED','CANCELLED'].includes(o.statut));
-    $('pl-of').innerHTML = '<option value="">— Sélectionner un OF —</option>' +
-      active.map(o => `<option value="${o.id}">${o.numero} · ${o.produit_nom} (${o.statut.replace('_',' ')})</option>`).join('');
-  }
+  // Cache active OFs for picker
+  _planningOFs = (ofs||[]).filter(o => !['COMPLETED','CANCELLED'].includes(o.statut));
+
+  // Populate machine & operator selects
   if (machines && $('pl-machine')) $('pl-machine').innerHTML = '<option value="">— Aucune —</option>' +
     machines.filter(m=>m.statut==='OPERATIONNELLE').map(m=>`<option value="${m.id}">${m.nom} · ${m.atelier}</option>`).join('');
   if (ops && $('pl-op')) $('pl-op').innerHTML = '<option value="">— Aucun —</option>' +
     ops.map(o=>`<option value="${o.id}">${o.prenom} ${o.nom}${o.specialite?' ('+o.specialite+')':''}</option>`).join('');
 
   // Simple Gantt-style visual
-  const ganttHTML = rows.length === 0 ? '<div style="color:var(--muted);font-size:12px;padding:1rem">Aucun créneau planifié.</div>' : (() => {
-    const dates = rows.flatMap(r=>[new Date(r.date_debut),new Date(r.date_fin)]);
-    const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
-    const totalMs = maxD-minD || 1;
-    const colors=['#D42B2B','#3B82F6','#22C55E','#F59E0B','#8B5CF6','#EC4899'];
-    return `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem">Gantt — Planning Production</div>
+  const ganttHTML = rows.length === 0
+    ? '<div style="color:var(--muted);font-size:12px;padding:1rem">Aucun créneau planifié.</div>'
+    : (() => {
+      const dates = rows.flatMap(r=>[new Date(r.date_debut),new Date(r.date_fin)]);
+      const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
+      const totalMs = maxD-minD || 1;
+      const colors=['#D42B2B','#3B82F6','#22C55E','#F59E0B','#8B5CF6','#EC4899'];
+      return `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem">Gantt — Planning Production</div>
     <div style="position:relative;min-height:${rows.length*36+20}px">
       ${rows.map((r,i)=>{
         const left=((new Date(r.date_debut)-minD)/totalMs*100).toFixed(1);
@@ -39,7 +56,7 @@ async function loadPlanning(){
         </div>`;
       }).join('')}
     </div>`;
-  })();
+    })();
   $('planning-gantt').innerHTML=`<div style="padding:1rem">${ganttHTML}</div>`;
 
   const sMap={PLANIFIE:'b-draft',EN_COURS:'b-inprogress',TERMINE:'b-completed',ANNULE:'b-cancelled'};
@@ -58,14 +75,113 @@ async function loadPlanning(){
   `;
 }
 
+// ── OF Card Picker ────────────────────────────────────────
+
+function openOFPicker(){
+  $('of-picker-search').value = '';
+  renderOFCards(_planningOFs);
+  $('modal-of-picker').classList.add('open');
+  setTimeout(()=>$('of-picker-search').focus(), 100);
+}
+
+function closeOFPicker(){
+  $('modal-of-picker').classList.remove('open');
+}
+
+function filterOFPicker(q){
+  const s = q.toLowerCase();
+  const filtered = _planningOFs.filter(o =>
+    (o.numero||'').toLowerCase().includes(s) ||
+    (o.produit_nom||'').toLowerCase().includes(s) ||
+    (o.client_nom||'').toLowerCase().includes(s) ||
+    (o.statut||'').toLowerCase().includes(s) ||
+    (o.atelier||'').toLowerCase().includes(s)
+  );
+  renderOFCards(filtered);
+}
+
+function renderOFCards(ofs){
+  if(!ofs.length){
+    $('of-picker-list').innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:12px">
+        Aucun OF correspondant.
+      </div>`;
+    return;
+  }
+  $('of-picker-list').innerHTML = ofs.map(o => {
+    const color = STATUS_COLOR[o.statut] || '#6B7280';
+    const label = STATUS_LABEL[o.statut] || o.statut;
+    const deadline = o.date_echeance ? o.date_echeance.slice(0,10) : '—';
+    const progress = o.progression != null ? Math.round(o.progression) : null;
+    const clientSafe = (o.client_nom||'').replace(/'/g,"\\'");
+    const produitSafe = (o.produit_nom||'').replace(/'/g,"\\'");
+    return `
+    <div onclick="selectOF(${o.id}, '${o.numero}', '${produitSafe}', '${clientSafe}', '${label}')"
+      style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;cursor:pointer;
+             transition:border-color .15s,transform .1s;position:relative;overflow:hidden"
+      onmouseenter="this.style.borderColor='${color}';this.style.transform='translateY(-1px)'"
+      onmouseleave="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+      <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:${color};border-radius:8px 0 0 8px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;padding-left:.25rem">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:${color}">${o.numero}</span>
+        <span style="font-size:9px;font-family:'IBM Plex Mono',monospace;background:${color}22;color:${color};
+                     border:1px solid ${color}44;border-radius:4px;padding:1px 6px;letter-spacing:1px">${label}</span>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:.25rem;padding-left:.25rem;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${o.produit_nom||'—'}
+      </div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;padding-left:.25rem;margin-top:.4rem">
+        ${o.client_nom ? `<span style="font-size:10px;color:var(--muted)">👤 ${o.client_nom}</span>` : ''}
+        <span style="font-size:10px;color:var(--muted)">📦 Qté: <b style="color:var(--text)">${o.quantite}</b></span>
+        <span style="font-size:10px;color:var(--muted)">📅 ${deadline}</span>
+        ${o.atelier ? `<span style="font-size:10px;color:var(--muted)">🏭 ${o.atelier}</span>` : ''}
+      </div>
+      ${progress !== null ? `
+      <div style="margin-top:.6rem;padding-left:.25rem">
+        <div style="background:var(--border);border-radius:4px;height:4px;overflow:hidden">
+          <div style="width:${progress}%;height:100%;background:${color};border-radius:4px"></div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px;font-family:'IBM Plex Mono',monospace">${progress}% complété</div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectOF(id, numero, produit, client, statut){
+  $('pl-of').value = id;
+  const clientPart = client ? ` · ${client}` : '';
+  $('pl-of-label').textContent = `${numero} — ${produit}${clientPart}`;
+  $('pl-of-label').style.color = 'var(--text)';
+  $('pl-of-label').style.fontWeight = '500';
+  closeOFPicker();
+}
+
+// ── Save / Delete ─────────────────────────────────────────
+
+function openPlanningModal(){
+  $('pl-of').value = '';
+  $('pl-of-label').textContent = '— Cliquer pour sélectionner un OF —';
+  $('pl-of-label').style.color = 'var(--muted)';
+  $('pl-of-label').style.fontWeight = 'normal';
+  if($('pl-machine')) $('pl-machine').value = '';
+  if($('pl-op'))      $('pl-op').value = '';
+  $('pl-debut').value = '';
+  $('pl-fin').value   = '';
+  $('pl-notes').value = '';
+  openModal('modal-planning');
+}
+
 async function savePlanning(){
+  const ofId = parseInt($('pl-of').value);
+  if(!ofId){ alert('Veuillez sélectionner un OF.'); return; }
   const data={
-    of_id:parseInt($('pl-of').value),
-    machine_id:$('pl-machine').value?parseInt($('pl-machine').value):null,
-    operateur_id:$('pl-op').value?parseInt($('pl-op').value):null,
-    date_debut:$('pl-debut').value.replace('T',' '),
-    date_fin:$('pl-fin').value.replace('T',' '),
-    notes:$('pl-notes').value||null
+    of_id:        ofId,
+    machine_id:   $('pl-machine').value  ? parseInt($('pl-machine').value)  : null,
+    operateur_id: $('pl-op').value       ? parseInt($('pl-op').value)       : null,
+    date_debut:   $('pl-debut').value.replace('T',' '),
+    date_fin:     $('pl-fin').value.replace('T',' '),
+    notes:        $('pl-notes').value||null
   };
   if(!data.date_debut||!data.date_fin){alert('Dates obligatoires');return;}
   const r=await api('/api/planning','POST',data);
