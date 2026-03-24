@@ -45,8 +45,16 @@ def draw_header(c, W, H, colors, title, numero, now):
     RED=colors.HexColor("#D42B2B"); DARK=colors.HexColor("#111"); WHITE=colors.white
     c.setFillColor(DARK); c.rect(0,H-38*2.835,W,38*2.835,fill=1,stroke=0)
     c.setFillColor(RED);  c.rect(0,H-40*2.835,W,2*2.835,fill=1,stroke=0)
-    c.setFillColor(RED);  c.roundRect(15*2.835,H-32*2.835,22*2.835,22*2.835,4,fill=1,stroke=0)
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold",18); c.drawCentredString(26*2.835,H-24*2.835,"S")
+    # ── Company logo ──────────────────────────────────────
+    import os as _os
+    _logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "static", "logo.png")
+    if _os.path.exists(_logo_path):
+        from reportlab.lib.utils import ImageReader as _IR
+        c.drawImage(_IR(_logo_path), 12*2.835, H-33*2.835, 24*2.835, 24*2.835,
+                    preserveAspectRatio=True, mask='auto')
+    else:
+        c.setFillColor(RED); c.roundRect(15*2.835,H-32*2.835,22*2.835,22*2.835,4,fill=1,stroke=0)
+        c.setFillColor(WHITE); c.setFont("Helvetica-Bold",18); c.drawCentredString(26*2.835,H-24*2.835,"S")
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold",20); c.drawString(42*2.835,H-22*2.835,"SOFEM")
     c.setFillColor(RED); c.setFont("Helvetica",7); c.drawString(42*2.835,H-27*2.835,"PARTENAIRE DES BRIQUETERIES")
     c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica",7)

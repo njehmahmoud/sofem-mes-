@@ -90,9 +90,16 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.setFillColor(DARK); c.rect(0, H-35*mm, W, 35*mm, fill=1, stroke=0)
     c.setFillColor(RED);  c.rect(0, H-37*mm, W, 2*mm, fill=1, stroke=0)
     # Logo box
-    c.setFillColor(RED); c.roundRect(12*mm, H-30*mm, 20*mm, 20*mm, 3, fill=1, stroke=0)
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(22*mm, H-22*mm, "S")
+    import os as _os
+    _logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "static", "logo.png")
+    if _os.path.exists(_logo_path):
+        from reportlab.lib.utils import ImageReader as _IR
+        c.drawImage(_IR(_logo_path), 10*mm, H-31*mm, 22*mm, 22*mm,
+                    preserveAspectRatio=True, mask='auto')
+    else:
+        c.setFillColor(RED); c.roundRect(12*mm, H-30*mm, 20*mm, 20*mm, 3, fill=1, stroke=0)
+        c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(22*mm, H-22*mm, "S")
     # Company name
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 18)
     c.drawString(36*mm, H-20*mm, S_NOM)
