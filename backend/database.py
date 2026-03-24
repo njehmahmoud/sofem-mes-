@@ -138,8 +138,8 @@ def next_document_number(conn, prefix: str, table: str, col: str) -> str:
 
 
 def temp_numero() -> str:
-    """A UUID-based placeholder that satisfies UNIQUE constraints during insert."""
-    return f"__TMP_{uuid.uuid4().hex}__"
+    """Short unique placeholder (12 chars) — fits VARCHAR(20+) UNIQUE columns."""
+    return f"TMP-{uuid.uuid4().hex[:8]}"
 
 
 def finalize_number(conn, table: str, col: str, row_id: int, prefix: str, year: int, pad: int = 4) -> str:
