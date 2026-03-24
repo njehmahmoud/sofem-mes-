@@ -116,21 +116,19 @@ function navigate(page) {
   document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
   $(`page-${page}`)?.classList.add('active');
   if (window.pageLoaders?.[page]) window.pageLoaders[page]();
-  // Persist active page across refreshes
+  // Persist active page — use replaceState to avoid scroll jump / hashchange trigger
   try { localStorage.setItem('sofem_last_page', page); } catch(e) {}
-  location.hash = page;
+  try { history.replaceState(null, '', ' '); } catch(e) {}
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigate(item.dataset.p));
 });
 
-// On load: restore last active page from hash or localStorage
+// On load: restore last active page from localStorage only (no hash reading)
 window.addEventListener('DOMContentLoaded', () => {
-  const hash = location.hash?.replace('#', '');
   const saved = localStorage.getItem('sofem_last_page');
-  const restore = hash || saved || 'dashboard';
-  // Only restore if the page element exists (valid page)
+  const restore = saved || 'dashboard';
   if ($(`page-${restore}`)) {
     navigate(restore);
   } else {
