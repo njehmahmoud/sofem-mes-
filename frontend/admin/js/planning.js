@@ -196,14 +196,23 @@ function updatePlDuration(){
 
 // ── Open / Reset modal ────────────────────────────────────
 
+// ── Open / Reset modal ────────────────────────────────────
+
 function openPlanningModal(){
   $('pl-of').value             = '';
   $('pl-of-label').textContent = '— Cliquer pour sélectionner un OF —';
   $('pl-of-label').style.color      = 'var(--muted)';
   $('pl-of-label').style.fontWeight = 'normal';
   $('pl-of-info').style.display     = 'none';
-  if($('pl-machine')) $('pl-machine').value = '';
-  if($('pl-op'))      $('pl-op').value      = '';
+
+  // Add checks for element existence before accessing style
+  if ($('pl-machine')) {
+    $('pl-machine').value = '';
+  }
+  if ($('pl-op')) {
+    $('pl-op').value      = '';
+  }
+
   $('pl-debut').value = '';
   $('pl-fin').value   = '';
   $('pl-duration').style.display = 'none';
