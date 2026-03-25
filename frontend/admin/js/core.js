@@ -16,7 +16,15 @@ async function api(path, method = 'GET', body = null) {
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
-  if (res.status === 401) { logout(); return null; }
+  if (res.status === 401) {
+    // Only hard-redirect on 401 if we're on the admin page (not a background API call)
+    // Debounce: don't redirect if we already are redirecting
+    if (!window._redirecting) {
+      window._redirecting = true;
+      setTimeout(() => { logout(); }, 300);
+    }
+    return null;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || 'Erreur serveur');

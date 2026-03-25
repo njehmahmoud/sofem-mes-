@@ -66,10 +66,15 @@ function initNotifications() {
 
 async function refreshNotifications() {
   try {
-    _notifData = await api('/api/notifications') || _notifData;
-    renderNotifBell();
-    if (_notifOpen) renderNotifPanel();
-  } catch(e) {}
+    const result = await api('/api/notifications');
+    if (result) {
+      _notifData = result;
+      renderNotifBell();
+      if (_notifOpen) renderNotifPanel();
+    }
+  } catch(e) {
+    // Silent fail — don't crash the whole app if notifications endpoint is unavailable
+  }
 }
 
 function renderNotifBell() {
@@ -160,5 +165,8 @@ function closeNotifPanel() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(initNotifications, 300);
+  // Only init if we have a valid token — avoid 401 redirect on startup
+  if (localStorage.getItem('token')) {
+    setTimeout(initNotifications, 800);
+  }
 });
