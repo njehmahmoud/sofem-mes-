@@ -109,6 +109,8 @@ function getUserInfo() {
 
 // Nav router
 let currentPage = 'dashboard';
+let _navigating = false; // guard against hashchange loop
+
 function navigate(page) {
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -116,13 +118,22 @@ function navigate(page) {
   document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
   $(`page-${page}`)?.classList.add('active');
   if (window.pageLoaders?.[page]) window.pageLoaders[page]();
-  // Persist active page across refreshes
+  // Persist active page — use history.replaceState to avoid hashchange event
   try { localStorage.setItem('sofem_last_page', page); } catch(e) {}
-  location.hash = page;
+  _navigating = true;
+  history.replaceState(null, '', '#' + page);
+  _navigating = false;
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigate(item.dataset.p));
+});
+
+// Handle browser back/forward without re-triggering full navigate loop
+window.addEventListener('hashchange', () => {
+  if (_navigating) return; // we set the hash ourselves — ignore
+  const page = location.hash.replace('#', '');
+  if (page && $(`page-${page}`)) navigate(page);
 });
 
 // On load: restore last active page from hash or localStorage
@@ -130,7 +141,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const hash = location.hash?.replace('#', '');
   const saved = localStorage.getItem('sofem_last_page');
   const restore = hash || saved || 'dashboard';
-  // Only restore if the page element exists (valid page)
   if ($(`page-${restore}`)) {
     navigate(restore);
   } else {
