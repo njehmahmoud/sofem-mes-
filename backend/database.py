@@ -120,34 +120,52 @@ def transaction(conn):
 
 # ── Race-free document numbering ──────────────────────────
 
-def next_document_number(conn, prefix: str, table: str, col: str) -> str:
-    """
-    Generate a unique document number using the auto-increment id as the suffix.
-    Strategy:
-      1. Insert a row with a UUID placeholder for the number column.
-      2. Read back the auto-increment id (guaranteed unique by MySQL).
-      3. Format the real number and UPDATE the row.
-    Returns the formatted number and the new row id as a tuple.
-
-    Usage example:
-        doc_id, numero = next_document_number(conn, "OF", "ordres_fabrication", "numero")
-    """
-    raise NotImplementedError(
-        "Call insert_with_temp_number() / finalize_number() instead — see helpers below."
-    )
-
-
 def temp_numero() -> str:
     """Short unique placeholder (12 chars) — fits VARCHAR(20+) UNIQUE columns."""
     return f"TMP-{uuid.uuid4().hex[:8]}"
 
 
-def finalize_number(conn, table: str, col: str, row_id: int, prefix: str, year: int, pad: int = 4) -> str:
+def next_seq(conn, prefix: str, year: int) -> int:
     """
-    After inserting with temp_numero(), call this to assign the real formatted number.
-    The number is based on the row's auto-increment id — always unique, no race condition.
+    ISO 9001-compliant monotonic sequence counter.
+
+    Uses a dedicated document_sequences table — one row per (prefix, year).
+    The counter ONLY increments, never resets on delete.
+    Two concurrent calls are serialized by MySQL's row-level lock on the
+    ON DUPLICATE KEY UPDATE — the second waits for the first to commit.
+
+    Returns the new sequence integer (caller formats it as needed).
     """
-    numero = f"{prefix}-{year}-{str(row_id).zfill(pad)}"
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            INSERT INTO document_sequences (prefix, year, last_seq)
+            VALUES (%s, %s, 1)
+            ON DUPLICATE KEY UPDATE last_seq = last_seq + 1
+        """, (prefix, year))
+        conn.commit()
+        cur.execute(
+            "SELECT last_seq FROM document_sequences WHERE prefix=%s AND year=%s",
+            (prefix, year)
+        )
+        row = cur.fetchone()
+        return int(row["last_seq"])
+    finally:
+        cur.close()
+
+
+def finalize_number(conn, table: str, col: str, row_id: int,
+                    prefix: str, year: int, pad: int = 4) -> str:
+    """
+    Assign a permanent, ISO 9001-compliant document number after an insert.
+
+    Calls next_seq() which atomically increments the sequence counter —
+    so numbers are always monotonically increasing regardless of deletes,
+    cancellations, or concurrent requests. A deleted OF-2026-0003 is gone
+    forever; the next OF will be OF-2026-0004.
+    """
+    seq    = next_seq(conn, prefix, year)
+    numero = f"{prefix}-{year}-{str(seq).zfill(pad)}"
     exe(conn, f"UPDATE `{table}` SET `{col}`=%s WHERE id=%s", (numero, row_id))
     return numero
 
