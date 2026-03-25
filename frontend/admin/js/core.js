@@ -6,25 +6,45 @@ const API = window.location.origin;
 // DOM helper
 const $ = id => document.getElementById(id);
 
-// API helper
+// ── API helper ────────────────────────────────────────────
 async function api(path, method = 'GET', body = null) {
   const token = localStorage.getItem('token');
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
   };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(API + path, opts);
+
+  let res;
+  try {
+    res = await fetch(API + path, opts);
+  } catch (networkErr) {
+    // Network error (server down, CORS, etc.) — don't redirect, just throw
+    throw new Error('Erreur réseau — vérifier la connexion');
+  }
+
   if (res.status === 401) {
-    // Only hard-redirect on 401 if we're on the admin page (not a background API call)
-    // Debounce: don't redirect if we already are redirecting
-    if (!window._redirecting) {
+    // Only redirect if this call is NOT marked as a background/silent call
+    // AND we haven't already started a redirect
+    if (!window._redirecting && !opts._silent) {
       window._redirecting = true;
-      setTimeout(() => { logout(); }, 300);
+      // Use a longer debounce and confirm token really is gone before redirecting
+      setTimeout(() => {
+        if (!localStorage.getItem('token')) {
+          // Already logged out
+          window._redirecting = false;
+          window.location.href = '/login';
+          return;
+        }
+        logout();
+      }, 500);
     }
     return null;
   }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || 'Erreur serveur');
@@ -33,7 +53,22 @@ async function api(path, method = 'GET', body = null) {
   return res.json();
 }
 
-// Toast
+// Silent API call — never triggers 401 redirect (for background polling)
+async function apiSilent(path) {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────
 function toast(msg, type = 'ok') {
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
@@ -43,7 +78,7 @@ function toast(msg, type = 'ok') {
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-// Modal
+// ── Modal ─────────────────────────────────────────────────
 function openModal(id) { $(id)?.classList.add('open'); }
 function closeModal(id) { $(id)?.classList.remove('open'); }
 
@@ -51,7 +86,7 @@ document.addEventListener('click', e => {
   if (e.target.classList.contains('overlay')) e.target.classList.remove('open');
 });
 
-// Empty / loading table placeholders
+// ── Table placeholders ────────────────────────────────────
 function empty(cols, msg = 'Aucune donnée') {
   return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:2rem;font-family:'IBM Plex Mono',monospace;font-size:11px">— ${msg} —</td></tr>`;
 }
@@ -59,7 +94,7 @@ function loading(cols) {
   return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:2rem;font-family:'IBM Plex Mono',monospace;font-size:11px">Chargement...</td></tr>`;
 }
 
-// Badge helpers
+// ── Badge helpers ─────────────────────────────────────────
 function pBadge(p) {
   const m = { URGENT:'b-urgent', HIGH:'b-high', NORMAL:'b-normal', LOW:'b-low' };
   const l = { URGENT:'URGENT', HIGH:'HAUTE', NORMAL:'NORMAL', LOW:'BASSE' };
@@ -79,7 +114,7 @@ function dateTd(d) {
   return `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;${c}">${d}</span>`;
 }
 
-// Operations dots (dynamic)
+// Operations dots
 function dots(ops) {
   if (!ops?.length) return '—';
   const cls = { COMPLETED: 'done', IN_PROGRESS: 'in_progress', PENDING: 'pending' };
@@ -89,7 +124,7 @@ function dots(ops) {
   }).join('')}</div>`;
 }
 
-// Clock
+// ── Clock ─────────────────────────────────────────────────
 function tick() {
   const el = $('clock');
   if (el) el.textContent = new Date().toLocaleString('fr-FR', {
@@ -99,25 +134,36 @@ function tick() {
 }
 tick(); setInterval(tick, 1000);
 
-// Logout
+// ── Logout ────────────────────────────────────────────────
 function logout() {
-  localStorage.clear();
+  // Clear all stored state
+  localStorage.removeItem('token');
+  localStorage.removeItem('nom');
+  localStorage.removeItem('prenom');
+  localStorage.removeItem('role');
+  localStorage.removeItem('operateur_id');
+  localStorage.removeItem('sofem_last_page');
+  // Reset redirect flag so next login works cleanly
+  window._redirecting = false;
+  // Redirect to login page
   window.location.href = '/';
 }
 
-// User info from token
+// ── User info from token ──────────────────────────────────
 function getUserInfo() {
   try {
     const token = localStorage.getItem('token');
     if (!token) return {};
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload;
+    const parts = token.split('.');
+    if (parts.length !== 3) return {};
+    const payload = JSON.parse(atob(parts[1]));
+    return payload || {};
   } catch { return {}; }
 }
 
-// Nav router
+// ── Nav router ────────────────────────────────────────────
 let currentPage = 'dashboard';
-let _navigating = false; // guard against hashchange loop
+let _navigating = false;
 
 function navigate(page) {
   currentPage = page;
@@ -126,7 +172,6 @@ function navigate(page) {
   document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
   $(`page-${page}`)?.classList.add('active');
   if (window.pageLoaders?.[page]) window.pageLoaders[page]();
-  // Persist active page — use history.replaceState to avoid hashchange event
   try { localStorage.setItem('sofem_last_page', page); } catch(e) {}
   _navigating = true;
   history.replaceState(null, '', '#' + page);
@@ -137,9 +182,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigate(item.dataset.p));
 });
 
-// Handle browser back/forward without re-triggering full navigate loop
+// Handle browser back/forward
 window.addEventListener('hashchange', () => {
-  if (_navigating) return; // we set the hash ourselves — ignore
+  if (_navigating) return;
   const page = location.hash.replace('#', '');
   if (page && $(`page-${page}`)) navigate(page);
 });
@@ -156,7 +201,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// PDF URL helper — appends token for authenticated PDF endpoints
+// ── PDF URL helper ────────────────────────────────────────
 function pdfUrl(path) {
   const token = localStorage.getItem('token') || '';
   const sep = path.includes('?') ? '&' : '?';
@@ -184,7 +229,6 @@ function quickThemeToggle() {
     const saved = JSON.parse(localStorage.getItem('sofem_display') || '{}');
     const theme = saved.theme || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-    // Update button icon after DOM loads
     window.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('theme-toggle-btn');
       if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';

@@ -1,13 +1,15 @@
 // ── notifications.js — SOFEM MES v6.0 ────────────────────
+// IMPORTANT: Uses apiSilent() for background polling — never triggers logout on 401
 let _notifData  = { total: 0, danger: 0, warning: 0, info: 0, items: [] };
 let _notifOpen  = false;
 let _notifTimer = null;
 
 // ── Init: inject bell into topbar ────────────────────────
 function initNotifications() {
-  // Insert bell button before logout
+  if (document.getElementById('notif-bell')) return;
+
   const logout = document.querySelector('.btn-logout');
-  if (!logout || document.getElementById('notif-bell')) return;
+  if (!logout) return;
 
   const bell = document.createElement('div');
   bell.id = 'notif-bell';
@@ -21,10 +23,9 @@ function initNotifications() {
       <span id="notif-count" style="display:none;position:absolute;top:-5px;right:-5px;
         background:var(--red);color:#fff;border-radius:50%;font-size:8px;
         font-family:'IBM Plex Mono',monospace;font-weight:700;
-        min-width:16px;height:16px;display:none;align-items:center;
+        min-width:16px;height:16px;align-items:center;
         justify-content:center;padding:0 3px;line-height:16px">0</span>
     </button>
-    <!-- Panel -->
     <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 8px);right:0;
       width:360px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
       z-index:500;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4)">
@@ -51,29 +52,28 @@ function initNotifications() {
   `;
   logout.parentNode.insertBefore(bell, logout);
 
-  // Close on outside click
   document.addEventListener('click', e => {
-    if (_notifOpen && !document.getElementById('notif-bell').contains(e.target)) {
+    if (_notifOpen && !document.getElementById('notif-bell')?.contains(e.target)) {
       closeNotifPanel();
     }
   });
 
-  // First fetch
   refreshNotifications();
-  // Auto-refresh every 60s
-  _notifTimer = setInterval(refreshNotifications, 60000);
+  // Poll every 90 seconds using silent fetch — never triggers global 401 redirect
+  _notifTimer = setInterval(refreshNotifications, 90000);
 }
 
 async function refreshNotifications() {
+  // ⚠️ Use apiSilent — background polling must NEVER trigger the global logout/redirect
   try {
-    const result = await api('/api/notifications');
+    const result = await apiSilent('/api/notifications');
     if (result) {
       _notifData = result;
       renderNotifBell();
       if (_notifOpen) renderNotifPanel();
     }
-  } catch(e) {
-    // Silent fail — don't crash the whole app if notifications endpoint is unavailable
+  } catch {
+    // Silent fail — notifications are non-critical
   }
 }
 
@@ -165,8 +165,8 @@ function closeNotifPanel() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Only init if we have a valid token — avoid 401 redirect on startup
   if (localStorage.getItem('token')) {
-    setTimeout(initNotifications, 800);
+    // Delay init slightly so core.js DOMContentLoaded runs first
+    setTimeout(initNotifications, 1000);
   }
 });

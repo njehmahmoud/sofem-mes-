@@ -1719,12 +1719,48 @@ window.pageLoaders = {
   'activity':              loadActivity,
   'operator-dashboard':    loadOperatorDashboard,
 };
-const _u = getUserInfo();
-if (!localStorage.getItem('token')) window.location.href = '/';
-if ($('user-info'))  $('user-info').textContent  = _u.prenom ? `${_u.prenom} ${_u.nom}` : 'Admin';
-if ($('role-badge')) $('role-badge').textContent = _u.role || 'ADMIN';
-if (_u.role === 'MANAGER') { const el=$('admin-only-nav'); if(el) el.style.display='none'; }
-// Navigation handled by core.js DOMContentLoaded (restores last page from hash/localStorage)
+
+// ── Auth guard — runs once on page load ───────────────────
+(function authGuard() {
+  const token = localStorage.getItem('token');
+
+  // No token at all → go to login
+  if (!token) {
+    window.location.href = '/';
+    return;
+  }
+
+  // Validate token structure (don't redirect on invalid, just show error)
+  let payload = {};
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      payload = JSON.parse(atob(parts[1]));
+    }
+  } catch(e) {
+    // Malformed token — clear and redirect
+    localStorage.removeItem('token');
+    window.location.href = '/';
+    return;
+  }
+
+  // Check expiry if present
+  if (payload.exp && Date.now() / 1000 > payload.exp) {
+    localStorage.removeItem('token');
+    window.location.href = '/';
+    return;
+  }
+
+  // Apply user info to UI
+  const uInfo = payload;
+  if ($('user-info'))  $('user-info').textContent  = uInfo.prenom ? `${uInfo.prenom} ${uInfo.nom}` : 'Admin';
+  if ($('role-badge')) $('role-badge').textContent = uInfo.role || 'ADMIN';
+  if (uInfo.role === 'MANAGER') {
+    const el = $('admin-only-nav');
+    if (el) el.style.display = 'none';
+  }
+})();
 </script>
+
 </body>
 </html>
