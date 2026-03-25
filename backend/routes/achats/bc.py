@@ -94,6 +94,36 @@ def get_bc(bc_id: int, db=Depends(get_db)):
     return bc
 
 
+
+@router.put("/{bc_id}/statut", dependencies=[Depends(require_manager_or_admin)])
+def update_bc_statut(bc_id: int, statut: str, db=Depends(get_db)):
+    valid = ("DRAFT", "ENVOYE", "CONFIRME", "RECU", "ANNULE")
+    if statut not in valid:
+        raise HTTPException(400, f"Statut invalide. Valeurs: {', '.join(valid)}")
+    bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (bc_id,), one=True)
+    if not bc:
+        raise HTTPException(404, "BC non trouvé")
+    exe(db, "UPDATE bons_commande SET statut=%s WHERE id=%s", (statut, bc_id))
+    return {"message": f"BC statut mis à jour → {statut}"}
+
+
+@router.put("/{bc_id}", dependencies=[Depends(require_manager_or_admin)])
+def update_bc(bc_id: int, data: dict, db=Depends(get_db)):
+    bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (bc_id,), one=True)
+    if not bc:
+        raise HTTPException(404, "BC non trouvé")
+    allowed = {"statut", "fournisseur", "notes"}
+    fields, params = [], []
+    for k, v in data.items():
+        if k in allowed:
+            fields.append(f"{k}=%s"); params.append(v)
+    if not fields:
+        raise HTTPException(400, "Aucun champ valide")
+    params.append(bc_id)
+    exe(db, f"UPDATE bons_commande SET {','.join(fields)} WHERE id=%s", params)
+    return {"message": "BC mis à jour"}
+
+
 @router.get("/{bc_id}/pdf")
 def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depends(get_db)):
     bc = q(db, """
