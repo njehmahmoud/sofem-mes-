@@ -354,43 +354,56 @@ def update_of(of_id: int, data: OFUpdate,
                 "statut": "APPROVED",
             })
 
+    # ── Build the field update list ──────────────────────────
     fields, params = [], []
     for f, v in data.dict(exclude_none=True).items():
         fields.append(f"{f}=%s")
         params.append(v)
-    if fields:
-        params.append(of_id)
-        exe(db, f"UPDATE ordres_fabrication SET {','.join(fields)} WHERE id=%s", params)
 
-    # ── Stock auto-deduction — wrapped in explicit transaction ────
-    if data.statut == "IN_PROGRESS" and of["statut"] == "APPROVED":
-        try:
-            cfg = get_all_settings(db)
-            if cfg.get("stock_deduction_auto", True):
-                bom = q(db, """
-                    SELECT ob.materiau_id, ob.quantite_requise,
-                           m.nom, m.unite, m.stock_actuel
-                    FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
-                    WHERE ob.of_id = %s
-                """, (of_id,))
-                begin(db)
-                for b in bom:
-                    avant  = float(b["stock_actuel"])
-                    deduct = float(b["quantite_requise"])
-                    apres  = max(0.0, avant - deduct)
-                    exe_raw(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
-                            (apres, b["materiau_id"]))
-                    exe_raw(db, """
-                        INSERT INTO mouvements_stock
-                          (materiau_id, of_id, type, quantite, stock_avant, stock_apres, motif)
-                        VALUES (%s, %s, 'SORTIE', %s, %s, %s, %s)
-                    """, (b["materiau_id"], of_id, deduct, avant, apres,
-                          f"Consommation production OF #{of_id}"))
-                commit(db)
-        except Exception as e:
-            rollback(db)
-            logger.error(f"Stock deduction transaction failed for OF {of_id}: {e}")
-            raise HTTPException(500, "Erreur lors de la déduction stock — OF mis à jour, stock non déduit.")
+    deduct_stock = (
+        data.statut == "IN_PROGRESS"
+        and of["statut"] == "APPROVED"
+        and get_all_settings(db).get("stock_deduction_auto", True)
+    )
+
+    if deduct_stock:
+        # Read BOM BEFORE opening the transaction (reads are fine outside)
+        bom = q(db, """
+            SELECT ob.materiau_id, ob.quantite_requise,
+                   m.nom, m.unite, m.stock_actuel
+            FROM of_bom ob JOIN materiaux m ON m.id = ob.materiau_id
+            WHERE ob.of_id = %s
+        """, (of_id,))
+
+    # ── Single transaction: status update + stock deduction ──
+    try:
+        db.start_transaction()
+
+        # 1. Update OF fields
+        if fields:
+            update_params = params + [of_id]
+            exe_raw(db, "UPDATE ordres_fabrication SET " + ",".join(fields) + " WHERE id=%s", update_params)
+
+        # 2. Deduct stock atomically with the status change
+        if deduct_stock:
+            for b in bom:
+                avant  = float(b["stock_actuel"])
+                deduct = float(b["quantite_requise"])
+                apres  = max(0.0, avant - deduct)
+                exe_raw(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
+                        (apres, b["materiau_id"]))
+                exe_raw(db, """
+                    INSERT INTO mouvements_stock
+                      (materiau_id, of_id, type, quantite, stock_avant, stock_apres, motif)
+                    VALUES (%s, %s, 'SORTIE', %s, %s, %s, %s)
+                """, (b["materiau_id"], of_id, deduct, avant, apres,
+                      f"Consommation production OF #{of_id}"))
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"update_of transaction failed for OF {of_id}: {e}")
+        raise HTTPException(500, f"Erreur lors de la mise à jour de l'OF: {e}")
 
     return {"message": "OF mis à jour"}
 
