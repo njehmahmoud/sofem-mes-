@@ -377,7 +377,7 @@ def update_of(of_id: int, data: OFUpdate,
 
     # ── Single transaction: status update + stock deduction ──
     try:
-        db.start_transaction()
+        begin(db)
 
         # 1. Update OF fields
         if fields:
@@ -399,9 +399,9 @@ def update_of(of_id: int, data: OFUpdate,
                 """, (b["materiau_id"], of_id, deduct, avant, apres,
                       f"Consommation production OF #{of_id}"))
 
-        db.commit()
+        commit(db)
     except Exception as e:
-        db.rollback()
+        rollback(db)
         logger.error(f"update_of transaction failed for OF {of_id}: {e}")
         raise HTTPException(500, f"Erreur lors de la mise à jour de l'OF: {e}")
 
