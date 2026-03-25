@@ -158,6 +158,11 @@ def exe_raw(conn, sql, params=None):
 # ── Explicit transaction helpers ──────────────────────────
 
 def begin(conn):
+    """Start an explicit transaction — silently closes any pending implicit one first."""
+    try:
+        conn.commit()          # flush any implicit transaction left open by q() calls
+    except Exception:
+        pass
     conn.start_transaction()
 
 def commit(conn):
