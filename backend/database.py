@@ -35,14 +35,75 @@ def init_db():
     try:
         pool = pooling.MySQLConnectionPool(
             pool_name="sofem_pool",
-            pool_size=15,               # was 5 — too small for concurrent requests
+            pool_size=15,
             pool_reset_session=True,
             **DB_CONFIG
         )
         logger.info("✅ MySQL connected (pool_size=15)")
+        _ensure_sequences_table()
     except Error as e:
         logger.error(f"❌ MySQL error: {e}")
         pool = None
+
+
+def _ensure_sequences_table():
+    """
+    Create document_sequences if it doesn't exist, then seed it from
+    existing document numbers so the counter is always ahead of what's
+    already in the database. Safe to call on every startup — fully idempotent.
+    """
+    try:
+        conn = pool.get_connection()
+    except Exception as e:
+        logger.error(f"_ensure_sequences_table: could not get connection: {e}")
+        return
+    try:
+        cur = conn.cursor()
+
+        # 1. Create the table if missing
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS document_sequences (
+                prefix   VARCHAR(20)  NOT NULL,
+                year     SMALLINT     NOT NULL,
+                last_seq INT UNSIGNED NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+                            ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (prefix, year)
+            ) ENGINE=InnoDB
+        """)
+        conn.commit()
+
+        # 2. Seed each prefix from existing data so counter never goes backwards
+        seeds = [
+            ("OF", "ordres_fabrication", "numero"),
+            ("DA", "demandes_achat",     "da_numero"),
+            ("BC", "bons_commande",      "bc_numero"),
+            ("BR", "bons_reception",     "br_numero"),
+            ("BL", "bons_livraison",     "bl_numero"),
+        ]
+        for prefix, table, col in seeds:
+            try:
+                cur.execute(f"""
+                    INSERT INTO document_sequences (prefix, year, last_seq)
+                    SELECT %s, YEAR(created_at),
+                           MAX(CAST(SUBSTRING_INDEX(`{col}`, '-', -1) AS UNSIGNED))
+                    FROM `{table}`
+                    WHERE `{col}` REGEXP %s
+                    GROUP BY YEAR(created_at)
+                    ON DUPLICATE KEY UPDATE
+                        last_seq = GREATEST(last_seq, VALUES(last_seq))
+                """, (prefix, f'^{prefix}-[0-9]{{4}}-[0-9]+$'))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Seed skipped for {prefix} ({table}): {e}")
+
+        logger.info("✅ document_sequences ready")
+    except Exception as e:
+        logger.error(f"_ensure_sequences_table failed: {e}")
+    finally:
+        try: cur.close()
+        except: pass
+        conn.close()
 
 
 def get_db():
