@@ -105,19 +105,6 @@ def update_bc_statut(bc_id: int, statut: str, db=Depends(get_db)):
         raise HTTPException(404, "BC non trouvé")
     exe(db, "UPDATE bons_commande SET statut=%s WHERE id=%s", (statut, bc_id))
     return {"message": f"BC statut mis à jour → {statut}"}
-# ── cancel ────────────────────────────────────────────────
-
-@router.put("/{bc_id}/cancel")
-def cancel_da(bc_id: int, data: CancelRequest,
-              user=Depends(get_current_user), db=Depends(get_db)):
-    from database import cancel_document
-    numero = cancel_document(
-        db, "demandes_achat", "id", "bc_numero",
-        bc_id, user["id"],
-        f"{user.get('prenom','')} {user.get('nom','')}",
-        data.reason, "BC"
-    )
-    return {"message": f"BC {numero} annulée"}
 
 @router.put("/{bc_id}", dependencies=[Depends(require_manager_or_admin)])
 def update_bc(bc_id: int, data: dict, db=Depends(get_db)):
