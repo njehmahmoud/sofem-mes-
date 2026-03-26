@@ -7,7 +7,7 @@ Fixes:
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from database import get_db, q, exe, serialize, temp_numero, finalize_number
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import DACreate, DAUpdate
 from datetime import datetime

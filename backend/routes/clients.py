@@ -1,7 +1,7 @@
 """SOFEM MES v6.0 — Clients (Commit 01 — ISO 9001 soft delete)"""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from database import get_db, q, exe, serialize, soft_delete, log_activity
+from database import get_db, q, exe, serialize, soft_delete, log_activity, cancel_document
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import ClientCreate, ClientUpdate, DeactivateRequest
 
