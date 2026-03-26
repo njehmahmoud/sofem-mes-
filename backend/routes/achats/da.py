@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document
-from auth import require_any_role, require_manager_or_admin, get_current_user
+from auth import require_any_role, require_manager_or_admin, get_current_user, get_pdf_user
 from models import DACreate, DAUpdate, CancelRequest
 from datetime import datetime
 import io
