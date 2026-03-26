@@ -538,3 +538,21 @@ def update_of_full(of_id: int, data: OFCreate,
         """, (of_id, b.materiau_id, b.quantite_requise))
 
     return {"message": "OF mis à jour complet"}
+# ── cancel OF ──────────────────────────────────────────
+@router.put("/{of_id}/cancel")
+def cancel_of(of_id: int, data: CancelRequest,
+              user=Depends(get_current_user), db=Depends(get_db)):
+    from database import cancel_document
+    numero = cancel_document(
+        db, "ordres_fabrication", "id", "numero",
+        of_id, user["id"],
+        f"{user.get('prenom','')} {user.get('nom','')}",
+        data.reason, "OF"
+    )
+    # Also cancel associated BL
+    exe(db, """
+        UPDATE bons_livraison
+        SET statut='CANCELLED', cancel_reason=%s, cancelled_by=%s, cancelled_at=NOW()
+        WHERE of_id=%s AND statut != 'LIVRE'
+    """, (f"OF {numero} annulé: {data.reason}", user["id"], of_id))
+    return {"message": f"OF {numero} annulé", "numero": numero}

@@ -131,7 +131,19 @@ def create_da(data: DACreate, db=Depends(get_db)):
           data.quantite, data.unite, data.urgence, data.notes, data.demandeur_id))
     numero = finalize_number(db, "demandes_achat", "da_numero", da_id, "DA", year)
     return {"id": da_id, "da_numero": numero, "message": "Demande créée"}
+# ── cancel ────────────────────────────────────────────────
 
+@router.put("/{da_id}/cancel")
+def cancel_da(da_id: int, data: CancelRequest,
+              user=Depends(get_current_user), db=Depends(get_db)):
+    from database import cancel_document
+    numero = cancel_document(
+        db, "demandes_achat", "id", "da_numero",
+        da_id, user["id"],
+        f"{user.get('prenom','')} {user.get('nom','')}",
+        data.reason, "DA"
+    )
+    return {"message": f"DA {numero} annulée"}
 
 # ── UPDATE ────────────────────────────────────────────────
 

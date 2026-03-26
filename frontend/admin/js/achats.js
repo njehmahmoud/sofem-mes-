@@ -62,7 +62,8 @@ async function loadDA() {
           <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
           ${da.statut==='PENDING'
             ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')" title="Approuver">✓</button>
-               <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>`
+               <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>
+               <button class="fbtn" style="color:var(--accent)" onclick="cancelDA(${da.id},'${da.da_numero}','${da.description}','${da.statut}')"> ⚙ Annuler </button>`
             : ''}
         </td>
       </tr>`;

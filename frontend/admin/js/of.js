@@ -54,7 +54,10 @@ function renderOrders(ofs) {
         <button class="btn btn-ghost btn-sm" style="color:#f59e0b" onclick="openQuickTime(${of.id},'${of.numero}')" title="Modifier temps opérations">⏱</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--blue)" onclick="duplicateOF(${of.id})" title="Dupliquer">⎘</button>
         ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
-          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteOF(${of.id})" title="Supprimer">🗑</button>` : ''}
+          ${of.statut !== 'CANCELLED' && of.statut !== 'COMPLETED' ?
+  `         <button class="btn btn-ghost btn-sm" style="color:var(--accent)"
+                onclick="cancelOF(${of.id},'${of.numero}','${of.produit_nom}','${of.statut}')"
+                title="Annuler">✕ Annuler</button>` : ''}
       </div></td>
     </tr>`;
   }).join('');
@@ -436,13 +439,6 @@ async function saveEditOF() {
   } catch(e) { toast(e.message, 'err'); }
 }
 
-async function deleteOF(id) {
-  if (!confirm('Supprimer définitivement cet OF et tous ses documents liés ?')) return;
-  try {
-    await api(`/api/of/${id}`, 'DELETE');
-    toast('OF supprimé ✓'); loadOrders();
-  } catch(e) { toast(e.message, 'err'); }
-}
 
 
 // ── OF DUPLICATION ────────────────────────────────────────
