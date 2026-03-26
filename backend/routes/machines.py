@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from database import get_db, q, exe, serialize, soft_delete, log_activity, cancel_document
 from auth import require_any_role, require_manager_or_admin, get_current_user
-from models import MachineCreate, MachineUpdate, DeactivateRequest
+from models import MachineCreate, MachineUpdate, DeactivateRequest, CancelRequest
 
 router = APIRouter(prefix="/api/machines", tags=["machines"])
 

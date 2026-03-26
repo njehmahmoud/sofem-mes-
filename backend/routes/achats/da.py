@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document
 from auth import require_any_role, require_manager_or_admin, get_current_user
-from models import DACreate, DAUpdate
+from models import DACreate, DAUpdate, CancelRequest
 from datetime import datetime
 import io
 
@@ -136,7 +136,6 @@ def create_da(data: DACreate, db=Depends(get_db)):
 @router.put("/{da_id}/cancel")
 def cancel_da(da_id: int, data: CancelRequest,
               user=Depends(get_current_user), db=Depends(get_db)):
-    from database import cancel_document
     numero = cancel_document(
         db, "demandes_achat", "id", "da_numero",
         da_id, user["id"],

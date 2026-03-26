@@ -5,6 +5,7 @@ Commit 01 — Now reads from activity_log_v2 with full ISO 9001 audit data
 from fastapi import APIRouter, Depends
 from database import get_db, q, exe, serialize, log_activity
 from auth import require_any_role, require_manager_or_admin, get_current_user
+from models import OFCreate, OFUpdate, BOMOverride, CancelRequest
 from datetime import datetime
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
