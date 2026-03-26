@@ -1,6 +1,6 @@
-"""SOFEM MES v6.0 — Pydantic Models"""
+"""SOFEM MES v6.0 — Pydantic Models (Commit 01 — ISO 9001 soft delete)"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional, List
 from datetime import date
 
@@ -15,6 +15,45 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     nom: Optional[str]=None; prenom: Optional[str]=None
     role: Optional[str]=None; pin: Optional[str]=None; actif: Optional[bool]=None
+
+# ── ISO 9001 — CANCELLATION & AUDIT ───────────────────────
+
+class CancelRequest(BaseModel):
+    """
+    Used for every cancellation endpoint.
+    Reason is mandatory — ISO 9001 Clause 7.5 requires traceability.
+    """
+    reason: str
+
+    @validator('reason')
+    def reason_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Une raison est obligatoire pour annuler un document')
+        if len(v.strip()) < 5:
+            raise ValueError('La raison doit contenir au moins 5 caractères')
+        return v.strip()
+
+
+class DeactivateRequest(BaseModel):
+    """
+    Used for soft-deleting master data records (materiaux, machines, etc.)
+    """
+    reason: Optional[str] = None
+
+
+class ActivityLogEntry(BaseModel):
+    """Read model for activity log entries."""
+    id: int
+    created_at: str
+    user_id: Optional[int]
+    user_nom: Optional[str]
+    action: str
+    entity_type: str
+    entity_id: Optional[int]
+    entity_numero: Optional[str]
+    reason: Optional[str]
+    detail: Optional[str]
+
 
 # ── CLIENTS ───────────────────────────────────────────────
 class ClientCreate(BaseModel):

@@ -1,16 +1,16 @@
 """
-SOFEM MES v6.0 — Database (patched)
-Fixes:
-  - Cursor leaks: every cursor is now closed in finally block
-  - Pool size raised to 15 + overflow error surfaced as 503
-  - exe() no longer silently swallows errors
-  - Added exe_raw() + begin/commit/rollback for explicit transactions
-  - Added next_document_number() for race-free numbering
+SOFEM MES v6.0 — Database (Commit 01 — ISO 9001 soft delete + audit trail)
+Changes:
+  - Added log_activity() helper — logs every action to activity_log_v2
+  - Added soft_delete() helper — never physically deletes, always logs
+  - Added cancel_document() helper — cancels a document with reason
+  - _ensure_sequences_table now also ensures activity_log_v2 exists
 SMARTMOVE · Mahmoud Njeh
 """
 
 import os
 import uuid
+import json
 import logging
 from contextlib import contextmanager
 from mysql.connector import pooling, Error, PoolError
@@ -41,6 +41,7 @@ def init_db():
         )
         logger.info("✅ MySQL connected (pool_size=15)")
         _ensure_sequences_table()
+        _ensure_activity_log()
     except Error as e:
         logger.error(f"❌ MySQL error: {e}")
         pool = None
@@ -106,6 +107,53 @@ def _ensure_sequences_table():
         conn.close()
 
 
+def _ensure_activity_log():
+    """
+    Create activity_log_v2 if it doesn't exist.
+    This is the ISO 9001 compliant audit trail table.
+    Safe to call on every startup — fully idempotent.
+    """
+    try:
+        conn = pool.get_connection()
+    except Exception as e:
+        logger.error(f"_ensure_activity_log: could not get connection: {e}")
+        return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS activity_log_v2 (
+                id              BIGINT        NOT NULL AUTO_INCREMENT,
+                created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                user_id         INT           NULL,
+                user_nom        VARCHAR(100)  NULL,
+                action          VARCHAR(50)   NOT NULL,
+                entity_type     VARCHAR(50)   NOT NULL,
+                entity_id       INT           NULL,
+                entity_numero   VARCHAR(50)   NULL,
+                old_value       JSON          NULL,
+                new_value       JSON          NULL,
+                reason          VARCHAR(500)  NULL,
+                ip_address      VARCHAR(45)   NULL,
+                session_token   VARCHAR(20)   NULL,
+                detail          TEXT          NULL,
+                PRIMARY KEY (id),
+                INDEX idx_entity  (entity_type, entity_id),
+                INDEX idx_user    (user_id),
+                INDEX idx_action  (action),
+                INDEX idx_created (created_at),
+                INDEX idx_numero  (entity_numero)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        conn.commit()
+        logger.info("✅ activity_log_v2 ready")
+    except Exception as e:
+        logger.error(f"_ensure_activity_log failed: {e}")
+    finally:
+        try: cur.close()
+        except: pass
+        conn.close()
+
+
 def get_db():
     """FastAPI dependency — yields a pooled connection, always releases it."""
     from fastapi import HTTPException
@@ -158,6 +206,11 @@ def exe_raw(conn, sql, params=None):
 # ── Explicit transaction helpers ──────────────────────────
 
 def begin(conn):
+    """Start an explicit transaction — silently closes any pending implicit one first."""
+    try:
+        conn.commit()          # flush any implicit transaction left open by q() calls
+    except Exception:
+        pass
     conn.start_transaction()
 
 def commit(conn):
@@ -221,13 +274,173 @@ def finalize_number(conn, table: str, col: str, row_id: int,
     Assign a permanent, ISO 9001-compliant document number after an insert.
 
     Calls next_seq() which atomically increments the sequence counter —
-    so numbers are always monotonically increasing regardless of deletes,
-    cancellations, or concurrent requests. A deleted OF-2026-0003 is gone
-    forever; the next OF will be OF-2026-0004.
+    so numbers are always monotonically increasing regardless of cancellations
+    or concurrent requests. A cancelled OF-2026-0003 is gone forever;
+    the next OF will be OF-2026-0004.
     """
     seq    = next_seq(conn, prefix, year)
     numero = f"{prefix}-{year}-{str(seq).zfill(pad)}"
     exe(conn, f"UPDATE `{table}` SET `{col}`=%s WHERE id=%s", (numero, row_id))
+    return numero
+
+
+# ── ISO 9001 Audit Trail ──────────────────────────────────
+
+def log_activity(
+    conn,
+    action:        str,
+    entity_type:   str,
+    entity_id:     int   = None,
+    entity_numero: str   = None,
+    user_id:       int   = None,
+    user_nom:      str   = None,
+    old_value:     dict  = None,
+    new_value:     dict  = None,
+    reason:        str   = None,
+    detail:        str   = None,
+    ip_address:    str   = None,
+    session_token: str   = None,
+):
+    """
+    ISO 9001 compliant audit trail entry.
+
+    Call this for every significant action:
+    - CREATE, UPDATE, CANCEL, APPROVE, REJECT, PRINT, LOGIN, LOGOUT
+
+    Never raises — logging failure must not break the main operation.
+    old_value and new_value are stored as JSON for full diff history.
+    """
+    try:
+        old_json = json.dumps(serialize(old_value), ensure_ascii=False) if old_value else None
+        new_json = json.dumps(serialize(new_value), ensure_ascii=False) if new_value else None
+
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                INSERT INTO activity_log_v2
+                    (action, entity_type, entity_id, entity_numero,
+                     user_id, user_nom, old_value, new_value,
+                     reason, detail, ip_address, session_token)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                action, entity_type, entity_id, entity_numero,
+                user_id, user_nom, old_json, new_json,
+                reason, detail, ip_address, session_token
+            ))
+            conn.commit()
+        finally:
+            cur.close()
+    except Exception as e:
+        logger.warning(f"log_activity failed (non-fatal): {e}")
+
+
+def soft_delete(
+    conn,
+    table:         str,
+    record_id:     int,
+    user_id:       int   = None,
+    user_nom:      str   = None,
+    reason:        str   = None,
+    entity_type:   str   = None,
+    entity_numero: str   = None,
+):
+    """
+    ISO 9001 soft delete — sets actif=FALSE, never physically deletes.
+
+    Use for: materiaux, machines, operateurs, clients, fournisseurs, users.
+    Logs the deactivation to activity_log_v2 automatically.
+    """
+    now = datetime.now()
+
+    # Check if table has deactivated_by column
+    try:
+        exe(conn, f"""
+            UPDATE `{table}`
+            SET actif = FALSE,
+                deactivated_by = %s,
+                deactivated_at = %s,
+                deactivation_reason = %s
+            WHERE id = %s
+        """, (user_id, now, reason, record_id))
+    except Exception:
+        # Fallback: table only has actif column
+        exe(conn, f"UPDATE `{table}` SET actif = FALSE WHERE id = %s", (record_id,))
+
+    # Log the action
+    log_activity(
+        conn,
+        action        = "DEACTIVATE",
+        entity_type   = entity_type or table.upper(),
+        entity_id     = record_id,
+        entity_numero = entity_numero,
+        user_id       = user_id,
+        user_nom      = user_nom,
+        reason        = reason,
+        detail        = f"Record {record_id} in {table} deactivated"
+    )
+
+
+def cancel_document(
+    conn,
+    table:         str,
+    id_col:        str,
+    numero_col:    str,
+    record_id:     int,
+    user_id:       int,
+    user_nom:      str,
+    reason:        str,
+    entity_type:   str,
+    old_statut:    str   = None,
+):
+    """
+    ISO 9001 document cancellation.
+
+    Use for: ordres_fabrication, bons_livraison, demandes_achat,
+             bons_commande, ordres_maintenance.
+
+    - Sets statut = 'CANCELLED'
+    - Records who cancelled, when, and why
+    - Logs full audit trail
+    - Reason is MANDATORY — raises ValueError if empty
+    """
+    if not reason or not reason.strip():
+        raise ValueError("Une raison est obligatoire pour annuler un document (ISO 9001)")
+
+    now = datetime.now()
+
+    # Get current state for audit trail
+    row = q(conn, f"SELECT * FROM `{table}` WHERE `{id_col}` = %s", (record_id,), one=True)
+    if not row:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Document introuvable")
+
+    numero = row.get(numero_col, str(record_id))
+
+    # Update document
+    exe(conn, f"""
+        UPDATE `{table}`
+        SET statut       = 'CANCELLED',
+            cancel_reason = %s,
+            cancelled_by  = %s,
+            cancelled_at  = %s
+        WHERE `{id_col}` = %s
+    """, (reason.strip(), user_id, now, record_id))
+
+    # Full audit log
+    log_activity(
+        conn,
+        action        = "CANCEL",
+        entity_type   = entity_type,
+        entity_id     = record_id,
+        entity_numero = numero,
+        user_id       = user_id,
+        user_nom      = user_nom,
+        old_value     = {"statut": old_statut or row.get("statut")},
+        new_value     = {"statut": "CANCELLED"},
+        reason        = reason.strip(),
+        detail        = f"{entity_type} {numero} annulé par {user_nom}"
+    )
+
     return numero
 
 
