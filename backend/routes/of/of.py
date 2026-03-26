@@ -15,9 +15,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number
-from auth import require_any_role, require_manager_or_admin
-from models import OFCreate, OFUpdate, BOMOverride
+from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number, cancel_document
+from auth import require_any_role, require_manager_or_admin, get_current_user
+from models import OFCreate, OFUpdate, BOMOverride, CancelRequest
 from routes.settings import get_all_settings
 
 logger = logging.getLogger("sofem-of")
@@ -542,7 +542,6 @@ def update_of_full(of_id: int, data: OFCreate,
 @router.put("/{of_id}/cancel")
 def cancel_of(of_id: int, data: CancelRequest,
               user=Depends(get_current_user), db=Depends(get_db)):
-    from database import cancel_document
     numero = cancel_document(
         db, "ordres_fabrication", "id", "numero",
         of_id, user["id"],
