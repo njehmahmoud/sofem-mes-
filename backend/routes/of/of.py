@@ -15,10 +15,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number, cancel_document
+from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number, cancel_documentm log_activity
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import OFCreate, OFUpdate, BOMOverride, CancelRequest
 from routes.settings import get_all_settings
+
 
 logger = logging.getLogger("sofem-of")
 
@@ -477,17 +478,109 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
     return {"id": new_id, "numero": numero, "message": f"OF dupliqué → {numero}"}
 
 
-# ── DELETE OF ─────────────────────────────────────────────
+# ── Cancel OF ─────────────────────────────────────────────
+
 
 @router.delete("/{of_id}", dependencies=[Depends(require_manager_or_admin)])
-def delete_of(of_id: int, db=Depends(get_db)):
-    of = q(db, "SELECT statut FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+def cancel_of(
+        of_id: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        db=Depends(get_db)
+):
+    """
+    ISO 9001 — OFs are NEVER physically deleted.
+    This endpoint cancels the OF with a mandatory reason.
+    The DB trigger also prevents any direct DELETE at database level.
+    """
+    # Get current OF
+    of = q(db, """
+        SELECT o.*, p.nom produit_nom
+        FROM ordres_fabrication o
+        JOIN produits p ON p.id = o.produit_id
+        WHERE o.id = %s
+    """, (of_id,), one=True)
+
     if not of:
-        raise HTTPException(404, "OF non trouvé")
-    if of["statut"] in ("COMPLETED", "CANCELLED"):
-        raise HTTPException(400, f"Impossible de supprimer un OF {of['statut']}")
-    exe(db, "DELETE FROM ordres_fabrication WHERE id=%s", (of_id,))
-    return {"message": "OF supprimé"}
+        raise HTTPException(404, "OF introuvable")
+
+    if of["statut"] == "CANCELLED":
+        raise HTTPException(400, "OF déjà annulé")
+
+    if of["statut"] == "COMPLETED":
+        raise HTTPException(400,
+                            "Un OF terminé ne peut pas être annulé. "
+                            "Créer une Non-Conformité si nécessaire.")
+
+    user_id = user.get("id")
+    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+
+    # Cancel the OF
+    numero = cancel_document(
+        db,
+        table="ordres_fabrication",
+        id_col="id",
+        numero_col="numero",
+        record_id=of_id,
+        user_id=user_id,
+        user_nom=user_nom,
+        reason=data.reason,
+        entity_type="OF",
+        old_statut=of["statut"],
+    )
+
+    # Also cancel the associated BL if not yet delivered
+    try:
+        exe(db, """
+            UPDATE bons_livraison
+            SET statut       = 'CANCELLED',
+                cancel_reason = %s,
+                cancelled_by  = %s,
+                cancelled_at  = NOW()
+            WHERE of_id = %s
+              AND statut NOT IN ('LIVRE', 'CANCELLED')
+        """, (
+            f"OF {numero} annulé — {data.reason}",
+            user_id,
+            of_id
+        ))
+        log_activity(
+            db,
+            action="CANCEL",
+            entity_type="BL",
+            entity_id=of_id,
+            user_id=user_id,
+            user_nom=user_nom,
+            reason=f"OF associé {numero} annulé",
+            detail=f"BL annulé automatiquement suite à annulation OF {numero}"
+        )
+    except Exception as e:
+        # Non-fatal — OF is already cancelled
+        import logging
+        logging.getLogger("sofem-of").warning(f"BL cancel failed: {e}")
+
+    return {
+        "message": f"OF {numero} annulé",
+        "numero": numero,
+        "reason": data.reason
+    }
+
+
+# ── ADD THIS ALSO — PUT cancel endpoint (used by frontend) ─
+# The frontend uses PUT not DELETE for the cancel modal
+
+@router.put("/{of_id}/cancel")
+def cancel_of_put(
+        of_id: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        db=Depends(get_db)
+):
+    """
+    PUT version of cancel — called by the frontend cancel modal.
+    Delegates to the same logic.
+    """
+    return cancel_of(of_id, data, user, db)
 
 
 # ── FULL EDIT ─────────────────────────────────────────────

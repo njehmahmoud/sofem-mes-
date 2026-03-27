@@ -27,9 +27,25 @@ function renderOrders(ofs) {
         ? '<span class="badge b-approved" style="font-size:7px">ÉMIS</span>'
         : '';
 
-    return `<tr>
+    // Safe strings for onclick attributes
+    const prodNomSafe   = (of.produit_nom||'').replace(/'/g,"\\'");
+    const ofNumeroSafe  = (of.numero||'').replace(/'/g,"\\'");
+    const ofStatutSafe  = (of.statut||'').replace(/'/g,"\\'");
+
+    // Cancelled row style
+    const rowStyle = of.statut === 'CANCELLED'
+      ? 'opacity:.5;text-decoration:line-through'
+      : '';
+
+    return `<tr style="${rowStyle}">
       <td><input type="checkbox" class="of-chk" value="${of.id}" ${of.statut!=='COMPLETED'?'disabled':''}></td>
-      <td><span class="of-num" style="cursor:pointer" onclick="openOFDetail(${of.id})" title="Voir détail">${of.numero}</span></td>
+      <td>
+        <span class="of-num" style="cursor:pointer" onclick="openOFDetail(${of.id})" title="Voir détail">${of.numero}</span>
+        ${of.statut==='CANCELLED'
+          ? `<div style="font-size:8px;color:var(--red);font-family:'IBM Plex Mono',monospace;margin-top:2px"
+               title="${of.cancel_reason||''}">✕ ANNULÉ</div>`
+          : ''}
+      </td>
       <td>${blBadge} ${blStatut}</td>
       <td>${of.produit_nom}</td>
       <td style="font-size:11px;color:var(--muted)">${of.client_nom||'—'}</td>
@@ -40,24 +56,40 @@ function renderOrders(ofs) {
       <td style="font-size:10px;color:var(--muted)">${of.chef_projet_nom||'—'}</td>
       <td>${dateTd(of.date_echeance)}</td>
       <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+
         ${of.statut==='COMPLETED' ? `
           <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px"
-            onclick="window.open(pdfUrl('/api/of/${of.id}/fiche'),'_blank')" title="Fiche Résumé Production">📋 Fiche</button>
+            onclick="window.open(pdfUrl('/api/of/${of.id}/fiche'),'_blank')"
+            title="Fiche Résumé Production">📋 Fiche</button>
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
-            onclick="printFacture(${of.id},'client')" title="Facture client">📄 Facture</button>
+            onclick="printFacture(${of.id},'client')"
+            title="Facture client">📄 Facture</button>
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
-            onclick="printFacture(${of.id},'interne')" title="Rapport interne">🖨️ Interne</button>` : ''}
+            onclick="printFacture(${of.id},'interne')"
+            title="Rapport interne">🖨️ Interne</button>` : ''}
+
         ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
-          <button class="btn btn-ghost btn-sm" onclick="advanceOFSafe(${of.id},'${of.statut}')">▶</button>` : ''}
+          <button class="btn btn-ghost btn-sm"
+            onclick="advanceOFSafe(${of.id},'${ofStatutSafe}')">▶</button>` : ''}
+
         ${of.statut!=='CANCELLED'&&of.statut!=='COMPLETED' ? `
-          <button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="openEditOF(${of.id})" title="Modifier">✎</button>` : ''}
-        <button class="btn btn-ghost btn-sm" style="color:#f59e0b" onclick="openQuickTime(${of.id},'${of.numero}')" title="Modifier temps opérations">⏱</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--blue)" onclick="duplicateOF(${of.id})" title="Dupliquer">⎘</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent)"
+            onclick="openEditOF(${of.id})"
+            title="Modifier">✎</button>` : ''}
+
+        <button class="btn btn-ghost btn-sm" style="color:#f59e0b"
+          onclick="openQuickTime(${of.id},'${ofNumeroSafe}')"
+          title="Modifier temps opérations">⏱</button>
+
+        <button class="btn btn-ghost btn-sm" style="color:var(--blue)"
+          onclick="duplicateOF(${of.id})"
+          title="Dupliquer">⎘</button>
+
         ${of.statut!=='COMPLETED'&&of.statut!=='CANCELLED' ? `
-          ${of.statut !== 'CANCELLED' && of.statut !== 'COMPLETED' ?
-  `         <button class="btn btn-ghost btn-sm" style="color:var(--accent)"
-                onclick="cancelOF(${of.id},'${of.numero}','${of.produit_nom}','${of.statut}')"
-                title="Annuler">✕ Annuler</button>` : ''}
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)"
+            onclick="cancelOF(${of.id},'${ofNumeroSafe}','${prodNomSafe}','${ofStatutSafe}')"
+            title="Annuler cet OF">✕</button>` : ''}
+
       </div></td>
     </tr>`;
   }).join('');
@@ -86,6 +118,15 @@ function filterOF(btn, val, field = '') {
   loadOrders();
 }
 
+function clearSearch() {
+  $('search-of').value = '';
+  $('search-date').value = '';
+  ofFilter = { statut:'', priorite:'' };
+  document.querySelectorAll('#page-orders .fbtn').forEach(b => b.classList.remove('active'));
+  document.querySelector('#page-orders .fbtn')?.classList.add('active');
+  loadOrders();
+}
+
 async function advanceOF(id, current) {
   const next = {DRAFT:'APPROVED', APPROVED:'IN_PROGRESS', IN_PROGRESS:'COMPLETED'}[current];
   if (!next) return;
@@ -93,12 +134,7 @@ async function advanceOF(id, current) {
     await api(`/api/of/${id}`, 'PUT', {statut: next});
     toast(`OF → ${next} ✓`); loadOrders();
   } catch(e) {
-    // Handle stock insufficient (409)
     if (e.message && e.message.includes('Stock insuffisant')) {
-      try {
-        const detail = JSON.parse(e.message.replace('Stock insuffisant — ','').replace(/.*?(\{.*\}).*/s,'$1'));
-      } catch {}
-      // Re-fetch the error detail from the response
       showStockWarning(e);
     } else {
       toast(e.message, 'err');
@@ -124,11 +160,9 @@ async function advanceOFSafe(id, current) {
     const err = await res.json();
     const detail = err.detail || err;
     if (detail.statut === 'APPROVED') {
-      // OF was approved but stock insufficient — show warning and refresh
       loadOrders();
     }
     if (detail.pending_das > 0) {
-      // Trying to start but DAs still pending
       showStockWarning([], [], detail.pending_das);
     } else {
       showStockWarning(detail.shortfalls || [], detail.das_crees || []);
@@ -144,7 +178,7 @@ function showStockWarning(shortfalls, das, pendingDas) {
     $('stock-warning-list').innerHTML = `
       <div style="padding:.75rem;background:rgba(245,166,35,0.1);border:1px solid var(--accent);border-radius:6px;font-size:12px">
         ⏳ <strong>${pendingDas} Demande(s) d'Achat</strong> sont en attente de réception.<br>
-        <span style="color:var(--muted);font-size:11px">Le démarrage sera possible une fois les matériaux réceptionnés et le stock mis à jour.</span>
+        <span style="color:var(--muted);font-size:11px">Le démarrage sera possible une fois les matériaux réceptionnés.</span>
       </div>`;
     $('stock-das-created').style.display = 'none';
   } else {
@@ -167,14 +201,55 @@ function showStockWarning(shortfalls, das, pendingDas) {
   openModal('m-stock-warning');
 }
 
-async function cancelOF(id) {
-  if (!confirm('Annuler cet OF ?')) return;
-  try { await api(`/api/of/${id}`, 'DELETE'); toast('OF annulé'); loadOrders(); }
-  catch(e) { toast(e.message,'err'); }
+// ── ISO 9001 — Cancel OF (replaces deleteOF) ─────────────
+function cancelOF(ofId, ofNumero, produitNom, statut) {
+  if (statut === 'COMPLETED') {
+    toast('Un OF terminé ne peut pas être annulé', 'err');
+    return;
+  }
+  openCancelModal({
+    id:       ofId,
+    numero:   ofNumero,
+    endpoint: `/api/of/${ofId}/cancel`,
+    callback: 'loadOrders',
+    info: `
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+        <span>📋 <strong style="color:var(--text)">${ofNumero}</strong></span>
+        <span>📦 Produit: <strong style="color:var(--text)">${produitNom}</strong></span>
+        <span>📊 Statut actuel: <strong style="color:var(--accent)">${statut}</strong></span>
+      </div>
+      <div style="margin-top:.5rem;font-size:10px;color:var(--red)">
+        ⚠ Le BL associé sera également annulé.
+      </div>`
+  });
 }
 
 function printFacture(ofId, type='interne') {
   window.open(pdfUrl(`/api/facture/${ofId}?type=${type}`), '_blank');
+}
+
+function selectAllCompleted() {
+  document.querySelectorAll('.of-chk:not([disabled])').forEach(chk => chk.checked = true);
+}
+
+function toggleAllChk(master) {
+  document.querySelectorAll('.of-chk:not([disabled])').forEach(chk => chk.checked = master.checked);
+}
+
+async function printGroupedInvoice() {
+  const ids = [...document.querySelectorAll('.of-chk:checked')].map(c => parseInt(c.value));
+  if (!ids.length) { toast('Sélectionner au moins un OF terminé', 'err'); return; }
+  try {
+    const url = pdfUrl('/api/facture/grouped');
+    const res = await fetch(url.replace('?token=',''), {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+localStorage.getItem('token') },
+      body: JSON.stringify({ of_ids: ids })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
+    const blob = await res.blob();
+    window.open(URL.createObjectURL(blob), '_blank');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 // ── OF CREATION MODAL ────────────────────────────────────
@@ -189,13 +264,11 @@ async function openOFModal() {
   ]);
   window._opTypesCache = opTypes || [];
 
-  // Populate selects
   $('of-prod').innerHTML = (prods||[]).map(p =>
     `<option value="${p.id}" data-bom='${JSON.stringify(p.bom||[]).replace(/'/g,"&apos;")}'>${p.code} — ${p.nom}</option>`
   ).join('');
   $('of-client').innerHTML = '<option value="">— Aucun client —</option>' +
     (clients||[]).map(c => `<option value="${c.id}">${c.nom} (${c.code})</option>`).join('');
-  // Chef Atelier = only CHEF_ATELIER role
   $('of-chef').innerHTML = '<option value="">— Non assigné —</option>' +
     (chefs?.length
       ? chefs.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('')
@@ -206,7 +279,6 @@ async function openOFModal() {
     if (lbl) lbl.innerHTML = 'Chef Atelier <span style="color:var(--accent);font-size:9px">⚠ Définir rôle dans Opérateurs</span>';
   }
 
-  // Store for use in operations builder
   window._opsCache = ops || [];
   window._machinesCache = machines || [];
 
@@ -255,30 +327,23 @@ function renderOFOpsBuilder() {
   const types  = window._opTypesCache || [];
 
   $('of-ops-list').innerHTML = _ofOpsData.length === 0
-    ? '<div style="color:var(--muted);font-size:11px;padding:.5rem">— Cliquez + Ajouter pour créer une op&eacute;ration —</div>'
+    ? '<div style="color:var(--muted);font-size:11px;padding:.5rem">— Cliquez + Ajouter pour créer une opération —</div>'
     : _ofOpsData.map((op, i) => `
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem;margin-bottom:.4rem">
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
           <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--red);font-weight:600;min-width:16px">${i+1}</span>
-
-          <!-- Operation type dropdown -->
           <select onchange="_ofOpsData[${i}].operation_nom=this.value"
             style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px">
             <option value="">— Sélectionner opération —</option>
             ${types.map(t => `<option value="${t.nom}" ${op.operation_nom===t.nom?'selected':''}>${t.nom}</option>`).join('')}
           </select>
-
-          <!-- Machine dropdown -->
           <select onchange="_ofOpsData[${i}].machine_id=this.value?parseInt(this.value):null"
             style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px">
             <option value="">— Machine —</option>
             ${mach.map(m => `<option value="${m.id}" ${op.machine_id===m.id?'selected':''}>${m.nom}</option>`).join('')}
           </select>
-
           <button class="fbtn" style="color:var(--red)" onclick="_ofOpsData.splice(${i},1);renderOFOpsBuilder()">✕</button>
         </div>
-
-        <!-- Operators for this operation -->
         <div style="font-size:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Opérateurs</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
           ${ops.map(o => {
@@ -343,7 +408,6 @@ async function createOF() {
   } catch(e) { toast(e.message, 'err'); }
 }
 
-
 // ── OF EDIT ───────────────────────────────────────────────
 async function openEditOF(ofId) {
   const of = await api(`/api/of/${ofId}`);
@@ -355,9 +419,8 @@ async function openEditOF(ofId) {
     api('/api/operation-types')
   ]);
   window._opTypesCache = opTypes || [];
-
-  // Pre-fill OF modal with existing data
   window._editingOfId = ofId;
+
   $('of-prod').innerHTML = (prods||[]).map(p =>
     `<option value="${p.id}" data-bom='${JSON.stringify(p.bom||[]).replace(/'/g,"&apos;")}'
      ${p.id===of.produit_id?'selected':''}>${p.code} — ${p.nom}</option>`).join('');
@@ -368,31 +431,27 @@ async function openEditOF(ofId) {
       ? chefs.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('')
       : ops.map(o => `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`).join('')
     );
-  $('of-prio').value = of.priorite || 'NORMAL';
-  $('of-atelier').value = of.atelier || 'Atelier A';
-  $('of-date').value = of.date_echeance || '';
-  $('of-plan').value = of.plan_numero || '';
-  $('of-notes').value = of.notes || '';
-  $('of-st-nom').value = of.sous_traitant || '';
-  $('of-st-op').value = of.sous_traitant_op || '';
-  $('of-st-cout').value = of.sous_traitant_cout || 0;
-  $('of-qte').value = of.quantite || 1;
+  $('of-prio').value        = of.priorite || 'NORMAL';
+  $('of-atelier').value     = of.atelier || 'Atelier A';
+  $('of-date').value        = of.date_echeance || '';
+  $('of-plan').value        = of.plan_numero || '';
+  $('of-notes').value       = of.notes || '';
+  $('of-st-nom').value      = of.sous_traitant || '';
+  $('of-st-op').value       = of.sous_traitant_op || '';
+  $('of-st-cout').value     = of.sous_traitant_cout || 0;
+  $('of-qte').value         = of.quantite || 1;
 
-  // Pre-fill operations
-  window._opsCache = ops || [];
+  window._opsCache     = ops || [];
   window._machinesCache = machines || [];
   _ofOpsData = (of.operations||[]).map(op => ({
-    operation_nom: op.operation_nom,
-    machine_id: op.machine_id || null,
-    operateur_ids: [] // will be loaded separately
+    operation_nom:  op.operation_nom,
+    machine_id:     op.machine_id || null,
+    operateur_ids:  []
   }));
   renderOFOpsBuilder();
-
-  // Pre-fill BOM
   _ofBomData = (of.bom||[]).map(b => ({...b, quantite_override: null}));
   onOFQtyChange();
 
-  // Change modal button
   const btn = document.querySelector('#m-of .modal-f .btn:last-child');
   if (btn) { btn.textContent = '💾 Enregistrer modifications'; btn.onclick = saveEditOF; }
   const title = document.querySelector('#m-of .modal-title');
@@ -429,7 +488,6 @@ async function saveEditOF() {
     await api(`/api/of/${id}/full`, 'PUT', payload);
     toast('OF modifié ✓');
     closeModal('m-of');
-    // Reset modal to create mode
     window._editingOfId = null;
     const btn = document.querySelector('#m-of .modal-f .btn:last-child');
     if (btn) { btn.textContent = 'Créer OF + BL'; btn.onclick = createOF; }
@@ -439,12 +497,9 @@ async function saveEditOF() {
   } catch(e) { toast(e.message, 'err'); }
 }
 
-
-
 // ── OF DUPLICATION ────────────────────────────────────────
 async function duplicateOF(id) {
   try {
-    // Load OF data + dropdowns in parallel
     const [of, clients, ops] = await Promise.all([
       api(`/api/of/${id}`),
       api('/api/clients'),
@@ -452,34 +507,27 @@ async function duplicateOF(id) {
     ]);
     if (!of) return;
 
-    // Store source ID
-    $('dup-src-id').value       = id;
+    $('dup-src-id').value        = id;
     $('dup-src-num').textContent = of.numero;
-
-    // Pre-fill fields from source OF
     $('dup-qte').value   = of.quantite || 1;
     $('dup-prio').value  = of.priorite || 'NORMAL';
     $('dup-plan').value  = of.plan_numero || '';
     $('dup-notes').value = '';
 
-    // Default new date = today + 30 days
     const d = new Date();
     d.setDate(d.getDate() + 30);
     $('dup-date').value = d.toISOString().split('T')[0];
 
-    // Populate client dropdown
     $('dup-client').innerHTML = '<option value="">— Aucun —</option>' +
       (clients||[]).map(c =>
         `<option value="${c.id}" ${c.id===of.client_id?'selected':''}>${c.nom}</option>`
       ).join('');
 
-    // Populate chef dropdown
     $('dup-chef').innerHTML = '<option value="">— Non assigné —</option>' +
       (ops||[]).map(o =>
         `<option value="${o.id}" ${o.id===of.chef_projet_id?'selected':''}>${o.prenom} ${o.nom}</option>`
       ).join('');
 
-    // Summary of what will be copied
     const opCount  = (of.operations||[]).length;
     const bomCount = (of.bom||[]).length;
     $('dup-summary').innerHTML = `
@@ -497,8 +545,8 @@ async function duplicateOF(id) {
 }
 
 async function confirmDuplicateOF() {
-  const id  = $('dup-src-id').value;
-  const qte = parseInt($('dup-qte').value);
+  const id   = $('dup-src-id').value;
+  const qte  = parseInt($('dup-qte').value);
   const date = $('dup-date').value;
 
   if (!qte || qte < 1) { toast('Quantité invalide', 'err'); return; }
@@ -523,8 +571,8 @@ async function confirmDuplicateOF() {
 // ── OF DETAIL MODAL ──────────────────────────────────────
 
 let _ofdOfId = null;
-let _ofdOpsEdits = {};   // { op_id: { duree_reelle, notes } }
-let _ofdBomEdits = {};   // { materiau_id: quantite_requise }
+let _ofdOpsEdits = {};
+let _ofdBomEdits = {};
 let _ofdOf = null;
 
 async function openOFDetail(ofId) {
@@ -537,12 +585,10 @@ async function openOFDetail(ofId) {
     _ofdOf = of;
     if (!of) return;
 
-    // Header
     $('ofd-numero').textContent = of.numero;
     $('ofd-subtitle').textContent =
       `${of.produit_nom} · ${of.quantite} pcs · ${of.atelier||''}`;
 
-    // Info band
     const cells = [
       ['CLIENT',       of.client_nom  || '—'],
       ['CHEF ATELIER', of.chef_projet_nom || '—'],
@@ -555,7 +601,12 @@ async function openOFDetail(ofId) {
         <div class="ofd-info-value">${val}</div>
       </div>`).join('');
 
-    // Render active tab
+    // Show cancel reason if cancelled
+    if (of.statut === 'CANCELLED' && of.cancel_reason) {
+      $('ofd-subtitle').textContent += ` · ✕ Raison: ${of.cancel_reason}`;
+      $('ofd-subtitle').style.color = 'var(--red)';
+    }
+
     ofdTab('ops');
     openModal('m-of-detail');
   } catch(e) { toast(e.message, 'err'); }
@@ -579,8 +630,8 @@ function ofdTab(tab) {
     saveBtn.textContent = tab === 'bom' ? '💾 Enregistrer matériaux' : '💾 Enregistrer opérations';
     saveBtn.onclick = tab === 'bom' ? saveBOMChanges : saveOFDetailOps;
   }
-  if (tab === 'ops') renderOFDetailOps();
-  if (tab === 'bom') renderOFDetailBOM();
+  if (tab === 'ops')  renderOFDetailOps();
+  if (tab === 'bom')  renderOFDetailBOM();
   if (tab === 'cost') renderOFDetailCost();
 }
 
@@ -592,10 +643,10 @@ function renderOFDetailOps() {
   $('ofd-ops-tb').innerHTML = ops.length === 0
     ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;font-size:11px">— Aucune opération —</td></tr>`
     : ops.map((op, idx) => {
-      const dur = _ofdOpsEdits[op.id]?.duree_reelle ?? (op.duree_reelle || '');
-      const rowBg = idx % 2 === 0 ? 'background:var(--bg3)' : '';
-      const debut = op.debut ? String(op.debut).slice(0,16).replace('T',' ') : '—';
-      const fin   = op.fin   ? String(op.fin).slice(0,16).replace('T',' ') : '—';
+      const dur    = _ofdOpsEdits[op.id]?.duree_reelle ?? (op.duree_reelle || '');
+      const rowBg  = idx % 2 === 0 ? 'background:var(--bg3)' : '';
+      const debut  = op.debut ? String(op.debut).slice(0,16).replace('T',' ') : '—';
+      const fin    = op.fin   ? String(op.fin).slice(0,16).replace('T',' ')   : '—';
       return `<tr style="${rowBg}">
         <td style="padding:7px 8px;font-weight:600;color:var(--text)">${op.operation_nom}</td>
         <td style="padding:7px 8px;font-size:10px;color:var(--muted)">${op.operateurs_noms||'—'}</td>
@@ -619,8 +670,8 @@ function renderOFDetailBOM() {
   $('ofd-bom-tb').innerHTML = bom.length === 0
     ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;font-size:11px">— Aucun matériau —</td></tr>`
     : bom.map((b, idx) => {
-      const qte  = _ofdBomEdits[b.materiau_id] ?? b.quantite_requise;
-      const prix = parseFloat(b.prix_unitaire || 0);
+      const qte   = _ofdBomEdits[b.materiau_id] ?? b.quantite_requise;
+      const prix  = parseFloat(b.prix_unitaire || 0);
       const total = (parseFloat(qte) * prix).toFixed(3);
       const rowBg = idx % 2 === 0 ? 'background:var(--bg3)' : '';
       return `<tr style="${rowBg}">
@@ -673,7 +724,7 @@ function renderOFDetailCost() {
       ${row('Sous-traitance',  stCost.toFixed(3)  + ' DT')}
       ${row('COÛT DE REVIENT', total.toFixed(3)   + ' DT', true)}
       ${pv > 0 ? row('Prix Vente HT',  pv.toFixed(3) + ' DT') : ''}
-      ${marge !== null ? row('MARGE BRUTE', (marge >= 0 ? '+' : '') + marge.toFixed(3) + ' DT',true) : ''}
+      ${marge !== null ? row('MARGE BRUTE', (marge >= 0 ? '+' : '') + marge.toFixed(3) + ' DT', true) : ''}
     </div>`;
 }
 
@@ -687,7 +738,6 @@ async function saveOFDetailOps() {
     );
     await Promise.all(saves);
     toast(`${saves.length} opération(s) enregistrée(s) ✓`);
-    // Refresh OF data
     _ofdOf = await api(`/api/of/${_ofdOfId}`);
     _ofdOpsEdits = {};
     renderOFDetailOps();
@@ -701,7 +751,7 @@ async function saveBOMChanges() {
   }
   try {
     const bom = (_ofdOf?.bom || []).map(b => ({
-      materiau_id: b.materiau_id,
+      materiau_id:      b.materiau_id,
       quantite_requise: _ofdBomEdits[b.materiau_id] ?? b.quantite_requise
     }));
     await api(`/api/of/${_ofdOfId}/bom`, 'PUT', bom);
@@ -711,7 +761,6 @@ async function saveBOMChanges() {
     renderOFDetailBOM();
   } catch(e) { toast(e.message, 'err'); }
 }
-
 
 // ── QUICK TIME EDIT ───────────────────────────────────────
 let _qtOfId = null;
@@ -732,7 +781,7 @@ async function openQuickTime(ofId, ofNumero) {
       const stLbl = { COMPLETED:'✓', IN_PROGRESS:'⏳', PENDING:'—' }[op.statut] || '—';
       return `
         <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;
-          border-bottom:1px solid var(--border);${idx%2===0?'':''}">
+          border-bottom:1px solid var(--border)">
           <span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;min-width:16px">${idx+1}</span>
           <span style="flex:1;font-size:12px;font-weight:600">${op.operation_nom}</span>
           <span style="font-size:10px;color:var(--muted);min-width:80px">${op.operateurs_noms||'—'}</span>
@@ -740,21 +789,17 @@ async function openQuickTime(ofId, ofNumero) {
           <div style="display:flex;align-items:center;gap:4px">
             <div style="display:flex;flex-direction:column;align-items:center">
               <span style="font-size:8px;color:var(--muted);margin-bottom:1px">H</span>
-              <input type="number" min="0" max="999" value="${h}"
-                id="qt-h-${op.id}"
+              <input type="number" min="0" max="999" value="${h}" id="qt-h-${op.id}"
                 style="width:52px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;
-                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;
-                  text-align:center"
+                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:center"
                 oninput="updateQTTotal(${op.id})">
             </div>
             <span style="color:var(--muted);font-size:14px;margin-top:10px">:</span>
             <div style="display:flex;flex-direction:column;align-items:center">
               <span style="font-size:8px;color:var(--muted);margin-bottom:1px">MIN</span>
-              <input type="number" min="0" max="59" value="${m}"
-                id="qt-m-${op.id}"
+              <input type="number" min="0" max="59" value="${m}" id="qt-m-${op.id}"
                 style="width:52px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;
-                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;
-                  text-align:center"
+                  padding:4px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:center"
                 oninput="updateQTTotal(${op.id})">
             </div>
             <div style="display:flex;flex-direction:column;align-items:center">
@@ -769,7 +814,6 @@ async function openQuickTime(ofId, ofNumero) {
         </div>`;
     }).join('');
 
-    // Store op ids for save
     window._qtOps = of.operations.map(o => o.id);
     openModal('m-quick-time');
   } catch(e) { toast(e.message, 'err'); }
@@ -798,7 +842,6 @@ async function saveQuickTime() {
     toast(`Temps enregistrés ✓`);
     closeModal('m-quick-time');
     loadOrders();
-    // If detail modal is open, refresh it
     if (_ofdOfId === _qtOfId) {
       _ofdOf = await api(`/api/of/${_qtOfId}`);
       renderOFDetailOps();
