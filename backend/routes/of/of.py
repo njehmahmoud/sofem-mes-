@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number, cancel_documentm log_activity
+from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize, temp_numero, finalize_number, cancel_document, log_activity
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import OFCreate, OFUpdate, BOMOverride, CancelRequest
 from routes.settings import get_all_settings
