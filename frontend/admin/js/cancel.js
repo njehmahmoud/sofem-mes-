@@ -69,22 +69,47 @@ async function confirmCancel() {
     return;
   }
 
-  try {
-    await api(endpoint, 'PUT', { reason });
-    toast('Document annulé ✓');
+try {
+    const res = await api(endpoint, 'PUT', { reason });
     closeModal('m-cancel');
 
-    // Call the refresh callback
-    if (callback && window[callback]) {
-      window[callback]();
+    // Show cascade summary
+    toast(res.message || 'Document annulé ✓');
+
+    // Show warnings if any (BC already sent, goods received, etc.)
+    if (res.warnings && res.warnings.length > 0) {
+      setTimeout(() => {
+        showCancelWarnings(res.warnings);
+      }, 500);
     }
 
-    // Log to activity
-    logActivity('CANCEL', 'DOCUMENT', id, `Annulation confirmée`);
+    // Suggest NC if production had started
+    if (res.suggest_nc) {
+      setTimeout(() => {
+        if (confirm(
+          `⚠ Des opérations avaient déjà démarré sur cet OF.\n\n` +
+          `Voulez-vous créer une Non-Conformité pour documenter l'interruption de production ?\n\n` +
+          `(Recommandé pour ISO 9001)`
+        )) {
+          navigate('nc');
+          openModal('modal-nc');
+        }
+      }, 800);
+    }
+
+    // Refresh the page
+    if (callback && window[callback]) window[callback]();
+    logActivity('CANCEL', 'DOCUMENT', id, `Annulation confirmée: ${reason}`);
 
   } catch(e) {
     toast(e.message, 'err');
   }
+}
+
+// Show warnings in a readable modal/alert
+function showCancelWarnings(warnings) {
+  const msg = warnings.join('\n\n');
+  alert('⚠ Actions manuelles requises:\n\n' + msg);
 }
 
 // ── OF cancellation ───────────────────────────────────────

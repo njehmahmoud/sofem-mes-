@@ -9,6 +9,7 @@ Fixes:
 """
 
 import logging
+_logger = logging.getLogger("sofem-of")
 from datetime import datetime
 from typing import Optional
 
@@ -19,7 +20,6 @@ from database import get_db, q, exe, exe_raw, begin, commit, rollback, serialize
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import OFCreate, OFUpdate, BOMOverride, CancelRequest
 from routes.settings import get_all_settings
-
 
 logger = logging.getLogger("sofem-of")
 
@@ -482,18 +482,215 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
 
 
 @router.delete("/{of_id}", dependencies=[Depends(require_manager_or_admin)])
-def cancel_of(
-        of_id: int,
-        data: CancelRequest,
-        user=Depends(get_current_user),
-        db=Depends(get_db)
+#
+#    from models import CancelRequest
+#    from database import cancel_document, log_activity, q, exe
+#
+# 2. Replace the existing delete_of function with everything below
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def _cancel_of_cascade(db, of_id: int, numero: str,
+                        user_id: int, user_nom: str, reason: str) -> dict:
+    """
+    Full ISO 9001 cascade cancellation for an OF.
+    Returns a summary dict of everything that was cancelled / warned.
+
+    Rules:
+      BL              → CANCELLED (if not LIVRE)
+      Planning slots  → ANNULE
+      DA PENDING      → CANCELLED
+      DA APPROVED     → CANCELLED
+      DA ORDERED      → CANCELLED + warn (BC already sent)
+      BC DRAFT        → ANNULE
+      BC ENVOYE       → ANNULE + warn manager
+      BC RECU_PARTIEL → warn only
+      Stock SORTIE    → reversed (ENTREE created)
+      NC suggestion   → if any operation was started
+    """
+    summary = {
+        "bl_cancelled":       [],
+        "planning_cancelled": [],
+        "da_cancelled":       [],
+        "bc_cancelled":       [],
+        "stock_reversed":     [],
+        "warnings":           [],
+        "suggest_nc":         False,
+    }
+    cancel_reason = f"OF {numero} annulé — {reason}"
+
+    # ── 1. Cancel BL ─────────────────────────────────────
+    bls = q(db, """
+        SELECT id, bl_numero, statut FROM bons_livraison
+        WHERE of_id = %s AND statut NOT IN ('LIVRE','CANCELLED')
+    """, (of_id,))
+
+    for bl in bls:
+        exe(db, """
+            UPDATE bons_livraison
+            SET statut='CANCELLED', cancel_reason=%s,
+                cancelled_by=%s, cancelled_at=NOW()
+            WHERE id=%s
+        """, (cancel_reason, user_id, bl["id"]))
+        log_activity(db, "CANCEL", "BL", bl["id"], bl["bl_numero"],
+                     user_id, user_nom, reason=cancel_reason,
+                     detail=f"BL {bl['bl_numero']} annulé — OF {numero} annulé")
+        summary["bl_cancelled"].append(bl["bl_numero"])
+
+    # ── 2. Cancel Planning slots ──────────────────────────
+    plans = q(db, """
+        SELECT id FROM planning_production
+        WHERE of_id = %s
+          AND statut NOT IN ('TERMINE','ANNULE','CANCELLED')
+    """, (of_id,))
+
+    for pl in plans:
+        exe(db, """
+            UPDATE planning_production
+            SET statut='ANNULE', cancel_reason=%s,
+                cancelled_by=%s, cancelled_at=NOW()
+            WHERE id=%s
+        """, (cancel_reason, user_id, pl["id"]))
+        log_activity(db, "CANCEL", "PLANNING", pl["id"], numero,
+                     user_id, user_nom, reason=cancel_reason,
+                     detail=f"Créneau planning annulé — OF {numero} annulé")
+        summary["planning_cancelled"].append(pl["id"])
+
+    # ── 3. Handle DAs linked to this OF ──────────────────
+    das = q(db, """
+        SELECT id, da_numero, statut FROM demandes_achat
+        WHERE of_id = %s
+          AND statut NOT IN ('CANCELLED','RECEIVED')
+    """, (of_id,))
+
+    for da in das:
+        # Always cancel the DA regardless of status
+        exe(db, """
+            UPDATE demandes_achat
+            SET statut='CANCELLED', cancel_reason=%s,
+                cancelled_by=%s, cancelled_at=NOW()
+            WHERE id=%s
+        """, (cancel_reason, user_id, da["id"]))
+        log_activity(db, "CANCEL", "DA", da["id"], da["da_numero"],
+                     user_id, user_nom, reason=cancel_reason,
+                     detail=f"DA {da['da_numero']} annulée — OF {numero} annulé")
+        summary["da_cancelled"].append(da["da_numero"])
+
+        # If DA was ORDERED, a BC exists — handle it
+        if da["statut"] == "ORDERED":
+            bcs = q(db, """
+                SELECT id, bc_numero, statut, fournisseur
+                FROM bons_commande
+                WHERE da_id = %s
+                  AND statut NOT IN ('CANCELLED','ANNULE')
+            """, (da["id"],))
+
+            for bc in bcs:
+                bc_statut = bc["statut"]
+
+                if bc_statut in ("DRAFT", "ENVOYE"):
+                    # Cancel the BC
+                    exe(db, """
+                        UPDATE bons_commande
+                        SET statut='ANNULE', cancel_reason=%s,
+                            cancelled_by=%s, cancelled_at=NOW()
+                        WHERE id=%s
+                    """, (cancel_reason, user_id, bc["id"]))
+                    log_activity(db, "CANCEL", "BC", bc["id"], bc["bc_numero"],
+                                 user_id, user_nom, reason=cancel_reason,
+                                 detail=f"BC {bc['bc_numero']} annulé — OF {numero} annulé")
+                    summary["bc_cancelled"].append(bc["bc_numero"])
+
+                    # Extra warning if already sent to supplier
+                    if bc_statut == "ENVOYE":
+                        summary["warnings"].append(
+                            f"⚠ BC {bc['bc_numero']} ({bc['fournisseur']}) était déjà "
+                            f"envoyé au fournisseur — contacter le fournisseur "
+                            f"pour annuler la commande physiquement"
+                        )
+
+                elif bc_statut in ("RECU_PARTIEL", "RECU"):
+                    # Goods already received — warn only, do not cancel
+                    summary["warnings"].append(
+                        f"⚠ BC {bc['bc_numero']} déjà reçu (statut: {bc_statut}) — "
+                        f"vérifier le stock et effectuer un ajustement si nécessaire"
+                    )
+
+    # ── 4. Reverse stock SORTIE movements for this OF ────
+    sorties = q(db, """
+        SELECT ms.id, ms.materiau_id, ms.quantite,
+               m.nom  materiau_nom,
+               m.code materiau_code,
+               m.stock_actuel
+        FROM mouvements_stock ms
+        JOIN materiaux m ON m.id = ms.materiau_id
+        WHERE ms.of_id = %s AND ms.type = 'SORTIE'
+    """, (of_id,))
+
+    for mv in sorties:
+        stock_avant = float(mv["stock_actuel"])
+        stock_apres = round(stock_avant + float(mv["quantite"]), 6)
+
+        # Restore the stock
+        exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
+            (stock_apres, mv["materiau_id"]))
+
+        # Record the reversal as ENTREE
+        exe(db, """
+            INSERT INTO mouvements_stock
+                (materiau_id, of_id, type, quantite,
+                 stock_avant, stock_apres, motif)
+            VALUES (%s, %s, 'ENTREE', %s, %s, %s, %s)
+        """, (
+            mv["materiau_id"], of_id, mv["quantite"],
+            stock_avant, stock_apres,
+            f"Retour stock automatique — OF {numero} annulé"
+        ))
+
+        log_activity(
+            db, "STOCK_REVERSAL", "MATERIAU",
+            mv["materiau_id"], mv["materiau_code"],
+            user_id, user_nom,
+            old_value={"stock": stock_avant},
+            new_value={"stock": stock_apres},
+            detail=(f"Stock {mv['materiau_nom']} restauré "
+                    f"({stock_avant} → {stock_apres}) — OF {numero} annulé")
+        )
+
+        summary["stock_reversed"].append({
+            "materiau":    mv["materiau_nom"],
+            "code":        mv["materiau_code"],
+            "quantite":    float(mv["quantite"]),
+            "stock_avant": stock_avant,
+            "stock_apres": stock_apres,
+        })
+
+    # ── 5. Suggest NC if production had started ───────────
+    ops_started = q(db, """
+        SELECT COUNT(*) n FROM of_operations
+        WHERE of_id = %s
+          AND statut IN ('IN_PROGRESS','COMPLETED')
+    """, (of_id,), one=True)
+
+    if ops_started and ops_started["n"] > 0:
+        summary["suggest_nc"] = True
+
+    return summary
+
+
+# ── CANCEL ENDPOINTS ──────────────────────────────────────
+
+@router.put("/{of_id}/cancel")
+def cancel_of_put(
+    of_id: int,
+    data:  CancelRequest,
+    user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
     """
-    ISO 9001 — OFs are NEVER physically deleted.
-    This endpoint cancels the OF with a mandatory reason.
-    The DB trigger also prevents any direct DELETE at database level.
+    ISO 9001 — Cancel an OF with full cascade.
+    PUT /api/of/{of_id}/cancel  ← called by frontend cancel modal
     """
-    # Get current OF
     of = q(db, """
         SELECT o.*, p.nom produit_nom
         FROM ordres_fabrication o
@@ -503,70 +700,72 @@ def cancel_of(
 
     if not of:
         raise HTTPException(404, "OF introuvable")
-
     if of["statut"] == "CANCELLED":
         raise HTTPException(400, "OF déjà annulé")
-
     if of["statut"] == "COMPLETED":
         raise HTTPException(400,
-                            "Un OF terminé ne peut pas être annulé. "
-                            "Créer une Non-Conformité si nécessaire.")
+            "Un OF terminé ne peut pas être annulé. "
+            "Créer une Non-Conformité si nécessaire.")
 
-    user_id = user.get("id")
-    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+    user_id  = user.get("id")
+    user_nom = f"{user.get('prenom','')} {user.get('nom','')}".strip()
 
-    # Cancel the OF
+    # Cancel the OF itself first
     numero = cancel_document(
         db,
-        table="ordres_fabrication",
-        id_col="id",
-        numero_col="numero",
-        record_id=of_id,
-        user_id=user_id,
-        user_nom=user_nom,
-        reason=data.reason,
-        entity_type="OF",
-        old_statut=of["statut"],
+        table      = "ordres_fabrication",
+        id_col     = "id",
+        numero_col = "numero",
+        record_id  = of_id,
+        user_id    = user_id,
+        user_nom   = user_nom,
+        reason     = data.reason,
+        entity_type= "OF",
+        old_statut = of["statut"],
     )
 
-    # Also cancel the associated BL if not yet delivered
-    try:
-        exe(db, """
-            UPDATE bons_livraison
-            SET statut       = 'CANCELLED',
-                cancel_reason = %s,
-                cancelled_by  = %s,
-                cancelled_at  = NOW()
-            WHERE of_id = %s
-              AND statut NOT IN ('LIVRE', 'CANCELLED')
-        """, (
-            f"OF {numero} annulé — {data.reason}",
-            user_id,
-            of_id
-        ))
-        log_activity(
-            db,
-            action="CANCEL",
-            entity_type="BL",
-            entity_id=of_id,
-            user_id=user_id,
-            user_nom=user_nom,
-            reason=f"OF associé {numero} annulé",
-            detail=f"BL annulé automatiquement suite à annulation OF {numero}"
+    # Run full cascade
+    summary = _cancel_of_cascade(
+        db, of_id, numero, user_id, user_nom, data.reason
+    )
+
+    # Build human-readable message
+    msg_parts = [f"OF {numero} annulé"]
+    if summary["bl_cancelled"]:
+        msg_parts.append(f"BL: {', '.join(summary['bl_cancelled'])}")
+    if summary["da_cancelled"]:
+        msg_parts.append(f"DAs: {', '.join(summary['da_cancelled'])}")
+    if summary["bc_cancelled"]:
+        msg_parts.append(f"BCs: {', '.join(summary['bc_cancelled'])}")
+    if summary["stock_reversed"]:
+        msg_parts.append(
+            f"{len(summary['stock_reversed'])} retour(s) stock"
         )
-    except Exception as e:
-        # Non-fatal — OF is already cancelled
-        import logging
-        logging.getLogger("sofem-of").warning(f"BL cancel failed: {e}")
+    if summary["warnings"]:
+        msg_parts.append(f"{len(summary['warnings'])} avertissement(s)")
 
     return {
-        "message": f"OF {numero} annulé",
-        "numero": numero,
-        "reason": data.reason
+        "message":    " · ".join(msg_parts),
+        "numero":     numero,
+        "summary":    summary,
+        "suggest_nc": summary["suggest_nc"],
+        "warnings":   summary["warnings"],
     }
 
 
-# ── ADD THIS ALSO — PUT cancel endpoint (used by frontend) ─
+@router.delete("/{of_id}")
+def cancel_of_delete(
+    of_id: int,
+    data:  CancelRequest,
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    DELETE method also triggers cancel — never a physical delete.
+    The DB trigger is the final safety net.
+    """
+    return cancel_of_put(of_id, data, user, db)
+
 # The frontend uses PUT not DELETE for the cancel modal
 
 @router.put("/{of_id}/cancel")

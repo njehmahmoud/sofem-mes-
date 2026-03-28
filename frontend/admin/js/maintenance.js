@@ -45,6 +45,11 @@ async function loadMaintenance(){
         <option value="PLANIFIE">Planifié</option><option value="EN_COURS">En Cours</option>
         <option value="TERMINE">Terminé</option><option value="ANNULE">Annulé</option>
       </select></td>
+      ${o.statut !== 'TERMINE' && o.statut !== 'ANNULE'
+  ? `<button class="fbtn" style="color:var(--accent);margin-left:4px"
+       onclick="cancelMaintenance(${o.id},'${o.om_numero}','${(o.titre||'').replace(/'/g,"\\'")}','${o.statut}')"
+       title="Annuler">✕</button>`
+  : ''}
     </tr>`).join('')}</tbody></table>
   `;
 }
