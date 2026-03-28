@@ -1,12 +1,4 @@
-"""SOFEM MES v6.0 — OF Core (patched)
-Fixes:
-  - N+1 query in list_of: operations fetched in one batched query
-  - Race condition in OF numbering: insert-first, id-based numero
-  - Race condition in BL numbering inside create_of: same fix
-  - Stock deduction wrapped in explicit DB transaction
-  - Silent bare except: pass replaced with logger.warning(...)
-  - Late imports of models/settings moved to module level
-"""
+"""SOFEM MES v6.0 — OF Core (patched)"""
 
 import logging
 _logger = logging.getLogger("sofem-of")
@@ -404,7 +396,7 @@ def update_of(of_id: int, data: OFUpdate,
     except Exception as e:
         rollback(db)
         logger.error(f"update_of transaction failed for OF {of_id}: {e}")
-        raise HTTPException(500, f"Erreur lors de la mise à jour de l'OF: {e}")
+        raise HTTPException(500, f"Error lors de la mise à jour automatic de stock: {e}")
 
     return {"message": "OF mis à jour"}
 
