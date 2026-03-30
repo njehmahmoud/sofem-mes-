@@ -22,14 +22,15 @@ import jwt
 logger = logging.getLogger("sofem-mes")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
-_DEFAULT_SECRET = "sofem-mes-smartmove-2025-secret"
 
 if not SECRET_KEY:
-    logger.warning(
-        "⚠️  SECRET_KEY env var not set — falling back to insecure default. "
-        "Set SECRET_KEY in your Railway environment variables before going to production."
+    error_msg = (
+        "❌ FATAL: SECRET_KEY environment variable is not set. "
+        "This is required for production security. "
+        "Set it in your Railway/deployment environment variables immediately."
     )
-    SECRET_KEY = _DEFAULT_SECRET
+    logger.error(error_msg)
+    raise ValueError(error_msg)
 
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 12

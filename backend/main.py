@@ -49,11 +49,20 @@ logger = logging.getLogger("sofem-mes")
 BASE_DIR     = Path(__file__).parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
+# ── CORS Configuration ─────────────────────────────────────
+# Allow specific origins from environment or use defaults
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", 
+    "http://localhost:3000,http://localhost:5173,https://sofem-mes-production.up.railway.app"
+).split(",")
+
 app = FastAPI(title="SOFEM MES API v6.0", version="6.0.0",
               description="Manufacturing Execution System — SOFEM Sfax · SMARTMOVE")
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, 
+                   allow_origins=ALLOWED_ORIGINS,
+                   allow_credentials=True,
+                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                   allow_headers=["Content-Type", "Authorization"])
 
 @app.on_event("startup")
 def startup():
