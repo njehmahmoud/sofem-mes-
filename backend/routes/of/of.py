@@ -500,12 +500,12 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
     # 1. Cancel BL
     bls = q(db, """
         SELECT id, bl_numero FROM bons_livraison
-        WHERE of_id = %s AND statut NOT IN ('LIVRE','CANCELLED')
+        WHERE of_id = %s AND statut NOT IN ('RECEIVED','CANCELLED')
     """, (of_id,))
     for bl in bls:
         exe(db, """
             UPDATE bons_livraison
-            SET statut='CANCELLED', cancel_reason=%s,
+            SET statut='ANNULE', cancel_reason=%s,
                 cancelled_by=%s, cancelled_at=NOW()
             WHERE id=%s
         """, (cancel_reason, user_id, bl["id"]))
@@ -536,12 +536,12 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
     das = q(db, """
         SELECT id, da_numero, statut FROM demandes_achat
         WHERE of_id = %s
-          AND statut NOT IN ('CANCELLED','RECEIVED')
+          AND statut NOT IN ('REJECTED','RECEIVED')
     """, (of_id,))
     for da in das:
         exe(db, """
             UPDATE demandes_achat
-            SET statut='CANCELLED', cancel_reason=%s,
+            SET statut='REJECTED', cancel_reason=%s,
                 cancelled_by=%s, cancelled_at=NOW()
             WHERE id=%s
         """, (cancel_reason, user_id, da["id"]))
