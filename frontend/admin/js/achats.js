@@ -66,7 +66,7 @@ async function loadDA() {
             : ''}
             ${!['CANCELLED','RECEIVED','ORDERED'].includes(da.statut)
             ?'
-             <button class="fbtn" style="color:var(--accent)"onclick="cancelDA($${da.id},'$${da.da_numero}','$${(da.description||'').replace(/'/g,"\\'")}','$${da.statut}')" title="Annuler">✕ Annuler</button>
+            <button class="fbtn" style="color:var(--accent)"onclick="cancelDA($${da.id},'$${da.da_numero}','$${(da.description||'').replace(/'/g,"\\'")}','$${da.statut}')" title="Annuler">✕ Annuler</button>
             : ''}
         </td>
       </tr>`;
