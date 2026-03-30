@@ -211,9 +211,9 @@ def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         c.drawString(cols[1]+2*mm, y_cur+2.5*mm, str(float(l["quantite"])))
         c.drawString(cols[2]+2*mm, y_cur+2.5*mm, str(l.get("unite", "")))
         #c.drawString(cols[3]+2*mm, y_cur+2.5*mm, f"{float(l['prix_unitaire']):.3f}")
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(cols[4]+2*mm, y_cur+2.5*mm, f"{ht_ligne:.3f}")
-        c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm, y_cur, W-15*mm, y_cur)
+        #c.setFont("Helvetica-Bold", 8)
+        #c.drawString(cols[4]+2*mm, y_cur+2.5*mm, f"{ht_ligne:.3f}")
+        #c.setStrokeColor(BORDER); c.setLineWidth(0.3); c.line(15*mm, y_cur, W-15*mm, y_cur)
 
     #tva = round(total_ht * TVA_RATE, 3)
     #ttc = round(total_ht + tva, 3)
