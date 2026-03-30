@@ -501,7 +501,7 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
     # 1. Cancel BL
     bls = q(db, """
         SELECT id, bl_numero FROM bons_livraison
-        WHERE of_id = %s AND statut NOT IN ('RECEIVED','CANCELLED')
+        WHERE of_id = %s AND statut NOT IN ('LIVRE','CANCELLED')
     """, (of_id,))
     for bl in bls:
         exe(db, """
@@ -750,5 +750,9 @@ def update_of_full(of_id: int, data: OFCreate,
             materiau_id=b.materiau_id,
             quantite_requise=round(float(b.quantite_requise) * data.quantite, 6)
         ) for b in bom_src]
+    for b in bom_src:
+        exe(db, """
+                INSERT INTO of_bom (of_id, materiau_id, quantite_requise) VALUES (%s,%s,%s)
+            """, (of_id, b.materiau_id, b.quantite_requise))
 
     return {"message": "OF mis à jour complet"}
