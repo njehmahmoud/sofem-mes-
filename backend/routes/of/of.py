@@ -261,11 +261,12 @@ def create_of(data: OFCreate, db=Depends(get_db)):
                 (data.quantite, data.produit_id))
         bom_src = [BOMOverride(materiau_id=r["materiau_id"],
                                quantite_requise=float(r["qr"])) for r in raw]
-    for b in bom_src:
-        exe(db, """
-            INSERT INTO of_bom (of_id, materiau_id, quantite_requise) VALUES (%s,%s,%s)
-            ON DUPLICATE KEY UPDATE quantite_requise=VALUES(quantite_requise)
-        """, (of_id, b.materiau_id, b.quantite_requise))
+    else:
+        # Multiply overrides by OF quantity
+        bom_src = [BOMOverride(
+            materiau_id=b.materiau_id,
+            quantite_requise=round(float(b.quantite_requise) * data.quantite, 6)
+        ) for b in bom_src]
 
     # Auto BL — race-free numbering
     bl_numero = None
@@ -743,9 +744,11 @@ def update_of_full(of_id: int, data: OFCreate,
                 (data.quantite, data.produit_id))
         bom_src = [BOMOverride(materiau_id=r["materiau_id"],
                                quantite_requise=float(r["qr"])) for r in raw]
-    for b in bom_src:
-        exe(db, """
-            INSERT INTO of_bom (of_id, materiau_id, quantite_requise) VALUES (%s,%s,%s)
-        """, (of_id, b.materiau_id, b.quantite_requise))
+    else:
+        # Multiply overrides by OF quantity
+        bom_src = [BOMOverride(
+            materiau_id=b.materiau_id,
+            quantite_requise=round(float(b.quantite_requise) * data.quantite, 6)
+        ) for b in bom_src]
 
     return {"message": "OF mis à jour complet"}
