@@ -5,11 +5,17 @@ Fix: race-free BL numbering using insert-first + id-based finalize.
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from database import get_db, q, exe, serialize, temp_numero, finalize_number
-from auth import require_any_role, get_pdf_user, require_manager_or_admin
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity, CancelRequest
+from auth import require_any_role, get_pdf_user, require_manager_or_admin, get_current_user
 from models import BLCreate, BLUpdate, BLLivrer
 from datetime import datetime
 import io
+from reportlab.lib.utils import ImageReader as _IR
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
+from routes.settings import get_all_settings
 
 logger = logging.getLogger("sofem-bl")
 
@@ -94,7 +100,7 @@ def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         raise HTTPException(404, "BL non trouvé")
     bl = serialize(bl)
 
-    from routes.settings import get_all_settings
+
     cfg = get_all_settings(db)
     S_NOM  = cfg.get("societe_nom",       "SOFEM")
     S_TAG  = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
@@ -105,10 +111,6 @@ def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
     S_WEB  = cfg.get("societe_website",   "sofem-tn.com")
     PDF_PIED = cfg.get("pdf_pied_custom", "SOFEM MES v6.0 · SMARTMOVE")
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
 
     W, H = A4
     buf = io.BytesIO()
@@ -128,7 +130,6 @@ def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
     import os as _os
     _logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "static", "logo.png")
     if _os.path.exists(_logo_path):
-        from reportlab.lib.utils import ImageReader as _IR
         c.drawImage(_IR(_logo_path), 12*2.835, H-33*2.835, 24*2.835, 24*2.835,
                     preserveAspectRatio=True, mask='auto')
     else:
@@ -205,3 +206,45 @@ def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="BL_{bl["bl_numero"]}.pdf"'},
     )
+
+
+router.put("/{bl_id}/cancel")
+
+
+def cancel_bl(
+        bl_id: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        db=Depends(get_db)
+):
+    """
+    ISO 9001 — Cancel a BL with mandatory reason.
+    Delivered BLs (LIVRE) cannot be cancelled.
+    """
+    bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
+    if not bl:
+        raise HTTPException(404, "BL introuvable")
+    if bl["statut"] == "CANCELLED":
+        raise HTTPException(400, "BL déjà annulé")
+    if bl["statut"] == "LIVRE":
+        raise HTTPException(400,
+                            "Un BL déjà livré ne peut pas être annulé. "
+                            "Créer une Non-Conformité si nécessaire.")
+
+    user_id = user.get("id")
+    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+
+    numero = cancel_document(
+        db,
+        table="bons_livraison",
+        id_col="id",
+        numero_col="bl_numero",
+        record_id=bl_id,
+        user_id=user_id,
+        user_nom=user_nom,
+        reason=data.reason,
+        entity_type="BL",
+        old_statut=bl["statut"],
+    )
+
+    return {"message": f"BL {numero} annulé", "numero": numero}

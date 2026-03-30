@@ -25,13 +25,10 @@ async function loadBL() {
           <button class="btn btn-ghost btn-sm" style="color:var(--accent)"
             onclick="openBLEdit(${bl.id},'${bl.bl_numero}','${dest}','${addr}','${notes}')">✎</button>
           ${!isLivre
-            ? `<button class="btn btn-sm" style="background:var(--green);font-size:9px;padding:3px 8px"
-                onclick="openLivrerBL(${bl.id},'${bl.bl_numero}','${dest}','${ofStatut}')">✓ Livrer</button>`
+            ? <button class="btn btn-sm" style="background:var(--green);font-size:9px;padding:3px 8px"         onclick="openLivrerBL(${bl.id},'${bl.bl_numero}','${dest}','${ofStatut}')">✓ Livrer</button>
             : '<span style="font-size:10px;color:var(--green)">✓ Livré</span>'}
-            ${!isLivre && bl.statut !== 'CANCELLED'
-  ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent)"
-       onclick="cancelBL(${bl.id},'${bl.bl_numero}','${bl.of_numero}','${bl.statut}')"
-       title="Annuler BL">✕</button>`
+            ${bl.statut !== 'LIVRE' && bl.statut !== 'CANCELLED'
+            ? <button class="btn btn-ghost btn-sm" style="color:var(--accent)"          onclick="cancelBL(${bl.id},'${bl.bl_numero}','${bl.of_numero}','${bl.statut}')"          title="Annuler BL">✕</button>
             : ''}
         </td>
       </tr>`;

@@ -2,34 +2,22 @@
 // ISO 9001 Global cancellation handler
 // Replaces all hard DELETE operations with soft CANCEL
 // Every cancellation requires a mandatory reason
-
 'use strict';
 
 // ── Global cancel modal ───────────────────────────────────
 
-/**
- * Open the cancel modal for any document.
- *
- * @param {object} options
- *   id          - record database ID
- *   numero      - document number (OF-2026-0001, etc.)
- *   endpoint    - API endpoint to call (e.g. '/api/of/5/cancel')
- *   info        - HTML string with document details to show
- *   callback    - function name (string) to call after success
- */
 function openCancelModal({ id, numero, endpoint, info = '', callback = '' }) {
-  $('cancel-id').value        = id;
-  $('cancel-endpoint').value  = endpoint;
-  $('cancel-callback').value  = callback;
+  $('cancel-id').value            = id;
+  $('cancel-endpoint').value      = endpoint;
+  $('cancel-callback').value      = callback;
   $('cancel-doc-num').textContent = numero || `#${id}`;
   $('cancel-doc-info').innerHTML  = info || `Document ID: ${id}`;
   $('cancel-reason').value        = '';
 
-  // Reset button state
   const btn = $('cancel-confirm-btn');
-  btn.disabled = true;
-  btn.style.opacity = '.5';
-  btn.style.cursor  = 'not-allowed';
+  btn.disabled       = true;
+  btn.style.opacity  = '.5';
+  btn.style.cursor   = 'not-allowed';
   $('cancel-reason-error').style.display = 'none';
 
   openModal('m-cancel');
@@ -42,14 +30,14 @@ function validateCancelReason() {
   const err = $('cancel-reason-error');
 
   if (val.length >= 5) {
-    btn.disabled       = false;
-    btn.style.opacity  = '1';
-    btn.style.cursor   = 'pointer';
+    btn.disabled      = false;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
     if (err) err.style.display = 'none';
   } else {
-    btn.disabled       = true;
-    btn.style.opacity  = '.5';
-    btn.style.cursor   = 'not-allowed';
+    btn.disabled      = true;
+    btn.style.opacity = '.5';
+    btn.style.cursor  = 'not-allowed';
     if (err && val.length > 0) err.style.display = 'block';
   }
 }
@@ -69,58 +57,57 @@ async function confirmCancel() {
     return;
   }
 
-try {
+  try {
     const res = await api(endpoint, 'PUT', { reason });
     closeModal('m-cancel');
 
-    // Show cascade summary
+    // Show cascade summary message
     toast(res.message || 'Document annulé ✓');
 
     // Show warnings if any (BC already sent, goods received, etc.)
     if (res.warnings && res.warnings.length > 0) {
-      setTimeout(() => {
-        showCancelWarnings(res.warnings);
-      }, 500);
+      setTimeout(() => showCancelWarnings(res.warnings), 600);
     }
 
-    // Suggest NC if production had started
+    // Suggest NC if production had started on the OF
     if (res.suggest_nc) {
       setTimeout(() => {
         if (confirm(
-          `⚠ Des opérations avaient déjà démarré sur cet OF.\n\n` +
-          `Voulez-vous créer une Non-Conformité pour documenter l'interruption de production ?\n\n` +
-          `(Recommandé pour ISO 9001)`
+          '⚠ Des opérations avaient déjà démarré sur cet OF.\n\n' +
+          'Voulez-vous créer une Non-Conformité pour documenter ' +
+          'l\'interruption de production ?\n\n' +
+          '(Recommandé pour ISO 9001 Clause 10.2)'
         )) {
           navigate('nc');
-          openModal('modal-nc');
+          setTimeout(() => openModal('modal-nc'), 300);
         }
       }, 800);
     }
 
-    // Refresh the page
+    // Refresh the calling page
     if (callback && window[callback]) window[callback]();
-    logActivity('CANCEL', 'DOCUMENT', id, `Annulation confirmée: ${reason}`);
+
+    // Log to activity trail
+    logActivity('CANCEL', 'DOCUMENT', id, reason);
 
   } catch(e) {
     toast(e.message, 'err');
   }
 }
 
-// Show warnings in a readable modal/alert
+// Show cascade warnings in a readable alert
 function showCancelWarnings(warnings) {
-  const msg = warnings.join('\n\n');
-  alert('⚠ Actions manuelles requises:\n\n' + msg);
+  const msg = '⚠ Actions manuelles requises:\n\n' + warnings.join('\n\n');
+  alert(msg);
 }
 
 // ── OF cancellation ───────────────────────────────────────
 
 function cancelOF(ofId, ofNumero, produitNom, statut) {
-  // Cannot cancel a completed OF
   if (statut === 'COMPLETED') {
     toast('Un OF terminé ne peut pas être annulé', 'err');
     return;
   }
-
   openCancelModal({
     id:       ofId,
     numero:   ofNumero,
@@ -130,10 +117,10 @@ function cancelOF(ofId, ofNumero, produitNom, statut) {
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
         <span>📋 <strong style="color:var(--text)">${ofNumero}</strong></span>
         <span>📦 Produit: <strong style="color:var(--text)">${produitNom}</strong></span>
-        <span>📊 Statut actuel: <strong style="color:var(--accent)">${statut}</strong></span>
+        <span>📊 Statut: <strong style="color:var(--accent)">${statut}</strong></span>
       </div>
       <div style="margin-top:.5rem;font-size:10px;color:var(--red)">
-        ⚠ Les opérations liées et le BL associé seront également annulés.
+        ⚠ BL, DAs, BCs liés et stock seront également traités automatiquement.
       </div>`,
   });
 }
@@ -141,8 +128,8 @@ function cancelOF(ofId, ofNumero, produitNom, statut) {
 // ── DA cancellation ───────────────────────────────────────
 
 function cancelDA(daId, daNumero, description, statut) {
-  if (['RECEIVED','ORDERED'].includes(statut)) {
-    toast('Une DA déjà commandée/reçue ne peut pas être annulée', 'err');
+  if (statut === 'RECEIVED') {
+    toast('Une DA déjà reçue ne peut pas être annulée', 'err');
     return;
   }
   openCancelModal({
@@ -155,15 +142,20 @@ function cancelDA(daId, daNumero, description, statut) {
         <span>📝 <strong style="color:var(--text)">${daNumero}</strong></span>
         <span>📌 ${description}</span>
         <span>📊 Statut: <strong style="color:var(--accent)">${statut}</strong></span>
-      </div>`,
+      </div>
+      ${statut === 'ORDERED'
+        ? `<div style="margin-top:.5rem;font-size:10px;color:var(--accent)">
+             ⚠ Le BC associé sera également annulé.
+           </div>`
+        : ''}`,
   });
 }
 
 // ── BC cancellation ───────────────────────────────────────
 
 function cancelBC(bcId, bcNumero, fournisseur, statut) {
-  if (['RECU','RECU_PARTIEL'].includes(statut)) {
-    toast('Un BC déjà reçu ne peut pas être annulé', 'err');
+  if (statut === 'RECU') {
+    toast('Un BC entièrement reçu ne peut pas être annulé', 'err');
     return;
   }
   openCancelModal({
@@ -176,6 +168,9 @@ function cancelBC(bcId, bcNumero, fournisseur, statut) {
         <span>🛒 <strong style="color:var(--text)">${bcNumero}</strong></span>
         <span>🤝 Fournisseur: <strong style="color:var(--text)">${fournisseur}</strong></span>
         <span>📊 Statut: <strong style="color:var(--accent)">${statut}</strong></span>
+      </div>
+      <div style="margin-top:.5rem;font-size:10px;color:var(--accent)">
+        ⚠ La DA liée repassera en statut APPROUVÉE pour retraitement.
       </div>`,
   });
 }
@@ -218,19 +213,22 @@ function cancelMaintenance(omId, omNumero, titre, statut) {
         <span>🔧 <strong style="color:var(--text)">${omNumero}</strong></span>
         <span>📌 ${titre}</span>
         <span>📊 Statut: <strong style="color:var(--accent)">${statut}</strong></span>
-      </div>`,
+      </div>
+      ${statut === 'EN_COURS'
+        ? `<div style="margin-top:.5rem;font-size:10px;color:var(--accent)">
+             ⚠ La machine sera remise en statut OPÉRATIONNELLE.
+           </div>`
+        : ''}`,
   });
 }
 
 // ── Soft deactivations (master data) ─────────────────────
-// These don't need a reason but we ask for one anyway for audit quality
 
 async function deactivateRecord(endpoint, entityName, code, callback) {
   const reason = prompt(
-    `Raison de désactivation de "${code}" (optionnel):\n` +
-    `(Laisser vide si aucune raison spécifique)`
+    `Raison de désactivation de "${code}" (optionnel):`
   );
-  if (reason === null) return; // cancelled by user
+  if (reason === null) return; // user cancelled
 
   try {
     await api(endpoint, 'DELETE', { reason: reason || 'Désactivation manuelle' });
@@ -241,17 +239,30 @@ async function deactivateRecord(endpoint, entityName, code, callback) {
   }
 }
 
-// Convenience wrappers
-function deactivateMateriau(id, code)       { deactivateRecord(`/api/materiaux/${id}`,    'Matériau',    code, 'loadMaterials');  }
-function deactivateMachine(id, code)        { deactivateRecord(`/api/machines/${id}`,     'Machine',     code, 'loadMachines');   }
-function deactivateClient(id, code)         { deactivateRecord(`/api/clients/${id}`,      'Client',      code, 'loadClients');    }
-function deactivateFournisseur(id, code)    { deactivateRecord(`/api/fournisseurs/${id}`, 'Fournisseur', code, 'loadFournisseurs'); }
-function deactivateOperateur(id, nomPrenom) { deactivateRecord(`/api/operateurs/${id}`,  'Opérateur', nomPrenom, 'loadOperators'); }
+// Convenience wrappers for master data deactivation
+function deactivateMateriau(id, code) {
+  deactivateRecord(`/api/materiaux/${id}`, 'Matériau', code, 'loadMaterials');
+}
+function deactivateMachine(id, code) {
+  deactivateRecord(`/api/machines/${id}`, 'Machine', code, 'loadMachines');
+}
+function deactivateClient(id, code) {
+  deactivateRecord(`/api/clients/${id}`, 'Client', code, 'loadClients');
+}
+function deactivateFournisseur(id, code) {
+  deactivateRecord(`/api/fournisseurs/${id}`, 'Fournisseur', code, 'loadFournisseurs');
+}
+function deactivateOperateur(id, nomPrenom) {
+  deactivateRecord(`/api/operateurs/${id}`, 'Opérateur', nomPrenom, 'loadOperators');
+}
 
 // ── Activity log helper ───────────────────────────────────
 
 function logActivity(action, entityType, entityId, detail) {
   api('/api/notifications/activity', 'POST', {
-    action, entity_type: entityType, entity_id: entityId, detail
-  }).catch(() => {}); // silent fail
+    action,
+    entity_type: entityType,
+    entity_id:   entityId,
+    detail
+  }).catch(() => {}); // silent fail — never break the main flow
 }

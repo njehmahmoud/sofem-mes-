@@ -7,11 +7,15 @@ Fixes:
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity
 from auth import require_any_role, require_manager_or_admin, get_current_user, get_pdf_user
 from models import DACreate, DAUpdate, CancelRequest
 from datetime import datetime
 import io
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
 
 logger = logging.getLogger("sofem-achats")
 
@@ -187,10 +191,7 @@ def print_ba(da_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         raise HTTPException(404, "DA introuvable")
     da = serialize(da)
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
+
 
     W, H = A4
     buf = io.BytesIO()
@@ -294,3 +295,77 @@ def print_ba(da_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="BA_{da["da_numero"]}.pdf"'},
     )
+
+
+@router.put("/{da_id}/cancel")
+def cancel_da(
+        da_id: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        db=Depends(get_db)
+):
+    """
+    ISO 9001 — Cancel a DA with mandatory reason.
+    RECEIVED DAs cannot be cancelled (goods already received).
+    """
+    da = q(db, "SELECT * FROM demandes_achat WHERE id=%s", (da_id,), one=True)
+    if not da:
+        raise HTTPException(404, "DA introuvable")
+    if da["statut"] == "CANCELLED":
+        raise HTTPException(400, "DA déjà annulée")
+    if da["statut"] == "RECEIVED":
+        raise HTTPException(400,
+                            "Une DA déjà reçue ne peut pas être annulée. "
+                            "Effectuer un ajustement de stock si nécessaire.")
+
+    user_id = user.get("id")
+    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+
+    numero = cancel_document(
+        db,
+        table="demandes_achat",
+        id_col="id",
+        numero_col="da_numero",
+        record_id=da_id,
+        user_id=user_id,
+        user_nom=user_nom,
+        reason=data.reason,
+        entity_type="DA",
+        old_statut=da["statut"],
+    )
+
+    warnings = []
+
+    # If DA was ORDERED, cancel associated BC if not yet received
+    if da["statut"] == "ORDERED":
+        bcs = q(db, """
+            SELECT id, bc_numero, statut, fournisseur
+            FROM bons_commande
+            WHERE da_id = %s
+              AND statut NOT IN ('CANCELLED','ANNULE','RECU')
+        """, (da_id,))
+
+        for bc in bcs:
+            exe(db, """
+                UPDATE bons_commande
+                SET statut='ANNULE', cancel_reason=%s,
+                    cancelled_by=%s, cancelled_at=NOW()
+                WHERE id=%s
+            """, (f"DA {numero} annulée — {data.reason}", user_id, bc["id"]))
+
+            log_activity(db, "CANCEL", "BC", bc["id"], bc["bc_numero"],
+                         user_id, user_nom,
+                         reason=f"DA {numero} annulée",
+                         detail=f"BC {bc['bc_numero']} annulé — DA {numero} annulée")
+
+            if bc["statut"] == "ENVOYE":
+                warnings.append(
+                    f"⚠ BC {bc['bc_numero']} ({bc['fournisseur']}) était déjà envoyé "
+                    f"au fournisseur — contacter le fournisseur pour annuler"
+                )
+
+    msg = f"DA {numero} annulée"
+    if warnings:
+        msg += f" · {len(warnings)} avertissement(s)"
+
+    return {"message": msg, "numero": numero, "warnings": warnings}

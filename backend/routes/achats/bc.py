@@ -7,11 +7,16 @@ Fixes:
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from database import get_db, q, exe, serialize, temp_numero, finalize_number
-from auth import require_any_role, get_pdf_user, require_manager_or_admin
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity, CancelRequest
+from auth import require_any_role, get_pdf_user, require_manager_or_admin, get_current_user
 from models import BCCreate
 from datetime import datetime
 import io
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
+from routes.settings import get_all_settings
 
 logger = logging.getLogger("sofem-bc")
 
@@ -140,7 +145,6 @@ def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         WHERE bcl.bc_id = %s ORDER BY bcl.id
     """, (bc_id,)))
 
-    from routes.settings import get_all_settings
     cfg = get_all_settings(db)
     S_NOM   = cfg.get("societe_nom",       "SOFEM")
     S_TAG   = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
@@ -152,10 +156,7 @@ def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
     PDF_PIED = cfg.get("pdf_pied_custom",  "SOFEM MES v6.0 · SMARTMOVE")
     TVA_RATE = float(cfg.get("tva_rate",   19)) / 100
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
+
 
     W, H = A4
     buf = io.BytesIO()
@@ -252,3 +253,76 @@ def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="BC_{bc["bc_numero"]}.pdf"'},
     )
+
+
+@router.put("/{bc_id}/cancel")
+def cancel_bc(
+        bc_id: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        db=Depends(get_db)
+):
+    """
+    ISO 9001 — Cancel a BC with mandatory reason.
+    RECU BCs cannot be cancelled (goods already received).
+    When BC is cancelled, linked DA goes back to APPROVED status.
+    """
+    bc = q(db, "SELECT * FROM bons_commande WHERE id=%s", (bc_id,), one=True)
+    if not bc:
+        raise HTTPException(404, "BC introuvable")
+    if bc["statut"] in ("CANCELLED", "ANNULE"):
+        raise HTTPException(400, "BC déjà annulé")
+    if bc["statut"] == "RECU":
+        raise HTTPException(400,
+                            "Un BC entièrement reçu ne peut pas être annulé. "
+                            "Effectuer un ajustement de stock si nécessaire.")
+
+    user_id = user.get("id")
+    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+
+    warnings = []
+
+    # Warn if already sent to supplier
+    if bc["statut"] == "ENVOYE":
+        warnings.append(
+            f"⚠ Ce BC était déjà envoyé au fournisseur {bc.get('fournisseur', '')} — "
+            f"contacter le fournisseur pour annuler la commande physiquement"
+        )
+
+    numero = cancel_document(
+        db,
+        table="bons_commande",
+        id_col="id",
+        numero_col="bc_numero",
+        record_id=bc_id,
+        user_id=user_id,
+        user_nom=user_nom,
+        reason=data.reason,
+        entity_type="BC",
+        old_statut=bc["statut"],
+    )
+
+    # Restore linked DA to APPROVED status so it can be re-ordered
+    if bc.get("da_id"):
+        da = q(db, "SELECT * FROM demandes_achat WHERE id=%s",
+               (bc["da_id"],), one=True)
+        if da and da["statut"] == "ORDERED":
+            exe(db, """
+                UPDATE demandes_achat
+                SET statut='APPROVED'
+                WHERE id=%s
+            """, (bc["da_id"],))
+            log_activity(
+                db, "UPDATE", "DA", bc["da_id"], da.get("da_numero"),
+                user_id, user_nom,
+                old_value={"statut": "ORDERED"},
+                new_value={"statut": "APPROVED"},
+                detail=(f"DA {da.get('da_numero')} remise à APPROVED "
+                        f"suite à annulation BC {numero}")
+            )
+
+    msg = f"BC {numero} annulé"
+    if warnings:
+        msg += f" · {len(warnings)} avertissement(s)"
+
+    return {"message": msg, "numero": numero, "warnings": warnings}

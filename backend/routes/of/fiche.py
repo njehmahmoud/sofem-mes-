@@ -6,6 +6,13 @@ from database import get_db, q, serialize
 from auth import require_any_role, get_pdf_user
 from datetime import datetime
 import io
+from reportlab.lib.utils import ImageReader as _IR
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
+from routes.settings import get_all_settings
 
 router = APIRouter(prefix="/api/of", tags=["fiche"])
 
@@ -52,7 +59,6 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
 
     of = serialize(of); ops = serialize(ops); bom = serialize(bom)
     # Load settings
-    from routes.settings import get_all_settings
     cfg = get_all_settings(db)
     S_NOM    = cfg.get("societe_nom",       "sofem")
     S_TAG    = cfg.get("societe_tagline",   "Société de Fabrication Électromécanique & de Maintenance")
@@ -68,11 +74,6 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
 
     qte = int(of.get("quantite", 1))
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
-    from reportlab.platypus import Table, TableStyle
 
     W, H = A4
     buf = io.BytesIO()
@@ -93,7 +94,6 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     import os as _os
     _logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "static", "logo.png")
     if _os.path.exists(_logo_path):
-        from reportlab.lib.utils import ImageReader as _IR
         c.drawImage(_IR(_logo_path), 10*mm, H-31*mm, 22*mm, 22*mm,
                     preserveAspectRatio=True, mask='auto')
     else:

@@ -13,6 +13,12 @@ from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 import io
+from routes.settings import get_all_settings
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
 
 router = APIRouter(prefix="/api/facture", tags=["facture"])
 
@@ -75,7 +81,6 @@ def draw_footer(c, W, colors, numero, now,
 def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = get_of_data(of_id, db)
     # Load settings
-    from routes.settings import get_all_settings
     cfg = get_all_settings(db)
     S_NOM  = cfg.get("societe_nom",       "SOFEM")
     S_TAG  = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
@@ -111,10 +116,7 @@ def get_facture(of_id: int, type: str = "interne", token: str=None, user=Depends
             ORDER BY m.nom
         """, (of["quantite"], of_id)))
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
+
 
     W, H = A4
     buf = io.BytesIO()
@@ -309,7 +311,6 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
         ofs.append(of)
 
     # Load company settings for footer
-    from routes.settings import get_all_settings
     cfg = get_all_settings(db)
     S_NOM   = cfg.get("societe_nom",       "SOFEM")
     S_TAG   = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
@@ -320,10 +321,6 @@ def get_facture_groupee(data: MultiOFRequest, db=Depends(get_db)):
     PDF_PIED = cfg.get("pdf_pied_custom",  "SOFEM MES v6.0 · SMARTMOVE")
     TVA_RATE  = float(cfg.get("tva_rate", 19)) / 100
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
 
     W, H = A4
     buf = io.BytesIO()

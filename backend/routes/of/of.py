@@ -469,35 +469,21 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
 
     return {"id": new_id, "numero": numero, "message": f"OF dupliqué → {numero}"}
 
-
-# ── Cancel OF ─────────────────────────────────────────────
-
-
-@router.delete("/{of_id}", dependencies=[Depends(require_manager_or_admin)])
-#
-#    from models import CancelRequest
-#    from database import cancel_document, log_activity, q, exe
-#
-# 2. Replace the existing delete_of function with everything below
-# ──────────────────────────────────────────────────────────────────────────
-
+# ── Cancel OF — paste this at end of of.py ───────────────
+# Delete everything from "# ── Cancel OF" to end of file
+# and replace with this clean version
 
 def _cancel_of_cascade(db, of_id: int, numero: str,
                         user_id: int, user_nom: str, reason: str) -> dict:
     """
     Full ISO 9001 cascade cancellation for an OF.
-    Returns a summary dict of everything that was cancelled / warned.
-
     Rules:
       BL              → CANCELLED (if not LIVRE)
       Planning slots  → ANNULE
-      DA PENDING      → CANCELLED
-      DA APPROVED     → CANCELLED
-      DA ORDERED      → CANCELLED + warn (BC already sent)
-      BC DRAFT        → ANNULE
-      BC ENVOYE       → ANNULE + warn manager
-      BC RECU_PARTIEL → warn only
-      Stock SORTIE    → reversed (ENTREE created)
+      DA PENDING/APPROVED/ORDERED → CANCELLED
+      BC DRAFT/ENVOYE → ANNULE (+ warn if ENVOYE)
+      BC RECU/*       → warn only
+      Stock SORTIE    → reversed automatically
       NC suggestion   → if any operation was started
     """
     summary = {
@@ -511,12 +497,11 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
     }
     cancel_reason = f"OF {numero} annulé — {reason}"
 
-    # ── 1. Cancel BL ─────────────────────────────────────
+    # 1. Cancel BL
     bls = q(db, """
-        SELECT id, bl_numero, statut FROM bons_livraison
+        SELECT id, bl_numero FROM bons_livraison
         WHERE of_id = %s AND statut NOT IN ('LIVRE','CANCELLED')
     """, (of_id,))
-
     for bl in bls:
         exe(db, """
             UPDATE bons_livraison
@@ -529,13 +514,12 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
                      detail=f"BL {bl['bl_numero']} annulé — OF {numero} annulé")
         summary["bl_cancelled"].append(bl["bl_numero"])
 
-    # ── 2. Cancel Planning slots ──────────────────────────
+    # 2. Cancel Planning slots
     plans = q(db, """
         SELECT id FROM planning_production
         WHERE of_id = %s
           AND statut NOT IN ('TERMINE','ANNULE','CANCELLED')
     """, (of_id,))
-
     for pl in plans:
         exe(db, """
             UPDATE planning_production
@@ -548,15 +532,13 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
                      detail=f"Créneau planning annulé — OF {numero} annulé")
         summary["planning_cancelled"].append(pl["id"])
 
-    # ── 3. Handle DAs linked to this OF ──────────────────
+    # 3. Handle DAs linked to this OF
     das = q(db, """
         SELECT id, da_numero, statut FROM demandes_achat
         WHERE of_id = %s
           AND statut NOT IN ('CANCELLED','RECEIVED')
     """, (of_id,))
-
     for da in das:
-        # Always cancel the DA regardless of status
         exe(db, """
             UPDATE demandes_achat
             SET statut='CANCELLED', cancel_reason=%s,
@@ -568,7 +550,7 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
                      detail=f"DA {da['da_numero']} annulée — OF {numero} annulé")
         summary["da_cancelled"].append(da["da_numero"])
 
-        # If DA was ORDERED, a BC exists — handle it
+        # If DA was ORDERED, handle BC
         if da["statut"] == "ORDERED":
             bcs = q(db, """
                 SELECT id, bc_numero, statut, fournisseur
@@ -576,12 +558,8 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
                 WHERE da_id = %s
                   AND statut NOT IN ('CANCELLED','ANNULE')
             """, (da["id"],))
-
             for bc in bcs:
-                bc_statut = bc["statut"]
-
-                if bc_statut in ("DRAFT", "ENVOYE"):
-                    # Cancel the BC
+                if bc["statut"] in ("DRAFT", "ENVOYE"):
                     exe(db, """
                         UPDATE bons_commande
                         SET statut='ANNULE', cancel_reason=%s,
@@ -592,63 +570,45 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
                                  user_id, user_nom, reason=cancel_reason,
                                  detail=f"BC {bc['bc_numero']} annulé — OF {numero} annulé")
                     summary["bc_cancelled"].append(bc["bc_numero"])
-
-                    # Extra warning if already sent to supplier
-                    if bc_statut == "ENVOYE":
+                    if bc["statut"] == "ENVOYE":
                         summary["warnings"].append(
                             f"⚠ BC {bc['bc_numero']} ({bc['fournisseur']}) était déjà "
                             f"envoyé au fournisseur — contacter le fournisseur "
                             f"pour annuler la commande physiquement"
                         )
-
-                elif bc_statut in ("RECU_PARTIEL", "RECU"):
-                    # Goods already received — warn only, do not cancel
+                elif bc["statut"] in ("RECU_PARTIEL", "RECU"):
                     summary["warnings"].append(
-                        f"⚠ BC {bc['bc_numero']} déjà reçu (statut: {bc_statut}) — "
+                        f"⚠ BC {bc['bc_numero']} déjà reçu ({bc['statut']}) — "
                         f"vérifier le stock et effectuer un ajustement si nécessaire"
                     )
 
-    # ── 4. Reverse stock SORTIE movements for this OF ────
+    # 4. Reverse stock SORTIE movements
     sorties = q(db, """
-        SELECT ms.id, ms.materiau_id, ms.quantite,
-               m.nom  materiau_nom,
-               m.code materiau_code,
+        SELECT ms.materiau_id, ms.quantite,
+               m.nom materiau_nom, m.code materiau_code,
                m.stock_actuel
         FROM mouvements_stock ms
         JOIN materiaux m ON m.id = ms.materiau_id
         WHERE ms.of_id = %s AND ms.type = 'SORTIE'
     """, (of_id,))
-
     for mv in sorties:
         stock_avant = float(mv["stock_actuel"])
         stock_apres = round(stock_avant + float(mv["quantite"]), 6)
-
-        # Restore the stock
         exe(db, "UPDATE materiaux SET stock_actuel=%s WHERE id=%s",
             (stock_apres, mv["materiau_id"]))
-
-        # Record the reversal as ENTREE
         exe(db, """
             INSERT INTO mouvements_stock
-                (materiau_id, of_id, type, quantite,
-                 stock_avant, stock_apres, motif)
+                (materiau_id, of_id, type, quantite, stock_avant, stock_apres, motif)
             VALUES (%s, %s, 'ENTREE', %s, %s, %s, %s)
-        """, (
-            mv["materiau_id"], of_id, mv["quantite"],
-            stock_avant, stock_apres,
-            f"Retour stock automatique — OF {numero} annulé"
-        ))
-
-        log_activity(
-            db, "STOCK_REVERSAL", "MATERIAU",
-            mv["materiau_id"], mv["materiau_code"],
-            user_id, user_nom,
-            old_value={"stock": stock_avant},
-            new_value={"stock": stock_apres},
-            detail=(f"Stock {mv['materiau_nom']} restauré "
-                    f"({stock_avant} → {stock_apres}) — OF {numero} annulé")
-        )
-
+        """, (mv["materiau_id"], of_id, mv["quantite"],
+              stock_avant, stock_apres,
+              f"Retour stock automatique — OF {numero} annulé"))
+        log_activity(db, "STOCK_REVERSAL", "MATERIAU",
+                     mv["materiau_id"], mv["materiau_code"],
+                     user_id, user_nom,
+                     old_value={"stock": stock_avant},
+                     new_value={"stock": stock_apres},
+                     detail=f"Stock {mv['materiau_nom']} restauré ({stock_avant}→{stock_apres}) — OF {numero} annulé")
         summary["stock_reversed"].append({
             "materiau":    mv["materiau_nom"],
             "code":        mv["materiau_code"],
@@ -657,31 +617,23 @@ def _cancel_of_cascade(db, of_id: int, numero: str,
             "stock_apres": stock_apres,
         })
 
-    # ── 5. Suggest NC if production had started ───────────
+    # 5. Suggest NC if production had started
     ops_started = q(db, """
         SELECT COUNT(*) n FROM of_operations
-        WHERE of_id = %s
-          AND statut IN ('IN_PROGRESS','COMPLETED')
+        WHERE of_id = %s AND statut IN ('IN_PROGRESS','COMPLETED')
     """, (of_id,), one=True)
-
     if ops_started and ops_started["n"] > 0:
         summary["suggest_nc"] = True
 
     return summary
 
 
-# ── CANCEL ENDPOINTS ──────────────────────────────────────
-
 @router.put("/{of_id}/cancel")
-def cancel_of_put(
-    of_id: int,
-    data:  CancelRequest,
-    user=Depends(get_current_user),
-    db=Depends(get_db)
-):
+def cancel_of(of_id: int, data: CancelRequest,
+              user=Depends(get_current_user), db=Depends(get_db)):
     """
     ISO 9001 — Cancel an OF with full cascade.
-    PUT /api/of/{of_id}/cancel  ← called by frontend cancel modal
+    Called by frontend cancel modal.
     """
     of = q(db, """
         SELECT o.*, p.nom produit_nom
@@ -702,7 +654,6 @@ def cancel_of_put(
     user_id  = user.get("id")
     user_nom = f"{user.get('prenom','')} {user.get('nom','')}".strip()
 
-    # Cancel the OF itself first
     numero = cancel_document(
         db,
         table      = "ordres_fabrication",
@@ -716,12 +667,10 @@ def cancel_of_put(
         old_statut = of["statut"],
     )
 
-    # Run full cascade
     summary = _cancel_of_cascade(
         db, of_id, numero, user_id, user_nom, data.reason
     )
 
-    # Build human-readable message
     msg_parts = [f"OF {numero} annulé"]
     if summary["bl_cancelled"]:
         msg_parts.append(f"BL: {', '.join(summary['bl_cancelled'])}")
@@ -730,9 +679,7 @@ def cancel_of_put(
     if summary["bc_cancelled"]:
         msg_parts.append(f"BCs: {', '.join(summary['bc_cancelled'])}")
     if summary["stock_reversed"]:
-        msg_parts.append(
-            f"{len(summary['stock_reversed'])} retour(s) stock"
-        )
+        msg_parts.append(f"{len(summary['stock_reversed'])} retour(s) stock")
     if summary["warnings"]:
         msg_parts.append(f"{len(summary['warnings'])} avertissement(s)")
 
@@ -746,33 +693,13 @@ def cancel_of_put(
 
 
 @router.delete("/{of_id}")
-def cancel_of_delete(
-    of_id: int,
-    data:  CancelRequest,
-    user=Depends(get_current_user),
-    db=Depends(get_db)
-):
+def delete_of(of_id: int, data: CancelRequest,
+              user=Depends(get_current_user), db=Depends(get_db)):
     """
-    DELETE method also triggers cancel — never a physical delete.
-    The DB trigger is the final safety net.
-    """
-    return cancel_of_put(of_id, data, user, db)
-
-# The frontend uses PUT not DELETE for the cancel modal
-
-@router.put("/{of_id}/cancel")
-def cancel_of_put(
-        of_id: int,
-        data: CancelRequest,
-        user=Depends(get_current_user),
-        db=Depends(get_db)
-):
-    """
-    PUT version of cancel — called by the frontend cancel modal.
-    Delegates to the same logic.
+    DELETE is redirected to cancel — never a physical delete.
+    DB trigger is the final safety net.
     """
     return cancel_of(of_id, data, user, db)
-
 
 # ── FULL EDIT ─────────────────────────────────────────────
 
@@ -822,20 +749,3 @@ def update_of_full(of_id: int, data: OFCreate,
         """, (of_id, b.materiau_id, b.quantite_requise))
 
     return {"message": "OF mis à jour complet"}
-# ── cancel OF ──────────────────────────────────────────
-@router.put("/{of_id}/cancel")
-def cancel_of(of_id: int, data: CancelRequest,
-              user=Depends(get_current_user), db=Depends(get_db)):
-    numero = cancel_document(
-        db, "ordres_fabrication", "id", "numero",
-        of_id, user["id"],
-        f"{user.get('prenom','')} {user.get('nom','')}",
-        data.reason, "OF"
-    )
-    # Also cancel associated BL
-    exe(db, """
-        UPDATE bons_livraison
-        SET statut='CANCELLED', cancel_reason=%s, cancelled_by=%s, cancelled_at=NOW()
-        WHERE of_id=%s AND statut != 'LIVRE'
-    """, (f"OF {numero} annulé: {data.reason}", user["id"], of_id))
-    return {"message": f"OF {numero} annulé", "numero": numero}

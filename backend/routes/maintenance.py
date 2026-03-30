@@ -4,8 +4,8 @@ SMARTMOVE · Mahmoud Njeh
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from database import get_db, q, exe, serialize
-from auth import require_any_role, require_manager_or_admin
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity, CancelRequest
+from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import MaintenanceCreate, MaintenanceUpdate
 from datetime import date
 
@@ -102,3 +102,72 @@ def maintenance_stats(conn=Depends(get_db), user=Depends(require_manager_or_admi
         "by_type": by_type,
         "cout_total": cout_total
     })
+
+
+@router.put("/{oid}/cancel")
+def cancel_maintenance(
+        oid: int,
+        data: CancelRequest,
+        user=Depends(get_current_user),
+        conn=Depends(get_db)
+):
+    """
+    ISO 9001 — Cancel a maintenance order with mandatory reason.
+    TERMINE orders cannot be cancelled.
+    When cancelled, machine status is restored to OPERATIONNELLE.
+    """
+    om = q(conn, """
+        SELECT om.*, m.statut machine_statut
+        FROM ordres_maintenance om
+        LEFT JOIN machines m ON m.id = om.machine_id
+        WHERE om.id=%s
+    """, (oid,), one=True)
+
+    if not om:
+        raise HTTPException(404, "Ordre de maintenance introuvable")
+    if om["statut"] == "ANNULE":
+        raise HTTPException(400, "Ordre déjà annulé")
+    if om["statut"] == "TERMINE":
+        raise HTTPException(400,
+                            "Un ordre de maintenance terminé ne peut pas être annulé.")
+
+    user_id = user.get("id")
+    user_nom = f"{user.get('prenom', '')} {user.get('nom', '')}".strip()
+
+    numero = cancel_document(
+        conn,
+        table="ordres_maintenance",
+        id_col="id",
+        numero_col="om_numero",
+        record_id=oid,
+        user_id=user_id,
+        user_nom=user_nom,
+        reason=data.reason,
+        entity_type="MAINTENANCE",
+        old_statut=om["statut"],
+    )
+
+    # If machine was in maintenance because of this order,
+    # restore it to OPERATIONNELLE
+    if om["statut"] == "EN_COURS" and om.get("machine_id"):
+        # Check no other active maintenance orders for this machine
+        other_active = q(conn, """
+            SELECT COUNT(*) n FROM ordres_maintenance
+            WHERE machine_id=%s
+              AND id != %s
+              AND statut = 'EN_COURS'
+        """, (om["machine_id"], oid), one=True)
+
+        if not other_active or other_active["n"] == 0:
+            exe(conn,
+                "UPDATE machines SET statut='OPERATIONNELLE' WHERE id=%s",
+                (om["machine_id"],))
+            log_activity(
+                conn, "UPDATE", "MACHINE", om["machine_id"], None,
+                user_id, user_nom,
+                old_value={"statut": "EN_MAINTENANCE"},
+                new_value={"statut": "OPERATIONNELLE"},
+                detail=f"Machine restaurée à OPERATIONNELLE — OM {numero} annulé"
+            )
+
+    return {"message": f"Ordre {numero} annulé", "numero": numero}
