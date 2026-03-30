@@ -311,7 +311,7 @@ def cancel_da(
     da = q(db, "SELECT * FROM demandes_achat WHERE id=%s", (da_id,), one=True)
     if not da:
         raise HTTPException(404, "DA introuvable")
-    if da["statut"] == "CANCELLED":
+    if da["statut"] == "ANNULE":
         raise HTTPException(400, "DA déjà annulée")
     if da["statut"] == "RECEIVED":
         raise HTTPException(400,

@@ -5,6 +5,7 @@ from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
 from models import FACreate
 from datetime import datetime
+from routes.settings import get_all_settings
 
 router = APIRouter(prefix="/api/achats/fa", tags=["achats-fa"])
 
@@ -29,7 +30,7 @@ def list_fa(db=Depends(get_db)):
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_fa(data: FACreate, db=Depends(get_db)):
-    from routes.settings import get_all_settings
+
     TVA_RATE = float(get_all_settings(db).get("tva_rate", 19))
     numero = gen_num(db)
     bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (data.bc_id,), one=True)

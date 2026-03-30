@@ -208,7 +208,7 @@ def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depen
     )
 
 
-router.put("/{bl_id}/cancel")
+@router.put("/{bl_id}/cancel")
 
 
 def cancel_bl(
@@ -224,7 +224,7 @@ def cancel_bl(
     bl = q(db, "SELECT * FROM bons_livraison WHERE id=%s", (bl_id,), one=True)
     if not bl:
         raise HTTPException(404, "BL introuvable")
-    if bl["statut"] == "CANCELLED":
+    if bl["statut"] == "ANNULE":
         raise HTTPException(400, "BL déjà annulé")
     if bl["statut"] == "LIVRE":
         raise HTTPException(400,
