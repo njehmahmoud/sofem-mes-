@@ -1,5 +1,4 @@
 // ── bl.js v6 ─────────────────────────────────────────────
-from models import CancelRequest  # reuse the same model
 
 async function loadBL() {
   try {
@@ -120,24 +119,3 @@ async function saveBLEdit() {
     loadBL();
   } catch (e) { toast(e.message, 'err'); }
 }
-
-@router.put("/{bl_id}/cancel")
-def cancel_bl(bl_id: int, data: CancelRequest,
-              user=Depends(get_current_user), db=Depends(get_db)):
-    bl = q(db, "SELECT id, bl_numero, statut FROM bons_livraison WHERE id=%s",
-           (bl_id,), one=True)
-    if not bl:
-        raise HTTPException(404, "BL introuvable")
-    if bl["statut"] == "LIVRE":
-        raise HTTPException(400, "Un BL livré ne peut pas être annulé")
-    if bl["statut"] == "ANNULE":
-        raise HTTPException(400, "BL déjà annulé")
-
-    exe(db, """
-        UPDATE bons_livraison
-        SET statut='ANNULE', cancel_reason=%s,
-            cancelled_by=%s, cancelled_at=NOW()
-        WHERE id=%s
-    """, (data.reason, user.get("id"), bl_id))
-
-    return {"message": f"BL {bl['bl_numero']} annulé ✓"}
