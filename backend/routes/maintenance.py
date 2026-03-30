@@ -4,9 +4,9 @@ SMARTMOVE · Mahmoud Njeh
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity, CancelRequest
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity
 from auth import require_any_role, require_manager_or_admin, get_current_user
-from models import MaintenanceCreate, MaintenanceUpdate
+from models import MaintenanceCreate, MaintenanceUpdate, CancelRequest
 from datetime import date
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])

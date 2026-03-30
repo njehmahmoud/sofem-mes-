@@ -5,9 +5,9 @@ Fix: race-free BL numbering using insert-first + id-based finalize.
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity, CancelRequest
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, cancel_document, log_activity
 from auth import require_any_role, get_pdf_user, require_manager_or_admin, get_current_user
-from models import BLCreate, BLUpdate, BLLivrer
+from models import BLCreate, BLUpdate, BLLivrer, CancelRequest
 from datetime import datetime
 import io
 from reportlab.lib.utils import ImageReader as _IR
