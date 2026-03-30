@@ -1663,6 +1663,74 @@
     </div>
   </div>
 </div>
+<!-- GLOBAL CANCEL MODAL -->
+<div class="overlay" id="m-cancel">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-h">
+      <div>
+        <div class="modal-title" style="color:var(--accent)">
+          ⚠️ ANNULER — <span id="cancel-doc-num" style="color:var(--red)"></span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px">
+          ISO 9001 · Cette action est irréversible · Le document sera conservé
+        </div>
+      </div>
+      <button class="x" onclick="closeModal('m-cancel')">✕</button>
+    </div>
+    <div class="modal-b">
+      <!-- Hidden fields -->
+      <input type="hidden" id="cancel-id">
+      <input type="hidden" id="cancel-endpoint">
+      <input type="hidden" id="cancel-callback">
+
+      <!-- Document info -->
+      <div id="cancel-doc-info"
+        style="background:var(--bg3);border:1px solid var(--border);
+               border-radius:6px;padding:.75rem;margin-bottom:.5rem;
+               font-size:11px;color:var(--muted)">
+      </div>
+
+      <!-- Reason input — MANDATORY -->
+      <div class="fg">
+        <label>
+          Raison de l'annulation *
+          <span style="color:var(--red);font-size:9px;margin-left:.5rem">OBLIGATOIRE</span>
+        </label>
+        <textarea id="cancel-reason" rows="3"
+          placeholder="Expliquer pourquoi ce document est annulé...
+Ex: Commande client annulée, erreur de saisie, doublon..."
+          style="resize:vertical;border-color:var(--border)"
+          oninput="validateCancelReason()"></textarea>
+        <div id="cancel-reason-error"
+          style="display:none;color:var(--red);font-size:10px;
+                 font-family:'IBM Plex Mono',monospace;margin-top:3px">
+          ⚠ La raison doit contenir au moins 5 caractères
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.25);
+                  border-radius:6px;padding:.6rem .75rem;font-size:11px;color:var(--muted)">
+        ⚠️ Le document passera au statut
+        <strong style="color:var(--red)">ANNULÉ</strong>.
+        Il restera visible dans les archives pour la traçabilité ISO 9001.
+        Le numéro de document ne sera
+        <strong style="color:var(--text)">jamais réutilisé</strong>.
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-cancel')">
+        Garder le document
+      </button>
+      <button class="btn" id="cancel-confirm-btn"
+        style="background:var(--accent);border-color:var(--accent);opacity:.5;cursor:not-allowed"
+        onclick="confirmCancel()" disabled>
+        ✕ Confirmer l'annulation
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <script src="/admin/js/core.js"></script>
 <script src="/admin/js/cancel.js"></script>
