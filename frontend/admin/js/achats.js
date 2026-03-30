@@ -58,17 +58,17 @@ async function loadDA() {
         <td style="font-size:10px;color:var(--muted)">${da.of_numero||'—'}</td>
         <td>${bcBrCell}</td>
         <td style="display:flex;gap:3px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
-          ${da.statut==='PENDING'
-            ? '
-            <button class="fbtn" style="color:var(--green)" onclick="updateDA($${da.id},'APPROVED')" title="Approuver">✓</button>
-            <button class="fbtn" style="color:var(--red)"   onclick="updateDA($${da.id},'REJECTED')" title="Rejeter">CANCELLED</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
+            ${da.statut==='PENDING'
+            ? '<button class="fbtn" style="color:var(--green)" onclick="updateDA(' + da.id + ',\'APPROVED\')" title="Approuver">✓</button> <button class="fbtn" style="color:var(--red)"   onclick="updateDA(' + da.id + ',\'REJECTED\')" title="Rejeter">CANCELLED</button>'
             : ''}
             ${!['CANCELLED','RECEIVED','ORDERED'].includes(da.statut)
-            ?'
-            <button class="fbtn" style="color:var(--accent)"onclick="cancelDA($${da.id},'$${da.da_numero}','$${(da.description||'').replace(/'/g,"\\'")}','$${da.statut}')" title="Annuler">✕ Annuler</button>
+            ? '<button class="fbtn" style="color:var(--accent)"          onclick="cancelDA(' + da.id + ',\'' + da.da_numero + '\',\'' + ((da.description||'').replace(/'/g,"\\'")) + '\',\'' + da.statut + '\')"          title="Annuler">✕ Annuler</button>'
             : ''}
-        </td>
+            </td>
+            </tr>`;
+            }).join('');
+            } catch(e) { toast('Erreur DA: '+e.message,'err'); }
       </tr>`;
     }).join('');
   } catch(e) { toast('Erreur DA: '+e.message,'err'); }
