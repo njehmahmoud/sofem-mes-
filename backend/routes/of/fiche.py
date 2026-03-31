@@ -6,12 +6,19 @@ from database import get_db, q, serialize
 from auth import require_any_role, get_pdf_user
 from datetime import datetime
 import io
+from reportlab.lib.utils import ImageReader as _IR
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
+from routes.settings import get_all_settings
 
 router = APIRouter(prefix="/api/of", tags=["fiche"])
 
 
 @router.get("/{of_id}/fiche")
-def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
+def generate_fiche(of_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = q(db, """
         SELECT o.*, p.nom produit_nom, p.code produit_code,
                p.prix_vente_ht,
@@ -52,7 +59,6 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
 
     of = serialize(of); ops = serialize(ops); bom = serialize(bom)
     # Load settings
-    from routes.settings import get_all_settings
     cfg = get_all_settings(db)
     S_NOM    = cfg.get("societe_nom",       "sofem")
     S_TAG    = cfg.get("societe_tagline",   "Société de Fabrication Électromécanique & de Maintenance")
@@ -68,11 +74,6 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
 
     qte = int(of.get("quantite", 1))
 
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
-    from reportlab.platypus import Table, TableStyle
 
     W, H = A4
     buf = io.BytesIO()
@@ -90,9 +91,15 @@ def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=D
     c.setFillColor(DARK); c.rect(0, H-35*mm, W, 35*mm, fill=1, stroke=0)
     c.setFillColor(RED);  c.rect(0, H-37*mm, W, 2*mm, fill=1, stroke=0)
     # Logo box
-    c.setFillColor(RED); c.roundRect(12*mm, H-30*mm, 20*mm, 20*mm, 3, fill=1, stroke=0)
-    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(22*mm, H-22*mm, "S")
+    import os as _os
+    _logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "static", "logo.png")
+    if _os.path.exists(_logo_path):
+        c.drawImage(_IR(_logo_path), 10*mm, H-31*mm, 22*mm, 22*mm,
+                    preserveAspectRatio=True, mask='auto')
+    else:
+        c.setFillColor(RED); c.roundRect(12*mm, H-30*mm, 20*mm, 20*mm, 3, fill=1, stroke=0)
+        c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(22*mm, H-22*mm, "S")
     # Company name
     c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 18)
     c.drawString(36*mm, H-20*mm, S_NOM)

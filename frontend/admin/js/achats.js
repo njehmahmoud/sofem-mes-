@@ -7,25 +7,41 @@ async function loadDA() {
       api('/api/achats/da'), api('/api/materiaux'),
       api('/api/of?limit=500'), api('/api/operateurs')
     ]);
+
     // Populate modal selects
     if (mats) $('da-mat').innerHTML = '<option value="">— Aucun —</option>' +
       mats.map(m => `<option value="${m.id}">${m.nom} (stock: ${m.stock_actuel} ${m.unite})</option>`).join('');
+
     if (ofs) {
       const daOfEl = $('da-of');
       if (daOfEl) daOfEl.innerHTML = '<option value="">— Aucun —</option>' +
         ofs.map(o => `<option value="${o.id}">${o.numero} — ${o.produit_nom}</option>`).join('');
     }
-    // Populate demandeur from operateurs
-    const opsList = await api('/api/operateurs') || [];
-    const demEl = $('da-demandeur');
-    if (demEl) demEl.innerHTML = '<option value="">— Aucun —</option>' +
-      opsList.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
-    if (ops) $('da-demandeur').innerHTML = '<option value="">— Aucun —</option>' +
-      ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
 
-    $('da-tb').innerHTML = (das||[]).length===0 ? empty(10) : das.map(da => {
-      const badge = {PENDING:'b-draft',APPROVED:'b-approved',REJECTED:'b-cancelled',ORDERED:'b-inprogress',RECEIVED:'b-completed'}[da.statut]||'b-draft';
-      const statutLabel = {PENDING:'En attente',APPROVED:'Approuvée',REJECTED:'Rejetée',ORDERED:'Commandée',RECEIVED:'Reçue'}[da.statut]||da.statut;
+    // Populate demandeur from operateurs
+    const demEl = $('da-demandeur');
+    if (demEl && ops) {
+      demEl.innerHTML = '<option value="">— Aucun —</option>' +
+        ops.map(o => `<option value="${o.id}">${o.prenom} ${o.nom}</option>`).join('');
+    }
+
+    $('da-tb').innerHTML = (das || []).length === 0 ? empty(10) : das.map(da => {
+      const badge = {
+        PENDING: 'b-draft',
+        APPROVED: 'b-approved',
+        REJECTED: 'b-cancelled',
+        ORDERED: 'b-inprogress',
+        RECEIVED: 'b-completed'
+      }[da.statut] || 'b-draft';
+
+      const statutLabel = {
+        PENDING: 'En attente',
+        APPROVED: 'Approuvée',
+        REJECTED: 'Rejetée',
+        ORDERED: 'Commandée',
+        RECEIVED: 'Reçue'
+      }[da.statut] || da.statut;
+
       // BC / BR links
       const bc = da.bc;
       let bcBrCell = '—';
@@ -41,82 +57,98 @@ async function loadDA() {
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent)">${bc.bc_numero}</span>
             <button class="btn btn-ghost btn-sm" style="font-size:8px;padding:1px 5px"
-              onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')" title="Imprimer BC">🖨️</button>
+              onclick="const token = localStorage.getItem('token'); window.open('/api/achats/bc/${bc.id}/pdf?token=' + encodeURIComponent(token), '_blank')" title="Imprimer BC">🖨️</button>
           </div>
           <div style="display:flex;align-items:center;gap:3px">
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${bc.br_numero||'—'}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${bc.br_numero || '—'}</span>
             ${brBadge}
           </div>
         </div>`;
       }
+
       return `<tr>
         <td><span class="of-num">${da.da_numero}</span></td>
         <td style="font-size:11px;max-width:160px">${da.description}</td>
-        <td style="font-size:11px">${da.materiau_nom||'—'}</td>
+        <td style="font-size:11px">${da.materiau_nom || '—'}</td>
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${da.quantite} ${da.unite}</td>
-        <td><span class="badge ${da.urgence==='URGENT'?'b-urgent':'b-normal'}">${da.urgence}</span></td>
+        <td><span class="badge ${da.urgence === 'URGENT' ? 'b-urgent' : 'b-normal'}">${da.urgence}</span></td>
         <td><span class="badge ${badge}">${statutLabel}</span></td>
-        <td style="font-size:10px;color:var(--muted)">${da.of_numero||'—'}</td>
+        <td style="font-size:10px;color:var(--muted)">${da.of_numero || '—'}</td>
         <td>${bcBrCell}</td>
         <td style="display:flex;gap:3px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
-          ${da.statut==='PENDING'
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/da/${da.id}/ba?token=' + encodeURIComponent(token), '_blank')" title="BA PDF">📋 BA</button>
+          ${da.statut === 'PENDING'
             ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')" title="Approuver">✓</button>
-               <button class="fbtn" style="color:var(--red)"   onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>`
+               <button class="fbtn" style="color:var(--red)" onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>`
+            : ''}
+          ${!['CANCELLED', 'RECEIVED', 'ORDERED'].includes(da.statut)
+            ? `<button class="fbtn" style="color:var(--accent)" onclick="cancelDA(${da.id},'${da.da_numero}','${(da.description || '').replace(/'/g, "\\'")}','${da.statut}')" title="Annuler">✕ Annuler</button>`
             : ''}
         </td>
       </tr>`;
     }).join('');
-  } catch(e) { toast('Erreur DA: '+e.message,'err'); }
+
+  } catch (e) { toast('Erreur DA: ' + e.message, 'err'); }
 }
 
 async function saveDA() {
-  if (!$('da-desc')?.value) { toast('Description requise','err'); return; }
+  if (!$('da-desc')?.value) { toast('Description requise', 'err'); return; }
   try {
-    const res = await api('/api/achats/da','POST',{
+    const res = await api('/api/achats/da', 'POST', {
       materiau_id:  $('da-mat')?.value       ? parseInt($('da-mat').value)       : null,
       of_id:        $('da-of')?.value         ? parseInt($('da-of').value)         : null,
       description:  $('da-desc').value,
       objet:        $('da-objet')?.value      || null,
-      quantite:     parseFloat($('da-qte')?.value)||1,
+      quantite:     parseFloat($('da-qte')?.value) || 1,
       unite:        $('da-unite')?.value      || 'pcs',
       urgence:      $('da-urgence')?.value    || 'NORMAL',
       notes:        $('da-notes')?.value      || null,
       demandeur_id: $('da-demandeur')?.value  ? parseInt($('da-demandeur').value) : null
     });
     toast(`${res.da_numero} créée ✓`); closeModal('m-da'); loadDA();
-  } catch(e) { toast(e.message,'err'); }
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function updateDA(id, statut) {
   try {
-    const res = await api(`/api/achats/da/${id}`,'PUT',{statut});
+    const res = await api(`/api/achats/da/${id}`, 'PUT', { statut });
     if (statut === 'APPROVED' && res.bc_numero) {
       toast(`DA approuvée ✓ — ${res.bc_numero} + ${res.br_numero} créés`);
     } else {
       toast(`DA → ${statut} ✓`);
     }
     loadDA(); loadBC(); loadBR();
-  } catch(e) { toast(e.message,'err'); }
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function cancelDA(id, numero, description, statut) {
+  const reason = prompt(`Annuler DA ${numero}?\n\nMotif d'annulation (obligatoire):`);
+  if (!reason || reason.trim().length < 5) {
+    toast('Motif requis (min. 5 caractères)', 'err');
+    return;
+  }
+
+  try {
+    const res = await api(`/api/achats/da/${id}/cancel`, 'PUT', { reason });
+    toast(`${numero} annulée ✓`);
+    loadDA(); loadBC(); loadBR();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function confirmerReception(brId, brNumero) {
-  // Load BR details to pre-fill modal
   try {
     const brs = await api('/api/achats/br');
-    const br  = (brs||[]).find(b => b.id === brId);
+    const br  = (brs || []).find(b => b.id === brId);
     if (!br) { toast('BR introuvable', 'err'); return; }
 
-    // Find the BC line (quantity ordered)
     const bcs = await api('/api/achats/bc');
-    const bc  = (bcs||[]).find(b => b.id === br.bc_id);
+    const bc  = (bcs || []).find(b => b.id === br.bc_id);
     const ligne = bc?.lignes?.[0];
 
-    $('br-confirm-id').value      = brId;
+    $('br-confirm-id').value        = brId;
     $('br-confirm-num').textContent = brNumero;
 
-    // Info band
-    const mat = ligne?.materiau_nom || ligne?.description || '—';
+    const mat   = ligne?.materiau_nom || ligne?.description || '—';
     const unite = ligne?.unite || '';
     $('br-confirm-info').innerHTML = `
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
@@ -128,44 +160,44 @@ async function confirmerReception(brId, brNumero) {
 
     const qteCmd = parseFloat(ligne?.quantite || 0);
     $('br-confirm-qte-cmd').value   = qteCmd;
-    $('br-confirm-qte-recue').value = qteCmd;  // default = full quantity
+    $('br-confirm-qte-recue').value = qteCmd;
     $('br-confirm-prix').value      = parseFloat(ligne?.prix_unitaire || 0);
     $('br-confirm-notes').value     = '';
     $('br-confirm-status').style.display = 'none';
     updateBRTotal();
 
     openModal('m-br-confirm');
-  } catch(e) { toast(e.message, 'err'); }
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 function updateBRTotal() {
-  const qte  = parseFloat($('br-confirm-qte-recue')?.value || 0);
-  const prix = parseFloat($('br-confirm-prix')?.value || 0);
+  const qte   = parseFloat($('br-confirm-qte-recue')?.value || 0);
+  const prix  = parseFloat($('br-confirm-prix')?.value || 0);
   const total = Math.round(qte * prix * 1000) / 1000;
-  if ($('br-confirm-total')) $('br-confirm-total').value = total;
+  const totalEl = $('br-confirm-total');
+  if (totalEl) totalEl.value = total;
 
-  // Show partial/full indicator
-  const qteCmd = parseFloat($('br-confirm-qte-cmd')?.value || 0);
+  const qteCmd  = parseFloat($('br-confirm-qte-cmd')?.value || 0);
   const statusEl = $('br-confirm-status');
   if (statusEl && qteCmd > 0) {
     if (qte <= 0) {
-      statusEl.style.display = 'block';
+      statusEl.style.display    = 'block';
       statusEl.style.background = 'rgba(212,43,43,0.1)';
-      statusEl.style.border = '1px solid var(--red)';
-      statusEl.style.color = 'var(--red)';
-      statusEl.textContent = '⚠ Quantité reçue doit être > 0';
+      statusEl.style.border     = '1px solid var(--red)';
+      statusEl.style.color      = 'var(--red)';
+      statusEl.textContent      = '⚠ Quantité reçue doit être > 0';
     } else if (qte < qteCmd) {
-      statusEl.style.display = 'block';
+      statusEl.style.display    = 'block';
       statusEl.style.background = 'rgba(245,158,11,0.1)';
-      statusEl.style.border = '1px solid #f59e0b';
-      statusEl.style.color = '#f59e0b';
-      statusEl.textContent = `⚠ Réception partielle — ${qte} / ${qteCmd} ${''} reçus`;
+      statusEl.style.border     = '1px solid #f59e0b';
+      statusEl.style.color      = '#f59e0b';
+      statusEl.textContent      = `⚠ Réception partielle — ${qte} / ${qteCmd} reçus`;
     } else {
-      statusEl.style.display = 'block';
+      statusEl.style.display    = 'block';
       statusEl.style.background = 'rgba(22,163,74,0.1)';
-      statusEl.style.border = '1px solid var(--green)';
-      statusEl.style.color = 'var(--green)';
-      statusEl.textContent = `✓ Réception complète — ${qte} sur ${qteCmd} commandés`;
+      statusEl.style.border     = '1px solid var(--green)';
+      statusEl.style.color      = 'var(--green)';
+      statusEl.textContent      = `✓ Réception complète — ${qte} sur ${qteCmd} commandés`;
     }
   }
 }
@@ -179,19 +211,18 @@ async function submitConfirmerReception() {
   if (!qteRecue || qteRecue <= 0) { toast('Quantité reçue requise', 'err'); return; }
 
   try {
-    // Update price on BC line first if provided
-    if (prix > 0) {
-      await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
-    } else {
-      await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
-    }
-    // Confirm reception
+    // Update quantite_recue
+    await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
+
+    // Note: Price will be synchronized on confirmer via br_lignes.prix_unitaire → bc_lignes.prix_unitaire
+    // The price is already stored in br_lignes from BR creation
+
     const res = await api(`/api/achats/br/${brId}/confirmer`, 'PUT');
     toast(res.message + ' ✓');
     closeModal('m-br-confirm');
     loadDA(); loadBR(); loadBC();
     if (window.pageLoaders?.dashboard) window.pageLoaders.dashboard();
-  } catch(e) { toast(e.message, 'err'); }
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 // ── BC ────────────────────────────────────────────────────
@@ -200,26 +231,39 @@ async function loadBC() {
     const [bcs, das, fourns] = await Promise.all([
       api('/api/achats/bc'), api('/api/achats/da'), api('/api/fournisseurs')
     ]);
+
     // Populate fournisseur dropdown
     if (fourns && $('bc-four')) {
       $('bc-four').innerHTML = '<option value="">— Sélectionner fournisseur —</option>' +
-        fourns.map(f => `<option value="${f.nom}">${f.nom}${f.ville?' · '+f.ville:''}</option>`).join('');
+        fourns.map(f => `<option value="${f.nom}">${f.nom}${f.ville ? ' · ' + f.ville : ''}</option>`).join('');
     }
-    // Populate DA — only APPROVED
-    if (das && $('bc-da')) $('bc-da').innerHTML = '<option value="">— DA liée (optionnel) —</option>' +
-      das.filter(d=>d.statut==='APPROVED').map(d=>`<option value="${d.id}">${d.da_numero} — ${d.description.slice(0,30)} (${d.quantite} ${d.unite})</option>`).join('');
 
-    $('bc-tb').innerHTML = (bcs||[]).length===0 ? empty(7) : bcs.map(bc => {
-      const badge={DRAFT:'b-draft',ENVOYE:'b-approved',RECU:'b-completed',ANNULE:'b-cancelled',RECU_PARTIEL:'b-inprogress'}[bc.statut]||'b-draft';
+    // Populate DA — only APPROVED
+    if (das && $('bc-da')) {
+      $('bc-da').innerHTML = '<option value="">— DA liée (optionnel) —</option>' +
+        das.filter(d => d.statut === 'APPROVED')
+           .map(d => `<option value="${d.id}">${d.da_numero} — ${d.description.slice(0, 30)} (${d.quantite} ${d.unite})</option>`)
+           .join('');
+    }
+
+    $('bc-tb').innerHTML = (bcs || []).length === 0 ? empty(7) : bcs.map(bc => {
+      const badge = {
+        DRAFT: 'b-draft',
+        ENVOYE: 'b-approved',
+        RECU: 'b-completed',
+        ANNULE: 'b-cancelled',
+        RECU_PARTIEL: 'b-inprogress'
+      }[bc.statut] || 'b-draft';
+
       return `<tr>
         <td><span class="of-num">${bc.bc_numero}</span></td>
         <td>${bc.fournisseur}</td>
-        <td style="font-size:10px;color:var(--muted)">${bc.da_numero||'—'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ht||0} TND HT</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ttc||0} TND TTC</td>
+        <td style="font-size:10px;color:var(--muted)">${bc.da_numero || '—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ht || 0} TND HT</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ttc || 0} TND TTC</td>
         <td><span class="badge ${badge}">${bc.statut}</span></td>
         <td style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')">🖨️</button>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/bc/${bc.id}/pdf?token=' + encodeURIComponent(token), '_blank')">🖨️</button>
           <select class="fbtn" onchange="updateBC(${bc.id},this.value)" style="font-size:9px">
             <option value="">Statut</option>
             <option value="ENVOYE">Envoyé</option>
@@ -230,151 +274,262 @@ async function loadBC() {
         </td>
       </tr>`;
     }).join('');
-  } catch(e) { toast('Erreur BC: '+e.message,'err'); }
+
+  } catch (e) { toast('Erreur BC: ' + e.message, 'err'); }
 }
 
-let bcLines = [];
+// BC line management
 function addBCLine() {
-  bcLines.push({ description:'', quantite:1, unite:'pcs', prix_unitaire:0, materiau_id:null });
-  renderBCLines();
+  const container = $('bc-lines');
+  if (!container) return;
+  const lineId = Date.now();
+  const html = `
+    <div class="bc-line-row" id="bcline-${lineId}" style="display:flex;gap:.5rem;margin-bottom:.5rem;align-items:flex-start;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+      <div style="flex:1">
+        <select class="bc-materiau-sel" data-lineid="${lineId}" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+          <option value="">— Sélectionner matériau —</option>
+        </select>
+      </div>
+      <div style="width:80px">
+        <input type="text" class="bc-desc" placeholder="Description" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <div style="width:70px">
+        <input type="number" class="bc-qty" placeholder="Qté" min="0.001" step="0.001" value="1" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <div style="width:60px">
+        <input type="text" class="bc-unite" placeholder="Unité" value="pcs" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <button class="fbtn" style="color:var(--red);min-width:30px" onclick="removeBCLine('bcline-${lineId}')">✕</button>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  
+  // Load matériaux into the new select
+  api('/api/materiaux').then(mats => {
+    const sel = document.querySelector(`#bcline-${lineId} .bc-materiau-sel`);
+    if (sel && mats) {
+      sel.innerHTML = '<option value="">— Sélectionner matériau —</option>' +
+        mats.map(m => `<option value="${m.id}|${m.nom}|${m.unite}">${m.nom} (${m.unite})</option>`).join('');
+      sel.addEventListener('change', function() {
+        if (this.value) {
+          const [id, nom, unite] = this.value.split('|');
+          const row = document.getElementById(`bcline-${lineId}`);
+          if (!row.querySelector('.bc-desc').value) {
+            row.querySelector('.bc-desc').value = nom;
+          }
+          row.querySelector('.bc-unite').value = unite;
+        }
+      });
+    }
+  });
 }
-function renderBCLines() {
-  $('bc-lines').innerHTML = bcLines.map((l,i)=>`
-    <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center">
-      <input placeholder="Désignation" value="${l.description}"
-        style="flex:2;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:11px"
-        onchange="bcLines[${i}].description=this.value">
-      <input type="number" placeholder="Qté" value="${l.quantite}" min="0"
-        style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px"
-        onchange="bcLines[${i}].quantite=parseFloat(this.value)||0">
-      <input placeholder="Unité" value="${l.unite}"
-        style="width:45px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px"
-        onchange="bcLines[${i}].unite=this.value">
-      <input type="number" placeholder="Prix HT" value="${l.prix_unitaire}" min="0" step="0.001"
-        style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px"
-        onchange="bcLines[${i}].prix_unitaire=parseFloat(this.value)||0">
-      <button class="fbtn" style="color:var(--red)" onclick="bcLines.splice(${i},1);renderBCLines()">✕</button>
-    </div>`).join('');
+
+function removeBCLine(lineId) {
+  const el = document.getElementById(lineId);
+  if (el) el.remove();
 }
 
 async function saveBC() {
-  if (!$('bc-fourn').value) { toast('Fournisseur requis','err'); return; }
-  try {
-    const res = await api('/api/achats/bc','POST',{
-      fournisseur: $('bc-fourn').value,
-      da_id: $('bc-da').value ? parseInt($('bc-da').value) : null,
-      notes: $('bc-notes').value||null,
-      lignes: bcLines
+  const four = $('bc-four')?.value;
+  if (!four) { toast('Fournisseur requis', 'err'); return; }
+
+  // Collect lines
+  const lines = [];
+  document.querySelectorAll('#bc-lines .bc-line-row').forEach(row => {
+    const matSel = row.querySelector('.bc-materiau-sel').value;
+    const desc = row.querySelector('.bc-desc').value;
+    const qty = parseFloat(row.querySelector('.bc-qty').value);
+    const unite = row.querySelector('.bc-unite').value;
+    
+    if (!matSel && !desc) return; // Skip empty lines
+    const [matId] = matSel ? matSel.split('|') : [null];
+    
+    lines.push({
+      materiau_id: matId ? parseInt(matId) : null,
+      description: desc || null,
+      quantite: qty || 0,
+      unite: unite || 'pcs'
     });
-    toast(`${res.bc_numero} créé ✓`); closeModal('m-bc'); bcLines=[]; loadBC();
-  } catch(e) { toast(e.message,'err'); }
+  });
+
+  if (lines.length === 0) { toast('Ajouter au moins une ligne', 'err'); return; }
+
+  try {
+    const res = await api('/api/achats/bc', 'POST', {
+      fournisseur: four,
+      da_id:       $('bc-da')?.value   ? parseInt($('bc-da').value)   : null,
+      notes:       $('bc-notes')?.value || null,
+      lignes:      lines
+    });
+    toast(`${res.bc_numero} créé ✓`); closeModal('m-bc'); loadBC();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function updateBC(id, statut) {
   if (!statut) return;
-  try { await api(`/api/achats/bc/${id}/statut?statut=${statut}`,'PUT'); toast('BC mis à jour'); loadBC(); }
-  catch(e) { toast(e.message,'err'); }
+  try {
+    await api(`/api/achats/bc/${id}`, 'PUT', { statut });
+    toast(`BC → ${statut} ✓`);
+    loadBC(); loadDA(); loadBR();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 // ── BR ────────────────────────────────────────────────────
 async function loadBR() {
   try {
-    const [brs, bcs] = await Promise.all([api('/api/achats/br'), api('/api/achats/bc')]);
-    if (bcs) {
-      const received = bcs.filter(b=>['ENVOYE','RECU_PARTIEL'].includes(b.statut));
-      $('br-bc').innerHTML = '<option value="">— Sélectionner BC —</option>' +
-        received.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
-    }
-    $('br-date').value = new Date().toISOString().split('T')[0];
-    $('br-tb').innerHTML = (brs||[]).length===0 ? empty(6) : brs.map(br => {
-      const badgeCls = {COMPLET:'b-completed',EN_ATTENTE:'b-draft',PARTIEL:'b-inprogress'}[br.statut]||'b-draft';
-      const statutLabel = {COMPLET:'Reçu ✓',EN_ATTENTE:'En attente',PARTIEL:'Partiel'}[br.statut]||br.statut;
+    const brs = await api('/api/achats/br');
+
+    $('br-tb').innerHTML = (brs || []).length === 0 ? empty(7) : brs.map(br => {
+      const badge = {
+        EN_ATTENTE: 'b-draft',
+        PARTIEL:    'b-inprogress',
+        COMPLET:    'b-completed',
+        ANNULE:     'b-cancelled'
+      }[br.statut] || 'b-draft';
+
+      const statutLabel = {
+        EN_ATTENTE: 'En attente',
+        PARTIEL:    'Partiel',
+        COMPLET:    'Complet',
+        ANNULE:     'Annulé'
+      }[br.statut] || br.statut;
+
       return `<tr>
         <td><span class="of-num">${br.br_numero}</span></td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.bc_numero}</td>
-        <td style="font-size:11px">${br.fournisseur}</td>
-        <td><span class="badge ${badgeCls}">${statutLabel}</span></td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${br.date_reception||'—'}</td>
-        <td>${br.statut !== 'COMPLET'
-          ? `<button class="btn btn-ghost btn-sm" style="color:var(--green)"
-               onclick="confirmerReception(${br.id},'${br.br_numero}')">✓ Confirmer réception</button>`
-          : '<span style="color:var(--muted);font-size:10px">—</span>'}
+        <td style="font-size:10px;color:var(--accent)">${br.bc_numero || '—'}</td>
+        <td>${br.fournisseur || '—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.quantite_recue || 0} / ${br.quantite_commandee || 0} ${br.unite || ''}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${br.montant_total || 0} TND</td>
+        <td><span class="badge ${badge}">${statutLabel}</span></td>
+        <td style="display:flex;gap:3px">
+          ${br.statut !== 'COMPLET' && br.statut !== 'ANNULE'
+            ? `<button class="btn btn-ghost btn-sm" onclick="confirmerReception(${br.id},'${br.br_numero}')" title="Confirmer réception">✓ Réceptionner</button>`
+            : ''}
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/br/${br.id}/pdf?token=' + encodeURIComponent(token), '_blank')" title="Imprimer BR">🖨️</button>
         </td>
       </tr>`;
     }).join('');
-  } catch(e) { toast('Erreur BR: '+e.message,'err'); }
+
+  } catch (e) { toast('Erreur BR: ' + e.message, 'err'); }
 }
 
-async function loadBCLines() {
-  const bcId = parseInt($('br-bc').value); if (!bcId) return;
-  const bc = await api('/api/achats/bc');
-  const found = (bc||[]).find(b=>b.id===bcId);
-  if (!found?.lignes) return;
-  $('br-lines').innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:.5rem">QUANTITÉS REÇUES</div>' +
-    found.lignes.map(l=>`
-      <div style="display:flex;align-items:center;gap:.5rem;padding:4px 0;border-bottom:1px solid var(--border)">
-        <span style="flex:1;font-size:11px">${l.materiau_nom||l.description} (commandé: ${l.quantite} ${l.unite})</span>
-        <input type="number" id="br-qty-${l.id}" value="${l.quantite}" min="0" step="0.01"
-          style="width:80px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px">
-        <span style="font-size:10px;color:var(--muted)">${l.unite}</span>
-      </div>`).join('');
-  // Store lines for save
-  window._brLines = found.lignes;
+function loadBCLines() {
+  const bcId = parseInt($('br-bc')?.value);
+  if (!bcId) {
+    $('br-lines').innerHTML = '';
+    return;
+  }
+
+  api('/api/achats/bc').then(bcs => {
+    const bc = (bcs || []).find(b => b.id === bcId);
+    if (!bc || !bc.lignes) {
+      $('br-lines').innerHTML = '<span style="color:var(--muted);font-size:11px">— Aucune ligne disponible —</span>';
+      return;
+    }
+
+    const html = `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:1px">Lignes du BC — ${bc.bc_numero}</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+        ${bc.lignes.map((ligne, idx) => `
+          <div class="br-line-item" data-ligne-idx="${idx}" style="display:flex;gap:.5rem;margin-bottom:.5rem;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+            <div style="flex:1">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Matériau / Description</div>
+              <div style="font-size:11px;color:var(--text);font-weight:600">${ligne.materiau_nom || ligne.description || '—'}</div>
+            </div>
+            <div style="width:80px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Qté cmd</div>
+              <input type="number" class="br-qte-cmd" value="${ligne.quantite}" disabled style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;opacity:.6">
+            </div>
+            <div style="width:90px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Qté reçue</div>
+              <input type="number" class="br-qte-recue" value="${ligne.quantite}" min="0" step="0.001" style="width:100%;background:var(--bg2);border:1px solid var(--green);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-weight:600">
+            </div>
+            <div style="width:100px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Prix unit. HT</div>
+              <input type="number" class="br-prix" min="0" step="0.001" value="${ligne.prix_unitaire || 0}" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+            </div>
+            <div style="width:80px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Total HT</div>
+              <input type="number" disabled value="${(parseFloat(ligne.quantite || 0) * (parseFloat(ligne.prix_unitaire || 0))).toFixed(3)}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--accent);font-family:'IBM Plex Mono',monospace;opacity:.7;font-weight:600">
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    $('br-lines').innerHTML = html;
+  });
 }
 
 async function saveBR() {
-  const bcId = parseInt($('br-bc').value);
-  if (!bcId) { toast('Sélectionner un BC','err'); return; }
-  const lignes = (window._brLines||[]).map(l=>({
-    bc_ligne_id: l.id,
-    quantite_recue: parseFloat($(`br-qty-${l.id}`)?.value||0)
-  })).filter(l=>l.quantite_recue>0);
-  try {
-    const res = await api('/api/achats/br','POST',{
-      bc_id: bcId, date_reception: $('br-date').value,
-      statut: $('br-statut').value, lignes
+  const bcId = parseInt($('br-bc')?.value);
+  const date = $('br-date')?.value;
+  const statut = $('br-statut')?.value || 'COMPLET';
+  const notes = $('br-notes')?.value || null;
+
+  if (!bcId || !date) { toast('BC et Date requis', 'err'); return; }
+
+  // Collect line items with prices
+  const lignes = [];
+  document.querySelectorAll('#br-lines .br-line-item').forEach(item => {
+    const qteRecue = parseFloat(item.querySelector('.br-qte-recue').value);
+    const prix = parseFloat(item.querySelector('.br-prix').value || 0);
+    lignes.push({
+      quantite_recue: qteRecue || 0,
+      prix_unitaire: prix || 0
     });
-    toast(`${res.br_numero} créé — stock mis à jour ✓`); closeModal('m-br'); loadBR();
-  } catch(e) { toast(e.message,'err'); }
+  });
+
+  try {
+    const res = await api('/api/achats/br', 'POST', {
+      bc_id:  bcId,
+      date_reception: date,
+      statut: statut,
+      notes:  notes,
+      lignes: lignes
+    });
+    toast(`${res.br_numero} créé ✓`); closeModal('m-br'); loadBR();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
-// ── FA ────────────────────────────────────────────────────
 async function loadFA() {
   try {
-    const [fas, bcs] = await Promise.all([api('/api/achats/fa'), api('/api/achats/bc')]);
-    if (bcs) {
-      const received = bcs.filter(b=>b.statut==='RECU');
+    const [fas, bcs] = await Promise.all([
+      api('/api/achats/fa'), api('/api/achats/bc')
+    ]);
+
+    // Populate BC select  
+    if (bcs && $('fa-bc')) {
       $('fa-bc').innerHTML = '<option value="">— Sélectionner BC —</option>' +
-        received.map(b=>`<option value="${b.id}">${b.bc_numero} — ${b.fournisseur}</option>`).join('');
+        bcs.map(b => `<option value="${b.id}">${b.bc_numero} — ${b.fournisseur} (${b.statut})</option>`).join('');
     }
-    $('fa-date').value = new Date().toISOString().split('T')[0];
-    $('fa-tb').innerHTML = (fas||[]).length===0 ? empty(7) : fas.map(fa=>
-      `<tr><td><span class="of-num">${fa.fa_numero}</span></td>
-       <td>${fa.fournisseur}</td><td>${fa.bc_numero}</td>
-       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.montant_ht} HT</td>
-       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.montant_ttc} TTC</td>
-       <td><span class="badge ${fa.statut==='PAYEE'?'b-completed':'b-draft'}">${fa.statut}</span></td>
-       <td>${fa.statut==='PENDING'
-         ? `<button class="fbtn" style="color:var(--green)" onclick="payFA(${fa.id})">✓ Payer</button>`
-         : '—'}</td></tr>`
-    ).join('');
-  } catch(e) { toast('Erreur FA: '+e.message,'err'); }
+
+    $('fa-tb').innerHTML = (fas || []).length === 0 ? empty(5) : fas.map(fa => {
+      return `<tr>
+        <td><span class="of-num">${fa.fa_numero}</span></td>
+        <td>${fa.fournisseur || '—'}</td>
+        <td style="font-size:10px;color:var(--accent)">${fa.bc_numero}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.montant_ht} TND HT</td>
+        <td style="font-size:9px;color:var(--muted)">${fa.notes || '—'}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/fa/${fa.id}/pdf?token=' + encodeURIComponent(token), '_blank')">🖨️ PDF</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) { toast('Erreur FA: ' + e.message, 'err'); }
 }
 
 async function saveFA() {
-  if (!$('fa-bc').value||!$('fa-fourn').value) { toast('BC et fournisseur requis','err'); return; }
-  try {
-    const res = await api('/api/achats/fa','POST',{
-      bc_id: parseInt($('fa-bc').value),
-      fournisseur: $('fa-fourn').value,
-      date_facture: $('fa-date').value,
-      notes: $('fa-notes').value||null
-    });
-    toast(`${res.fa_numero} créée ✓`); closeModal('m-fa'); loadFA();
-  } catch(e) { toast(e.message,'err'); }
-}
+  const bcId = parseInt($('fa-bc')?.value);
+  const four = $('fa-four')?.value;
+  const date = $('fa-date')?.value;
+  const notes = $('fa-notes')?.value || null;
 
-async function payFA(id) {
-  try { await api(`/api/achats/fa/${id}/payer`,'PUT'); toast('Facture payée ✓'); loadFA(); }
-  catch(e) { toast(e.message,'err'); }
+  if (!bcId || !four || !date) { toast('BC, Fournisseur et Date requis', 'err'); return; }
+
+  try {
+    const res = await api('/api/achats/fa', 'POST', {
+      bc_id: bcId,
+      fournisseur: four,
+      date_facture: date,
+      notes: notes
+    });
+    toast(`${res.fa_numero} créé ✓`); closeModal('m-fa'); loadFA();
+  } catch (e) { toast(e.message, 'err'); }
 }

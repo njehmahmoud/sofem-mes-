@@ -1,636 +1,3 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOFEM MES v6.0 — Admin</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23D42B2B'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='bold' fill='white' font-family='sans-serif'>S</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/admin/css/app.css">
-
-</head>
-<body>
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-logo"><img src="data:image/png;base64,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" style="width:28px;height:28px;object-fit:contain;" alt="SOFEM"></div>
-    <div><div class="brand-name">SOFEM MES</div><div class="brand-sub">Administration</div></div>
-    <span class="role-badge" id="role-badge">ADMIN</span>
-  </div>
-  <div class="topbar-r">
-    <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Afficher/Masquer menu">☰</button>
-    <div class="user-info" id="user-info">—</div>
-    <div class="clock" id="clock">—</div>
-    <button onclick="quickThemeToggle()" title="Changer thème"
-      style="background:transparent;border:1px solid var(--border);color:var(--muted);
-        font-size:14px;width:30px;height:30px;border-radius:6px;cursor:pointer;
-        margin-right:.5rem;display:flex;align-items:center;justify-content:center"
-      id="theme-toggle-btn">🌙</button>
-    <button class="btn-logout" onclick="logout()">DÉCONNEXION</button>
-  </div>
-</header>
-
-<div class="layout">
-<nav class="sidebar">
-  <div class="nav-group">
-    <div class="nav-lbl">Principal</div>
-    <div class="nav-item active" data-p="dashboard">▣ Tableau de Bord</div>
-    <div class="nav-item" data-p="operator-dashboard">👤 Mon Espace</div>
-    <div class="nav-item" data-p="orders">📋 Ordres de Fab.</div>
-    <div class="nav-item" data-p="calendar">📅 Calendrier</div>
-    <div class="nav-item" data-p="monitor">📡 Monitoring</div>
-    <div class="nav-item" data-p="bl">🚚 Bons de Livraison</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl">Gestion</div>
-    <div class="nav-item" data-p="materials">📦 Matériaux</div>
-    <div class="nav-item" data-p="products">⚙️ Produits</div>
-    <div class="nav-item" data-p="clients">🏢 Clients</div>
-    <div class="nav-item" data-p="operators">👷 Opérateurs</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl">Achats</div>
-    <div class="nav-item" data-p="da">📝 Demandes Achat</div>
-    <div class="nav-item" data-p="bc">🛒 Bons Commande</div>
-    <div class="nav-item" data-p="br">📥 Bons Réception</div>
-    <div class="nav-item" data-p="fa">💳 Factures Achat</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl">Qualité</div>
-    <div class="nav-item" data-p="qualite">✅ Contrôle Qualité</div>
-    <div class="nav-item" data-p="nc">⚠️ Non-Conformités</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl">Équipements</div>
-    <div class="nav-item" data-p="machines">🏭 Machines</div>
-    <div class="nav-item" data-p="maintenance">🔧 Maintenance</div>
-    <div class="nav-item" data-p="planning">📅 Planification</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl">Fournisseurs</div>
-    <div class="nav-item" data-p="fournisseurs">🤝 Fournisseurs</div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-lbl" style="color:#D42B2B">Data</div>
-    <div class="nav-item" data-p="reports">📊 Rapports</div>
-    <div class="nav-item" data-p="activity">📜 Activité</div>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-lbl" style="color:#D42B2B">Analytique</div>
-    <div class="nav-item" data-p="analytics-production">📊 Production</div>
-    <div class="nav-item" data-p="analytics-achats">💰 Achats &amp; Stock</div>
-    <div class="nav-item" data-p="analytics-operateurs">👥 Opérateurs</div>
-    <div class="nav-item" data-p="analytics-qualite">🎯 Qualité</div>
-  </div>
-  <div class="nav-group" id="admin-only-nav">
-    <div class="nav-lbl">Admin</div>
-
-    <div class="nav-item" data-p="settings">⚙️ Paramètres</div>
-    <div class="nav-item" data-p="users">🔐 Utilisateurs</div>
-    <div class="nav-item" data-p="op-types">⚙️ Opérations</div>
-  </div>
-  <div class="sidebar-footer">SOFEM MES v6.0<br>SMARTMOVE · 2025</div>
-</nav>
-<main class="main">
-
-<!-- CLIENTS -->
-<div class="page" id="page-clients">
-  <div class="sec-header">
-    <span class="sec-title">🏢 Clients</span>
-    <button class="btn" onclick="newClient()">+ Nouveau Client</button>
-  </div>
-  <div class="card mt">
-    <table><thead><tr>
-      <th>Code</th><th>Nom</th><th>MF</th><th>Téléphone</th><th>Email</th><th>Ville</th><th>Actions</th>
-    </tr></thead>
-    <tbody id="clients-tb"></tbody></table>
-  </div>
-</div>
-
-
-<!-- DASHBOARD -->
-<div class="page active" id="page-dashboard">
-  <div class="ph">
-    <div><div class="ph-title">TABLEAU DE <span>BORD</span></div><div class="ph-sub">// SOFEM · SFAX · ROUTE SIDI SALEM 2.5KM</div></div>
-    <button class="btn" onclick="openOFModal()">+ Nouvel OF</button>
-  </div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">Ordres Actifs</div><div class="kpi-val r" id="k-actifs">—</div><div class="kpi-det">En production</div></div>
-    <div class="kpi a"><div class="kpi-lbl">Urgents</div><div class="kpi-val a" id="k-urgents">—</div><div class="kpi-det">Priorité critique</div></div>
-    <div class="kpi g"><div class="kpi-lbl">Taux Complétion</div><div class="kpi-val g" id="k-taux">—</div><div class="kpi-det">Ce mois</div></div>
-    <div class="kpi b"><div class="kpi-lbl">Alertes Stock</div><div class="kpi-val b" id="k-stock">—</div><div class="kpi-det">Réappro. requis</div></div>
-    <div class="kpi o"><div class="kpi-lbl">En Retard</div><div class="kpi-val o" id="k-retard">—</div><div class="kpi-det">Délai dépassé</div></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h">
-      <div class="sec-title">PIPELINE <span class="ac">PRODUCTION</span></div>
-      <select id="pipeline-of-select" onchange="renderDashPipeline()"
-        style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:9px">
-        <option value="">— Sélectionner un OF —</option>
-      </select>
-    </div>
-    <div class="pipeline" id="dash-pipeline" style="min-height:60px">
-      <div style="color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace">Sélectionnez un OF pour voir ses opérations</div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">ORDRES <span class="ac">RÉCENTS</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Opérations</th><th>Échéance</th></tr></thead>
-      <tbody id="dash-ofs"><tr><td colspan="7"><div class="loading"><div class="spin"></div>CHARGEMENT...</div></td></tr></tbody>
-    </table></div>
-  </div>
-  <div style="margin-top:.75rem;padding:.75rem 1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:.75rem">
-    <span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace">ANALYTIQUES DÉTAILLÉES →</span>
-    <button class="fbtn" onclick="navigate('analytics-production')">📊 Production</button>
-    <button class="fbtn" onclick="navigate('analytics-achats')">💰 Achats & Stock</button>
-    <button class="fbtn" onclick="navigate('analytics-operateurs')">👥 Opérateurs</button>
-    <button class="fbtn" onclick="navigate('analytics-qualite')">🎯 Qualité</button>
-  </div>
-</div>
-
-<!-- ORDERS -->
-<div class="page" id="page-orders">
-  <div class="ph">
-    <div><div class="ph-title">ORDRES DE <span>FABRICATION</span></div><div class="ph-sub">// GESTION COMPLÈTE</div></div>
-    <div class="ph-actions">
-      <button class="btn btn-ghost" onclick="loadOrders()">↺</button>
-      <button class="btn" onclick="openOFModal()">+ Nouvel OF</button>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="fbar">
-      <button class="fbtn active" onclick="filterOF(this,'')">Tous</button>
-      <button class="fbtn" onclick="filterOF(this,'IN_PROGRESS')">En cours</button>
-      <button class="fbtn" onclick="filterOF(this,'DRAFT')">Brouillon</button>
-      <button class="fbtn" onclick="filterOF(this,'APPROVED')">Approuvé</button>
-      <button class="fbtn" onclick="filterOF(this,'COMPLETED')">Terminé</button>
-      <button class="fbtn" onclick="filterOF(this,'URGENT','p')">🔴 Urgent</button>
-      <div style="margin-left:auto;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-        <input id="search-of" type="text" placeholder="🔍 N° OF, produit, opérateur..." oninput="searchOF()"
-          style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:10px;outline:none;width:220px;transition:border-color .15s"
-          onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
-        <input id="search-date" type="date" oninput="searchOF()"
-          style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:10px;outline:none;transition:border-color .15s"
-          onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
-        <button class="fbtn" onclick="clearSearch()">✕ Reset</button>
-      </div>
-    </div>
-    <div style="padding:.4rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <span id="search-count">—</span>
-      <div style="display:flex;gap:.5rem;align-items:center">
-        <span style="color:var(--muted)">Sélectionner OFs terminés pour facture groupée :</span>
-        <button class="btn btn-ghost btn-sm" style="color:var(--blue)" onclick="selectAllCompleted()">✓ Sélectionner terminés</button>
-        <button class="btn btn-sm" style="background:var(--blue)" onclick="printGroupedInvoice()">📄 Facture Groupée</button>
-      </div>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)"></th><th>N° OF</th><th>BL</th><th>Produit</th><th>Client</th><th>Qté</th><th>Priorité</th><th>Statut</th><th>Opérations</th><th>Chef Atelier</th><th>Échéance</th><th>Actions</th></tr></thead>
-      <tbody id="orders-tb"><tr><td colspan="12"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- MONITOR -->
-<div class="page" id="page-monitor">
-  <div class="ph">
-    <div><div class="ph-title">MONITORING <span>PRODUCTION</span></div><div class="ph-sub">// CLIQUER SUR UNE ÉTAPE POUR AVANCER</div></div>
-    <button class="btn btn-ghost" onclick="loadMonitor()">↺ Actualiser</button>
-  </div>
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);padding:.25rem 0" id="mon-stats"></div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° OF / Client</th><th>Produit</th><th>Opérations & Progression</th><th>En Cours</th></tr></thead>
-      <tbody id="monitor-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- MATERIALS -->
-<div class="page" id="page-materials">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>MATÉRIAUX</span></div><div class="ph-sub">// STOCK ET MOUVEMENTS</div></div>
-    <div class="ph-actions">
-      <button class="btn btn-ghost" onclick="openModal('m-mv')">+ Mouvement</button>
-      <button class="btn" onclick="openModal('m-mat')">+ Matériau</button>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Matériau</th><th>Stock</th><th>Min.</th><th>Unité</th><th>Prix/u (DT)</th><th>Fournisseur</th><th>Niveau</th><th>Actions</th></tr></thead>
-      <tbody id="mats-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">HISTORIQUE <span class="ac">MOUVEMENTS</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Date</th><th>Matériau</th><th>Type</th><th>Qté</th><th>Avant</th><th>Après</th><th>OF</th><th>Motif</th></tr></thead>
-      <tbody id="mvt-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- OPERATORS -->
-<div class="page" id="page-operators">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>OPÉRATEURS</span></div><div class="ph-sub">// ÉQUIPE DE PRODUCTION SOFEM</div></div>
-    <button class="btn" onclick="openModal('m-op')">+ Opérateur</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Avatar</th><th>Prénom</th><th>Nom</th><th>Spécialité</th><th>Rôle</th><th>Téléphone</th><th>Taux</th><th>Statut</th><th>Actions</th></tr></thead>
-      <tbody id="ops-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- PRODUCTS -->
-<div class="page" id="page-products">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>PRODUITS</span></div><div class="ph-sub">// CATALOGUE SOFEM · CODES AUTO-GÉNÉRÉS</div></div>
-    <button class="btn" onclick="openModal('m-prod')">+ Produit</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Code</th><th>Produit</th><th>Description</th><th>Unité</th><th>Prix Vente HT</th><th>BOM (Matériaux)</th><th></th></tr></thead>
-      <tbody id="prods-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-  <!-- BOM Editor Panel (shown inline below product row) -->
-  <div id="bom-editor-panel" style="display:none" class="sec">
-    <div class="sec-h">
-      <div class="sec-title">NOMENCLATURE <span class="ac" id="bom-prod-title"></span></div>
-      <button class="btn btn-ghost btn-sm" onclick="closeBOMEditor()">✕ Fermer</button>
-    </div>
-    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.75rem">
-      <div class="fg" style="min-width:200px"><label>Matériau</label><select id="bom-mat-sel"></select></div>
-      <div class="fg" style="width:120px"><label>Qté / unité produit</label><input type="number" id="bom-qty" step="0.001" min="0.001" value="1"></div>
-      <button class="btn" onclick="addBOMLine()">+ Ajouter</button>
-    </div>
-    <div id="bom-lines-table"></div>
-  </div>
-</div>
-
-<!-- USERS (Admin only) -->
-<div class="page" id="page-users">
-  <div class="ph">
-    <div><div class="ph-title">GESTION <span>UTILISATEURS</span></div><div class="ph-sub">// ACCÈS ET RÔLES — PINS</div></div>
-    <button class="btn" onclick="openModal('m-user')">+ Utilisateur</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Nom</th><th>Prénom</th><th>Rôle</th><th>Opérateur lié</th><th>Statut</th><th>Actions</th></tr></thead>
-      <tbody id="users-tb"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- REPORTS -->
-<div class="page" id="page-reports">
-  <div class="ph"><div><div class="ph-title">RAPPORTS & <span>ANALYTIQUES</span></div><div class="ph-sub">// PERFORMANCE ET HISTORIQUE</div></div></div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">PRODUCTION <span class="ac">MENSUELLE</span></div></div>
-      <div class="chart" id="rep-chart" style="height:100px"></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">ALERTES <span class="ac">STOCK</span></div></div>
-      <div id="rep-stock"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">OPÉRATEURS</span></div></div>
-    <div id="rep-ops"><div class="loading"><div class="spin"></div></div></div>
-  </div>
-</div>
-
-<!-- BONS DE LIVRAISON -->
-<div class="page" id="page-bl">
-  <div class="ph">
-    <div><div class="ph-title">BONS DE <span>LIVRAISON</span></div><div class="ph-sub">// GÉNÉRÉS AUTOMATIQUEMENT À CHAQUE OF</div></div>
-    <button class="btn btn-ghost" onclick="loadBL()">↺ Actualiser</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° BL</th><th>N° OF</th><th>Produit</th><th>Qté</th><th>Destinataire</th><th>Statut</th><th>Date Livraison</th><th>Actions</th></tr></thead>
-      <tbody id="bl-tb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- DEMANDES D'ACHAT -->
-<div class="page" id="page-da">
-  <div class="ph">
-    <div><div class="ph-title">DEMANDES <span>D'ACHAT</span></div><div class="ph-sub">// CRÉÉES PAR LES OPÉRATEURS — VALIDÉES PAR MANAGER</div></div>
-    <button class="btn" onclick="openModal('m-da')">+ Demande</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° DA</th><th>Description</th><th>Matériau</th><th>Qté</th><th>Urgence</th><th>Statut</th><th>Demandeur</th><th>Date</th><th>Actions</th></tr></thead>
-      <tbody id="da-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- BONS DE COMMANDE -->
-<div class="page" id="page-bc">
-  <div class="ph">
-    <div><div class="ph-title">BONS DE <span>COMMANDE</span></div><div class="ph-sub">// COMMANDES FOURNISSEURS</div></div>
-    <button class="btn" onclick="openModal('m-bc')">+ Bon Commande</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° BC</th><th>Fournisseur</th><th>Montant HT</th><th>TVA 19%</th><th>Total TTC</th><th>Statut</th><th>DA lié</th><th>Date</th><th>Actions</th></tr></thead>
-      <tbody id="bc-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- BONS DE RECEPTION -->
-<div class="page" id="page-br">
-  <div class="ph">
-    <div><div class="ph-title">BONS DE <span>RÉCEPTION</span></div><div class="ph-sub">// RÉCEPTION MARCHANDISES — STOCK MIS À JOUR AUTOMATIQUEMENT</div></div>
-    <button class="btn" onclick="openModal('m-br')">+ Réception</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° BR</th><th>BC LIÉ</th><th>FOURNISSEUR</th><th>STATUT</th><th>DATE RÉCEPTION</th><th>ACTION</th></tr></thead>
-      <tbody id="br-tb"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- FACTURES D'ACHAT -->
-<div class="page" id="page-fa">
-  <div class="ph">
-    <div><div class="ph-title">FACTURES <span>D'ACHAT</span></div><div class="ph-sub">// FACTURES FOURNISSEURS</div></div>
-    <button class="btn" onclick="openModal('m-fa')">+ Facture Achat</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>N° FA</th><th>Fournisseur</th><th>BC lié</th><th>Montant HT</th><th>TVA</th><th>Total TTC</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
-      <tbody id="fa-tb"><tr><td colspan="9"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- MACHINES -->
-<div class="page" id="page-machines">
-  <div class="sec-header"><span class="sec-title">🏭 Machines & Équipements</span>
-    <button class="btn" onclick="openModal('modal-machine')">+ Nouvelle Machine</button>
-  </div>
-  <div class="kpi-grid" id="machines-kpis"></div>
-  <div class="card mt"><div id="machines-table"></div></div>
-</div>
-
-<!-- MAINTENANCE -->
-<div class="page" id="page-maintenance">
-  <div class="sec-header"><span class="sec-title">🔧 Ordres de Maintenance</span>
-    <button class="btn" onclick="openModal('modal-maintenance')">+ Nouvel Ordre</button>
-  </div>
-  <div class="kpi-grid" id="maintenance-kpis"></div>
-  <div class="card mt"><div id="maintenance-table"></div></div>
-</div>
-
-<!-- PLANIFICATION -->
-<div class="page" id="page-planning">
-  <div class="sec-header"><span class="sec-title">📅 Planification Production</span>
-    <button class="btn" onclick="openPlanningModal()">+ Nouveau Créneau</button>
-  </div>
-  <div class="card mt"><div id="planning-gantt"></div></div>
-  <div class="card mt"><div id="planning-table"></div></div>
-</div>
-
-<!-- QUALITE -->
-<div class="page" id="page-qualite">
-  <div class="sec-header"><span class="sec-title">✅ Contrôle Qualité</span>
-    <button class="btn" onclick="openModal('modal-qualite')">+ Nouveau Contrôle</button>
-  </div>
-  <div class="kpi-grid" id="qualite-kpis"></div>
-  <div class="card mt"><div id="qualite-table"></div></div>
-</div>
-
-<!-- NON-CONFORMITES -->
-<div class="page" id="page-nc">
-  <div class="ph">
-    <div><div class="ph-title">NON-<span>CONFORMITÉS</span></div>
-    <div class="ph-sub">// SUIVI ET TRAITEMENT DES DÉFAUTS</div></div>
-    <button class="btn" onclick="openModal('modal-nc')">+ Nouvelle NC</button>
-  </div>
-  <div class="kpi-grid" id="nc-kpis" style="margin-bottom:1rem"></div>
-  <div class="sec"><div id="nc-table"></div></div>
-</div>
-
-<!-- FOURNISSEURS -->
-<div class="page" id="page-fournisseurs">
-  <div class="sec-header"><span class="sec-title">🤝 Fournisseurs</span>
-    <button class="btn" onclick="openModal('modal-fournisseur')">+ Nouveau Fournisseur</button>
-  </div>
-  <div class="card mt"><div id="fournisseurs-table"></div></div>
-</div>
-
-
-
-
-
-
-
-
-<!-- OPERATION TYPES -->
-<div class="page" id="page-op-types">
-  <div class="ph">
-    <div><div class="ph-title">TYPES D'<span>OPÉRATIONS</span></div>
-    <div class="ph-sub">// CATALOGUE DES OPÉRATIONS DE PRODUCTION</div></div>
-    <button class="btn" onclick="openNewOpType()">+ Nouvelle Opération</button>
-  </div>
-  <div class="sec">
-    <div class="tw"><table>
-      <thead><tr><th>Ordre</th><th>Nom</th><th>Description</th><th>Statut</th><th>Actions</th></tr></thead>
-      <tbody id="op-types-tb"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-
-
-
-
-<!-- SETTINGS -->
-<div class="page" id="page-settings">
-  <div class="ph">
-    <div>
-      <div class="ph-title">PARA<span>MÈTRES</span></div>
-      <div class="ph-sub">// CONFIGURATION SYSTÈME SOFEM MES</div>
-    </div>
-    <button class="btn" onclick="saveAllSettings()">💾 Tout Sauvegarder</button>
-  </div>
-  <div id="settings-container">
-    <div class="loading"><div class="spin"></div></div>
-  </div>
-</div>
-
-
-
-
-<!-- OPERATOR DASHBOARD -->
-<div class="page" id="page-operator-dashboard">
-  <div class="ph">
-    <div><div class="ph-title">MON <span>ESPACE</span></div><div class="ph-sub">// VUE PERSONNALISÉE OPÉRATEUR</div></div>
-    <button class="btn btn-ghost" onclick="loadOperatorDashboard()">↺ Actualiser</button>
-  </div>
-  <div id="opd-container"><div class="loading"><div class="spin"></div></div></div>
-</div>
-
-<!-- CALENDAR -->
-<div class="page" id="page-calendar">
-  <div class="ph">
-    <div><div class="ph-title">CALEN<span>DRIER</span></div><div class="ph-sub">// ORDRES DE FABRICATION PAR DATE D'ÉCHÉANCE</div></div>
-    <button class="btn btn-ghost" onclick="loadCalendar()">↺ Actualiser</button>
-  </div>
-  <div class="sec"><div id="cal-container"><div class="loading"><div class="spin"></div></div></div></div>
-</div>
-
-<!-- ACTIVITY LOG -->
-<div class="page" id="page-activity">
-  <div class="ph">
-    <div><div class="ph-title">HISTORIQUE <span>ACTIVITÉ</span></div><div class="ph-sub">// LOGS UTILISATEURS ET ACTIONS SYSTÈME</div></div>
-    <button class="btn btn-ghost" onclick="loadActivity()">↺ Actualiser</button>
-  </div>
-  <div class="sec">
-    <div class="sec-h">
-      <div class="sec-title">JOURNAL <span class="ac">D'ACTIVITÉ</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="exportTable('activity-tb','activite')">⬇ CSV</button>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th>Date/Heure</th><th>Action</th><th>Utilisateur</th><th>Type</th><th>ID</th><th>Détail</th></tr></thead>
-      <tbody id="activity-tb"><tr><td colspan="6" class="loading"><div class="spin"></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- ANALYTIQUE — PRODUCTION -->
-<div class="page" id="page-analytics-production">
-  <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>PRODUCTION</span></div><div class="ph-sub">// OFs · DÉLAIS · COÛTS · ATELIERS</div></div>
-    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsProduction()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsProduction()">↺ Actualiser</button></div>
-  </div>
-  <div class="kpi-grid" id="anp-kpis"></div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">OF <span class="ac">PAR MOIS</span></div><span style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace">12 derniers mois</span></div>
-      <div class="chart" id="anp-chart" style="height:110px"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">STATUTS <span class="ac">PRODUCTION</span></div></div>
-      <div id="anp-statuts"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-  <div class="grid2" style="margin-top:1.25rem">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">OFs <span class="ac">EN RETARD</span></div></div>
-      <div class="tw"><table>
-        <thead><tr><th>N° OF</th><th>Produit</th><th>Client</th><th>Statut</th><th>Retard</th></tr></thead>
-        <tbody id="anp-retards"><tr><td colspan="5" class="loading"><div class="spin"></div></td></tr></tbody>
-      </table></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">CHARGE <span class="ac">PAR ATELIER</span></div></div>
-      <div id="anp-ateliers"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ANALYTIQUE — ACHATS & STOCK -->
-<div class="page" id="page-analytics-achats">
-  <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>ACHATS & STOCK</span></div><div class="ph-sub">// MATÉRIAUX · FOURNISSEURS · FLUX ACHATS</div></div>
-    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsAchats()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsAchats()">↺ Actualiser</button></div>
-  </div>
-  <div class="kpi-grid" id="ana-kpis"></div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">STOCK <span class="ac">MATÉRIAUX</span></div><span id="ana-valeur" style="font-size:9px;color:var(--accent);font-family:'IBM Plex Mono',monospace"></span></div>
-      <div id="ana-stock"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:1.25rem">
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">FLUX <span class="ac">DEMANDES ACHAT</span></div></div>
-        <div id="ana-da-statuts"><div class="loading"><div class="spin"></div></div></div>
-      </div>
-      <div class="sec">
-        <div class="sec-h"><div class="sec-title">TOP <span class="ac">FOURNISSEURS</span></div></div>
-        <div id="ana-fournisseurs"><div class="loading"><div class="spin"></div></div></div>
-      </div>
-    </div>
-  </div>
-  <div class="sec" style="margin-top:1.25rem">
-    <div class="sec-h"><div class="sec-title">MOUVEMENTS <span class="ac">STOCK RÉCENTS</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Type</th><th>Matériau</th><th>Quantité</th><th>Stock avant</th><th>Stock après</th><th>Motif</th><th>Date</th></tr></thead>
-      <tbody id="ana-mouvements"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- ANALYTIQUE — OPÉRATEURS -->
-<div class="page" id="page-analytics-operateurs">
-  <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>OPÉRATEURS</span></div><div class="ph-sub">// PERFORMANCE · HEURES · COÛTS MO</div></div>
-    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsOperateurs()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsOperateurs()">↺ Actualiser</button></div>
-  </div>
-  <div class="kpi-grid" id="ano-kpis"></div>
-  <div class="grid2">
-    <div class="sec" style="grid-column:1/-1">
-      <div class="sec-h"><div class="sec-title">PERFORMANCE <span class="ac">PAR OPÉRATEUR</span></div></div>
-      <div class="tw"><table>
-        <thead><tr><th>Opérateur</th><th>Rôle</th><th>Spécialité</th><th>Ops terminées</th><th>Durée totale</th><th>OFs impliqués</th><th>Taux</th></tr></thead>
-        <tbody id="ano-perf"><tr><td colspan="7" class="loading"><div class="spin"></div></td></tr></tbody>
-      </table></div>
-    </div>
-  </div>
-  <div class="grid2" style="margin-top:1.25rem">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">RÉPARTITION <span class="ac">SPÉCIALITÉS</span></div></div>
-      <div id="ano-specialites"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">COÛT MO <span class="ac">PAR OPÉRATION</span></div></div>
-      <div id="ano-cout-ops"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ANALYTIQUE — QUALITÉ -->
-<div class="page" id="page-analytics-qualite">
-  <div class="ph">
-    <div><div class="ph-title">ANALYTIQUE <span>QUALITÉ</span></div><div class="ph-sub">// CONFORMITÉ · NON-CONFORMITÉS · DÉFAUTS</div></div>
-    <div style="display:flex;gap:.5rem"><button class="btn btn-ghost btn-sm" onclick="exportAnalyticsQualite()">⬇ CSV</button><button class="btn btn-ghost" onclick="loadAnalyticsQualite()">↺ Actualiser</button></div>
-  </div>
-  <div class="kpi-grid" id="anq-kpis"></div>
-  <div class="grid2">
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">TAUX CONFORMITÉ <span class="ac">/ MOIS</span></div></div>
-      <div class="chart" id="anq-chart" style="height:100px"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><div class="sec-title">TYPES <span class="ac">DE DÉFAUTS</span></div></div>
-      <div id="anq-defauts"><div class="loading"><div class="spin"></div></div></div>
-    </div>
-  </div>
-  <div class="sec" style="margin-top:1.25rem">
-    <div class="sec-h"><div class="sec-title">NON-CONFORMITÉS <span class="ac">OUVERTES</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>NC N°</th><th>OF</th><th>Produit</th><th>Type défaut</th><th>Gravité</th><th>Responsable</th><th>Âge</th><th>Action corrective</th></tr></thead>
-      <tbody id="anq-nc"><tr><td colspan="8" class="loading"><div class="spin"></div></td></tr></tbody>
-    </table></div>
-  </div>
-</div>
-
-
-</main>
-</div>
-
-
 <div class="overlay" id="m-of">
   <div class="modal" style="max-width:700px;width:97vw;max-height:90vh;overflow-y:auto">
     <div class="modal-h">
@@ -1444,89 +811,32 @@
 </div>
 
 <div class="overlay" id="modal-planning">
-  <div class="modal" style="max-width:700px;width:97vw;max-height:90vh;overflow-y:auto">
+  <div class="modal" style="max-width:560px;width:97vw;max-height:90vh;overflow-y:auto">
     <div class="modal-h">
       <div class="modal-title">NOUVEAU CRÉNEAU PLANNING</div>
       <button class="x" onclick="closeModal('modal-planning')">✕</button>
     </div>
     <div class="modal-b">
-
-      <!-- Row 1: OF picker + Statut badge -->
-      <div class="fg">
-        <label>Ordre de Fabrication *</label>
-        <input type="hidden" id="pl-of">
-        <div id="pl-of-display" onclick="openOFPicker()"
-          style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem .7rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s;width:100%;min-height:36px"
-          onmouseenter="this.style.borderColor='var(--red)'" onmouseleave="this.style.borderColor='var(--border)'">
-          <span id="pl-of-label" style="color:var(--muted);font-size:12px;font-family:'IBM Plex Sans',sans-serif">— Cliquer pour sélectionner un OF —</span>
-          <span style="font-size:10px;color:var(--muted)">▼</span>
-        </div>
-      </div>
-
-      <!-- OF info preview — appears after selection, matches the BOM info block style -->
-      <div id="pl-of-info" style="display:none;margin-top:-.2rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.6rem">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.5rem 1rem">
-          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Produit</div>
-            <div id="pl-info-produit" style="font-size:12px;font-weight:600;color:var(--text);margin-top:2px">—</div></div>
-          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Client</div>
-            <div id="pl-info-client" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
-          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Quantité</div>
-            <div id="pl-info-qte" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
-          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Échéance</div>
-            <div id="pl-info-deadline" style="font-size:12px;color:var(--red);margin-top:2px;font-family:'IBM Plex Mono',monospace">—</div></div>
-          <div><div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Priorité</div>
-            <div id="pl-info-prio" style="font-size:12px;color:var(--text);margin-top:2px">—</div></div>
-        </div>
-      </div>
-
-      <!-- Row 2: Machine + Opérateur -->
+      <div class="fg"><label>Ordre de Fabrication *</label>
+        <select id="pl-of"><option value="">— Sélectionner un OF —</option></select></div>
       <div class="row2">
         <div class="fg"><label>Machine</label>
           <select id="pl-machine"><option value="">— Aucune —</option></select></div>
         <div class="fg"><label>Opérateur</label>
           <select id="pl-op"><option value="">— Aucun —</option></select></div>
       </div>
-
-      <!-- Row 3: Date début + Date fin -->
       <div class="row2">
-        <div class="fg"><label>Date de début *</label>
-          <input type="datetime-local" id="pl-debut" oninput="updatePlDuration()"></div>
-        <div class="fg"><label>Date de fin *</label>
-          <input type="datetime-local" id="pl-fin" oninput="updatePlDuration()"></div>
+        <div class="fg"><label>Début *</label>
+          <input type="datetime-local" id="pl-debut"></div>
+        <div class="fg"><label>Fin *</label>
+          <input type="datetime-local" id="pl-fin"></div>
       </div>
-
-      <!-- Duration indicator -->
-      <div id="pl-duration" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-top:-.3rem">
-        ⏱ <span id="pl-duration-txt"></span>
-      </div>
-
-      <!-- Notes -->
-      <div class="fg" style="margin-top:.5rem"><label>Notes</label>
+      <div class="fg"><label>Notes</label>
         <textarea id="pl-notes" rows="2"></textarea></div>
-
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal('modal-planning')">Annuler</button>
-      <button class="btn" onclick="savePlanning()">Enregistrer le créneau</button>
-    </div>
-  </div>
-</div>
-
-<!-- OF Picker Modal -->
-<div class="overlay" id="modal-of-picker" style="z-index:1100">
-  <div class="modal" style="max-width:780px;width:97vw;max-height:88vh;display:flex;flex-direction:column">
-    <div class="modal-h">
-      <div class="modal-title">SÉLECTIONNER UN OF</div>
-      <button class="x" onclick="closeOFPicker()">✕</button>
-    </div>
-    <!-- Search bar -->
-    <div style="padding:.75rem 1.25rem;border-bottom:1px solid var(--border)">
-      <input id="of-picker-search" type="text" placeholder="🔍  Rechercher par numéro, produit, client, statut…"
-        oninput="filterOFPicker(this.value)"
-        style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none">
-    </div>
-    <!-- Cards -->
-    <div id="of-picker-list" style="flex:1;overflow-y:auto;padding:1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.6rem">
+      <button class="btn" onclick="savePlanning()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1664,176 +974,121 @@
     </div>
   </div>
 </div>
-<!-- GLOBAL CANCEL MODAL -->
-<div class="overlay" id="m-cancel">
-  <div class="modal" style="max-width:480px">
+
+<!-- DOSSIER MODAL — Complete OF document package -->
+<div class="overlay" id="m-dossier">
+  <div class="modal" style="max-width:1000px;width:98vw;max-height:88vh;overflow-y:auto">
     <div class="modal-h">
       <div>
-        <div class="modal-title" style="color:var(--accent)">
-          ⚠️ ANNULER — <span id="cancel-doc-num" style="color:var(--red)"></span>
-        </div>
-        <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px">
-          ISO 9001 · Cette action est irréversible · Le document sera conservé
-        </div>
+        <div class="modal-title">📋 DOSSIER OF — <span id="dos-numero" style="color:var(--red)"></span></div>
+        <div id="dos-info-summary" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px;display:flex;gap:1.5rem"></div>
       </div>
-      <button class="x" onclick="closeModal('m-cancel')">✕</button>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" style="font-size:9px" onclick="printDossier()">🖨️ Imprimer</button>
+        <button class="x" onclick="closeModal('m-dossier')">✕</button>
+      </div>
     </div>
-    <div class="modal-b">
-      <!-- Hidden fields -->
-      <input type="hidden" id="cancel-id">
-      <input type="hidden" id="cancel-endpoint">
-      <input type="hidden" id="cancel-callback">
-
-      <!-- Document info -->
-      <div id="cancel-doc-info"
-        style="background:var(--bg3);border:1px solid var(--border);
-               border-radius:6px;padding:.75rem;margin-bottom:.5rem;
-               font-size:11px;color:var(--muted)">
+    <div class="modal-b" style="padding:0;font-size:11px">
+      
+      <!-- TABS -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto">
+        <button class="dos-tab active" onclick="dosTab('ops')">⚙️ Opérations</button>
+        <button class="dos-tab" onclick="dosTab('bom')">📦 Matériaux</button>
+        <button class="dos-tab" onclick="dosTab('achat')">🛒 Achats</button>
+        <button class="dos-tab" onclick="dosTab('qualite')">✓ Qualité</button>
+        <button class="dos-tab" onclick="dosTab('trace')">📝 Traçabilité</button>
       </div>
 
-      <!-- Reason input — MANDATORY -->
-      <div class="fg">
-        <label>
-          Raison de l'annulation *
-          <span style="color:var(--red);font-size:9px;margin-left:.5rem">OBLIGATOIRE</span>
-        </label>
-        <textarea id="cancel-reason" rows="3"
-          placeholder="Expliquer pourquoi ce document est annulé...
-Ex: Commande client annulée, erreur de saisie, doublon..."
-          style="resize:vertical;border-color:var(--border)"
-          oninput="validateCancelReason()"></textarea>
-        <div id="cancel-reason-error"
-          style="display:none;color:var(--red);font-size:10px;
-                 font-family:'IBM Plex Mono',monospace;margin-top:3px">
-          ⚠ La raison doit contenir au moins 5 caractères
+      <!-- OPS TAB -->
+      <div id="dos-pane-ops" class="dos-pane" style="padding:1rem">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px;color:var(--muted)">OPÉRATION</th>
+              <th style="text-align:left;padding:4px;color:var(--muted)">OPÉRATEUR</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">STATUT</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">DURÉE</th>
+            </tr>
+          </thead>
+          <tbody id="dos-ops-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- BOM TAB -->
+      <div id="dos-pane-bom" class="dos-pane" style="padding:1rem;display:none">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px;color:var(--muted)">MATÉRIAU</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">QTÉ</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">UNITÉ</th>
+              <th style="text-align:right;padding:4px;color:var(--muted)">PRIX UNIT.</th>
+              <th style="text-align:right;padding:4px;color:var(--muted)">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody id="dos-bom-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- ACHATS TAB (DA→BC→BR→FA chain) -->
+      <div id="dos-pane-achat" class="dos-pane" style="padding:1rem;display:none">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📄 Demandes Achat</div>
+            <div id="dos-das-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📋 Bons Commande</div>
+            <div id="dos-bcs-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📦 Bons Réception</div>
+            <div id="dos-brs-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">🧾 Factures</div>
+            <div id="dos-fas-list" style="font-size:9px"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Warning -->
-      <div style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.25);
-                  border-radius:6px;padding:.6rem .75rem;font-size:11px;color:var(--muted)">
-        ⚠️ Le document passera au statut
-        <strong style="color:var(--red)">ANNULÉ</strong>.
-        Il restera visible dans les archives pour la traçabilité ISO 9001.
-        Le numéro de document ne sera
-        <strong style="color:var(--text)">jamais réutilisé</strong>.
+      <!-- QUALITÉ TAB (QC + NC) -->
+      <div id="dos-pane-qualite" class="dos-pane" style="padding:1rem;display:none">
+        <div style="margin-bottom:1.5rem">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;font-weight:600">Contrôles Qualité</div>
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:4px">TYPE</th>
+                <th style="text-align:center;padding:4px">TOTAL</th>
+                <th style="text-align:center;padding:4px">OK</th>
+                <th style="text-align:center;padding:4px">REBUT</th>
+                <th style="text-align:center;padding:4px">%</th>
+              </tr>
+            </thead>
+            <tbody id="dos-qc-tb"></tbody>
+          </table>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;font-weight:600">Non-Conformités</div>
+          <div id="dos-nc-list" style="font-size:9px"></div>
+        </div>
       </div>
+
+      <!-- TRAÇABILITÉ TAB (Activity log) -->
+      <div id="dos-pane-trace" class="dos-pane" style="padding:1rem;display:none">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:1rem">Journal d'activité ISO 9001 — Toutes les mutations</div>
+        <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;background:var(--bg3)">
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <tbody id="dos-trace-tb"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
     <div class="modal-f">
-      <button class="btn btn-ghost" onclick="closeModal('m-cancel')">
-        Garder le document
-      </button>
-      <button class="btn" id="cancel-confirm-btn"
-        style="background:var(--accent);border-color:var(--accent);opacity:.5;cursor:not-allowed"
-        onclick="confirmCancel()" disabled>
-        ✕ Confirmer l'annulation
-      </button>
+      <button class="btn btn-ghost" onclick="closeModal('m-dossier')">Fermer</button>
     </div>
   </div>
 </div>
 
-
-<script src="/admin/js/core.js"></script>
-<script src="/admin/js/cancel.js"></script>
-<script src="/admin/js/dashboard.js"></script>
-<script src="/admin/js/of.js"></script>
-<script src="/admin/js/materials.js"></script>
-<script src="/admin/js/operators.js"></script>
-<script src="/admin/js/products.js"></script>
-<script src="/admin/js/clients.js"></script>
-<script src="/admin/js/bl.js"></script>
-<script src="/admin/js/achats.js"></script>
-<script src="/admin/js/dossier.js"></script>
-<script src="/admin/js/qualite.js"></script>
-<script src="/admin/js/nc.js"></script>
-<script src="/admin/js/machines.js"></script>
-<script src="/admin/js/maintenance.js"></script>
-<script src="/admin/js/planning.js?v=2"></script>
-<script src="/admin/js/fournisseurs.js"></script>
-<script src="/admin/js/users.js"></script>
-<script src="/admin/js/operation_types.js"></script>
-<script src="/admin/js/settings.js"></script>
-<script src="/admin/js/reports.js"></script>
-<script src="/admin/js/monitor.js"></script>
-<script src="/admin/js/notifications.js"></script>
-<script src="/admin/js/export.js"></script>
-<script src="/admin/js/calendar.js"></script>
-<script src="/admin/js/activity.js"></script>
-<script src="/admin/js/operator_dashboard.js"></script>
-<script src="/admin/js/analytics.js"></script>
-<script>
-window.pageLoaders = {
-  dashboard:               loadDashboard,
-  orders:                  loadOrders,
-  monitor:                 loadMonitor,
-  bl:                      loadBL,
-  materials:               loadMaterials,
-  operators:               loadOperators,
-  products:                loadProducts,
-  clients:                 loadClients,
-  da:                      loadDA,
-  bc:                      loadBC,
-  br:                      loadBR,
-  qualite:                 loadQualite,
-  nc:                      loadNC,
-  machines:                loadMachines,
-  maintenance:             loadMaintenance,
-  planning:                loadPlanning,
-  fournisseurs:            loadFournisseurs,
-  users:                   loadUsers,
-  'op-types':              loadOpTypes,
-  settings:                loadSettings,
-  reports:                 loadReports,
-  'analytics-production':  loadAnalyticsProduction,
-  'analytics-achats':      loadAnalyticsAchats,
-  'analytics-operateurs':  loadAnalyticsOperateurs,
-  'analytics-qualite':     loadAnalyticsQualite,
-  'calendar':              loadCalendar,
-  'activity':              loadActivity,
-  'operator-dashboard':    loadOperatorDashboard,
-};
-
-// ── Auth guard — runs once on page load ───────────────────
-(function authGuard() {
-  const token = localStorage.getItem('token');
-
-  // No token at all → go to login
-  if (!token) {
-    window.location.href = '/';
-    return;
-  }
-
-  // Validate token structure (don't redirect on invalid, just show error)
-  let payload = {};
-  try {
-    const parts = token.split('.');
-    if (parts.length === 3) {
-      payload = JSON.parse(atob(parts[1]));
-    }
-  } catch(e) {
-    // Malformed token — clear and redirect
-    localStorage.removeItem('token');
-    window.location.href = '/';
-    return;
-  }
-
-  // Check expiry if present
-  if (payload.exp && Date.now() / 1000 > payload.exp) {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-    return;
-  }
-
-  // Apply user info to UI
-  const uInfo = payload;
-  if ($('user-info'))  $('user-info').textContent  = uInfo.prenom ? `${uInfo.prenom} ${uInfo.nom}` : 'Admin';
-  if ($('role-badge')) $('role-badge').textContent = uInfo.role || 'ADMIN';
-  if (uInfo.role === 'MANAGER') {
-    const el = $('admin-only-nav');
-    if (el) el.style.display = 'none';
-  }
-})();
-</script>
-
-</body>
-</html>

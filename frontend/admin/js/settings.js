@@ -140,6 +140,9 @@ function renderSettingsPage() {
       <button class="stab ${_activeTab==='affichage'?'stab-active':''}" onclick="switchSettingsTab('affichage')">
         🖥️ Affichage
       </button>
+      <button class="stab ${_activeTab==='utilisateurs'?'stab-active':''}" onclick="switchSettingsTab('utilisateurs')">
+        🔐 Utilisateurs
+      </button>
     </div>
 
     <!-- Tab content -->
@@ -148,6 +151,9 @@ function renderSettingsPage() {
     </div>
     <div id="stab-affichage" style="display:${_activeTab==='affichage'?'block':'none'}">
       ${renderAffichageTab()}
+    </div>
+    <div id="stab-utilisateurs" style="display:${_activeTab==='utilisateurs'?'block':'none'}">
+      ${renderUtilisateursTab()}
     </div>
   `;
 
@@ -483,8 +489,10 @@ function switchSettingsTab(tab) {
   _activeTab = tab;
   document.querySelectorAll('.stab').forEach(b => b.classList.remove('stab-active'));
   event.target.classList.add('stab-active');
-  document.getElementById('stab-systeme').style.display  = tab === 'systeme'   ? 'block' : 'none';
-  document.getElementById('stab-affichage').style.display = tab === 'affichage' ? 'block' : 'none';
+  document.getElementById('stab-systeme').style.display      = tab === 'systeme'      ? 'block' : 'none';
+  document.getElementById('stab-affichage').style.display    = tab === 'affichage'    ? 'block' : 'none';
+  document.getElementById('stab-utilisateurs').style.display = tab === 'utilisateurs' ? 'block' : 'none';
+  if (tab === 'utilisateurs') loadSettingsUsers();
 }
 
 // ── Helpers ───────────────────────────────────────────────
@@ -598,3 +606,218 @@ function applyDisplaySettings() {
 
 // Call on init
 applyDisplaySettings();
+// ── Utilisateurs tab ──────────────────────────────────────
+let _settingsUsers = [];
+let _settingsOps   = [];
+
+function renderUtilisateursTab() {
+  return `
+    <div class="scard">
+      <div class="scard-head">
+        <div class="scard-icon" style="background:rgba(212,43,43,.15)">🔐</div>
+        <div>
+          <div class="scard-title">Gestion des Utilisateurs</div>
+          <div class="scard-desc">Ajouter, modifier le PIN, changer le rôle, activer/désactiver</div>
+        </div>
+        <button class="btn btn-sm" style="margin-left:auto" onclick="openAddUserInline()">+ Ajouter</button>
+      </div>
+
+      <!-- Add user form (hidden by default) -->
+      <div id="add-user-form" style="display:none;background:var(--bg3);border:1px solid var(--border);
+        border-radius:8px;padding:1rem;margin-bottom:1rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--red);
+          letter-spacing:2px;text-transform:uppercase;margin-bottom:.75rem">NOUVEL UTILISATEUR</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+          <div class="fg"><label>Prénom *</label><input id="su-prenom" type="text" placeholder="Prénom"></div>
+          <div class="fg"><label>Nom *</label><input id="su-nom" type="text" placeholder="Nom"></div>
+          <div class="fg"><label>Rôle *</label>
+            <select id="su-role">
+              <option value="OPERATOR">Opérateur</option>
+              <option value="MANAGER">Manager</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+          <div class="fg"><label>PIN (4 chiffres) *</label>
+            <input id="su-pin" type="password" maxlength="4" placeholder="••••"
+              style="font-size:20px;letter-spacing:6px;text-align:center"></div>
+          <div class="fg" style="grid-column:1/-1"><label>Opérateur lié</label>
+            <select id="su-op"><option value="">— Aucun —</option></select>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="closeAddUserInline()">Annuler</button>
+          <button class="btn btn-sm" onclick="saveSettingsUser()">Créer utilisateur</button>
+        </div>
+      </div>
+
+      <!-- Users table -->
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>Utilisateur</th><th>Rôle</th><th>Opérateur lié</th><th>Statut</th>
+            <th>PIN</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="su-table"><tr><td colspan="6" class="loading"><div class="spin"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Suggestions card -->
+    <div class="scard">
+      <div class="scard-head">
+        <div class="scard-icon" style="background:rgba(59,130,246,.15)">💡</div>
+        <div>
+          <div class="scard-title">Bonnes Pratiques Sécurité</div>
+          <div class="scard-desc">Recommandations pour la gestion des accès</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        ${[
+          ['🔑','PIN unique par utilisateur','Ne pas partager les codes PIN entre collègues'],
+          ['👤','Un compte par personne','Éviter les comptes génériques partagés'],
+          ['🔒','Désactiver les comptes inactifs','Retirer les accès dès qu\'un employé quitte'],
+          ['📋','Rôles minimaux','Donner uniquement les droits nécessaires à chaque rôle'],
+          ['🔄','Changer les PINs régulièrement','Recommandé tous les 3 mois'],
+          ['👁','Surveiller les connexions','Vérifier les logs d\'accès périodiquement'],
+        ].map(([icon,title,desc]) => `
+          <div style="display:flex;gap:.6rem;padding:.6rem;background:var(--bg3);border-radius:6px">
+            <span style="font-size:16px;flex-shrink:0">${icon}</span>
+            <div>
+              <div style="font-size:11px;font-weight:600;margin-bottom:2px">${title}</div>
+              <div style="font-size:10px;color:var(--muted)">${desc}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function loadSettingsUsers() {
+  try {
+    const [users, ops] = await Promise.all([api('/api/auth/users'), api('/api/operateurs')]);
+    _settingsUsers = users || [];
+    _settingsOps   = ops   || [];
+
+    // Populate operator select in add form
+    const suOp = $('su-op');
+    if (suOp) {
+      suOp.innerHTML = '<option value="">— Aucun —</option>' +
+        _settingsOps.map(o => `<option value="${o.id}">${o.prenom} ${o.nom} (${o.specialite||'—'})</option>`).join('');
+    }
+
+    const roleColors = { ADMIN:'b-admin', MANAGER:'b-manager', OPERATOR:'b-operator' };
+    const roleLabels = { ADMIN:'Admin', MANAGER:'Manager', OPERATOR:'Opérateur' };
+
+    const tbody = $('su-table');
+    if (!tbody) return;
+
+    tbody.innerHTML = !_settingsUsers.length
+      ? `<tr><td colspan="6" class="empty">Aucun utilisateur</td></tr>`
+      : _settingsUsers.map(u => {
+        const op = _settingsOps.find(o => o.id === u.operateur_id);
+        const rc = roleColors[u.role] || 'b-draft';
+        const rl = roleLabels[u.role] || u.role;
+        const init = (u.prenom?.[0]||'') + (u.nom?.[0]||'');
+        return `<tr id="su-row-${u.id}">
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--red-g);border:1px solid var(--red);
+                display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;
+                color:var(--red);flex-shrink:0">${init}</div>
+              <div>
+                <div style="font-size:12px;font-weight:500">${u.prenom} ${u.nom}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <select onchange="changeUserRole(${u.id}, this.value)"
+              style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+                padding:3px 6px;color:var(--text);font-size:10px;font-family:'IBM Plex Mono',monospace">
+              <option value="OPERATOR" ${u.role==='OPERATOR'?'selected':''}>Opérateur</option>
+              <option value="MANAGER"  ${u.role==='MANAGER' ?'selected':''}>Manager</option>
+              <option value="ADMIN"    ${u.role==='ADMIN'   ?'selected':''}>Admin</option>
+            </select>
+          </td>
+          <td style="font-size:11px;color:var(--muted)">${op ? `${op.prenom} ${op.nom}` : '—'}</td>
+          <td>${u.actif
+            ? '<span class="badge b-completed">ACTIF</span>'
+            : '<span class="badge b-draft">INACTIF</span>'}</td>
+          <td>
+            <button class="fbtn" onclick="changePinInline(${u.id},'${u.prenom} ${u.nom}')"
+              title="Modifier PIN" style="color:var(--accent)">🔑 PIN</button>
+          </td>
+          <td style="display:flex;gap:4px">
+            ${u.actif
+              ? `<button class="fbtn" style="color:var(--red)" onclick="toggleUserActive(${u.id},false)">Désactiver</button>`
+              : `<button class="fbtn" style="color:var(--green)" onclick="toggleUserActive(${u.id},true)">Activer</button>`
+            }
+          </td>
+        </tr>`;
+      }).join('');
+  } catch(e) { toast('Erreur chargement utilisateurs: '+e.message,'err'); }
+}
+
+function openAddUserInline() {
+  const f = $('add-user-form');
+  if (f) { f.style.display = 'block'; $('su-prenom')?.focus(); }
+}
+
+function closeAddUserInline() {
+  const f = $('add-user-form');
+  if (f) { f.style.display = 'none'; }
+  ['su-prenom','su-nom','su-pin'].forEach(id => { const el=$(id); if(el) el.value=''; });
+  if ($('su-role')) $('su-role').value = 'OPERATOR';
+  if ($('su-op'))   $('su-op').value   = '';
+}
+
+async function saveSettingsUser() {
+  const prenom = $('su-prenom')?.value?.trim();
+  const nom    = $('su-nom')?.value?.trim();
+  const pin    = $('su-pin')?.value?.trim();
+  const role   = $('su-role')?.value;
+  const op_id  = $('su-op')?.value;
+
+  if (!prenom || !nom) { toast('Prénom et nom requis','err'); return; }
+  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    toast('PIN doit être exactement 4 chiffres','err'); return;
+  }
+  try {
+    await api('/api/auth/users','POST',{
+      prenom, nom, role, pin,
+      operateur_id: op_id ? parseInt(op_id) : null
+    });
+    toast(`Utilisateur ${prenom} ${nom} créé ✓`);
+    closeAddUserInline();
+    loadSettingsUsers();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function changeUserRole(userId, newRole) {
+  try {
+    await api(`/api/auth/users/${userId}`, 'PUT', { role: newRole });
+    const labels = { ADMIN:'Admin', MANAGER:'Manager', OPERATOR:'Opérateur' };
+    toast(`Rôle mis à jour → ${labels[newRole]||newRole} ✓`);
+  } catch(e) {
+    toast(e.message,'err');
+    loadSettingsUsers(); // revert UI
+  }
+}
+
+async function toggleUserActive(userId, active) {
+  try {
+    await api(`/api/auth/users/${userId}`, 'PUT', { actif: active });
+    toast(active ? 'Utilisateur activé ✓' : 'Utilisateur désactivé');
+    loadSettingsUsers();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+function changePinInline(userId, userName) {
+  const pin = prompt(`Nouveau PIN (4 chiffres) pour ${userName}:`);
+  if (pin === null) return; // cancelled
+  if (!/^\d{4}$/.test(pin)) {
+    toast('PIN invalide — doit être exactement 4 chiffres','err'); return;
+  }
+  api(`/api/auth/users/${userId}`, 'PUT', { pin })
+    .then(() => toast(`PIN de ${userName} modifié ✓`))
+    .catch(e => toast(e.message,'err'));
+}

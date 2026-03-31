@@ -11,8 +11,8 @@ from models import PlanningCreate, PlanningUpdate
 router = APIRouter(prefix="/api/planning", tags=["planning"])
 
 
-@router.get("")
-def list_planning(conn=Depends(get_db), user=Depends(require_any_role)):
+@router.get("", dependencies=[Depends(require_any_role)])
+def list_planning(conn=Depends(get_db)):
     rows = q(conn, """
         SELECT pp.*,
                of_.numero AS of_numero, p.nom as produit_nom,
@@ -28,8 +28,8 @@ def list_planning(conn=Depends(get_db), user=Depends(require_any_role)):
     return serialize(rows)
 
 
-@router.post("", status_code=201)
-def create_planning(data: PlanningCreate, conn=Depends(get_db), user=Depends(require_manager_or_admin)):
+@router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
+def create_planning(data: PlanningCreate, conn=Depends(get_db)):
     # Conflict check: same machine, overlapping time
     if data.machine_id:
         conflict = q(conn, """
@@ -47,8 +47,8 @@ def create_planning(data: PlanningCreate, conn=Depends(get_db), user=Depends(req
     return {"id": pid, "message": "Planification créée"}
 
 
-@router.put("/{pid}")
-def update_planning(pid: int, data: PlanningUpdate, conn=Depends(get_db), user=Depends(require_manager_or_admin)):
+@router.put("/{pid}", dependencies=[Depends(require_manager_or_admin)])
+def update_planning(pid: int, data: PlanningUpdate, conn=Depends(get_db)):
     fields, vals = [], []
     for f, v in data.dict(exclude_none=True).items():
         fields.append(f"{f}=%s")
@@ -60,14 +60,14 @@ def update_planning(pid: int, data: PlanningUpdate, conn=Depends(get_db), user=D
     return {"message": "Planning mis à jour"}
 
 
-@router.delete("/{pid}")
-def delete_planning(pid: int, conn=Depends(get_db), user=Depends(require_manager_or_admin)):
+@router.delete("/{pid}", dependencies=[Depends(require_manager_or_admin)])
+def delete_planning(pid: int, conn=Depends(get_db)):
     exe(conn, "DELETE FROM planning_production WHERE id=%s", (pid,))
     return {"message": "Entrée supprimée"}
 
 
-@router.get("/gantt")
-def gantt_data(conn=Depends(get_db), user=Depends(require_manager_or_admin)):
+@router.get("/gantt", dependencies=[Depends(require_manager_or_admin)])
+def gantt_data(conn=Depends(get_db)):
     """Returns data structured for Gantt chart rendering."""
     rows = q(conn, """
         SELECT pp.id, pp.date_debut, pp.date_fin, pp.statut,

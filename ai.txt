@@ -1,0 +1,10 @@
+Commit 01 — Soft delete + Audit trail       ✅ DONE
+Commit 02 — Purchase fix (DA→BC→BR→FA)      ← next
+Commit 03 — Traceability (batch/serial)
+Commit 04 — Cost calculation (frozen)
+Commit 05 — Quality module
+Commit 06 — Equipment/calibration
+Commit 07 — Suppliers/Clients evaluation
+Commit 08 — Planning & Objectives
+Commit 09 — OF Dossier endpoint + UI        ← all data exists here
+Commit 10 — Automated summaries (ISO mgmt review)

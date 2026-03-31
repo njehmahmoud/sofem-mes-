@@ -40,6 +40,9 @@ from routes.maintenance  import router as maintenance_router
 from routes.planification import router as planification_router
 from routes.qualite      import router as qualite_router
 from routes.fournisseurs import router as fournisseurs_router
+from routes.analytics    import router as analytics_router
+from routes.notifications import router as notifications_router
+from routes.dossier      import router as dossier_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sofem-mes")
@@ -47,11 +50,20 @@ logger = logging.getLogger("sofem-mes")
 BASE_DIR     = Path(__file__).parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
+# ── CORS Configuration ─────────────────────────────────────
+# Allow specific origins from environment or use defaults
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", 
+    "http://localhost:3000,http://localhost:5173,https://sofem-mes-production.up.railway.app"
+).split(",")
+
 app = FastAPI(title="SOFEM MES API v6.0", version="6.0.0",
               description="Manufacturing Execution System — SOFEM Sfax · SMARTMOVE")
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, 
+                   allow_origins=ALLOWED_ORIGINS,
+                   allow_credentials=True,
+                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                   allow_headers=["Content-Type", "Authorization"])
 
 @app.on_event("startup")
 def startup():
@@ -92,6 +104,9 @@ app.include_router(maintenance_router)
 app.include_router(planification_router)
 app.include_router(qualite_router)
 app.include_router(fournisseurs_router)
+app.include_router(analytics_router)
+app.include_router(notifications_router)
+app.include_router(dossier_router)
 
 # ── Health ───────────────────────────────────────────────
 @app.get("/api/health")
@@ -123,7 +138,13 @@ if admin_js.exists():
     app.mount("/admin/js", StaticFiles(directory=str(admin_js)), name="admin-js")
     app.mount("/js",       StaticFiles(directory=str(admin_js)), name="js-root")
 
+# Serve admin CSS
 admin_css = FRONTEND_DIR / "admin" / "css"
 if admin_css.exists():
     app.mount("/admin/css", StaticFiles(directory=str(admin_css)), name="admin-css")
     app.mount("/css",       StaticFiles(directory=str(admin_css)), name="css-root")
+
+# Serve page fragments (analytics, modals)
+admin_pages = FRONTEND_DIR / "admin" / "pages"
+if admin_pages.exists():
+    app.mount("/admin/pages", StaticFiles(directory=str(admin_pages)), name="admin-pages")

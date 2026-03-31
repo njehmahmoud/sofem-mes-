@@ -1,3 +1,4 @@
+
 fastapi==0.110.0
 uvicorn==0.29.0
 mysql-connector-python==8.3.0
@@ -7,3 +8,5 @@ anyio==4.3.0
 starlette==0.36.3
 PyJWT==2.8.0
 reportlab==4.1.0
+passlib==1.7.4
+bcrypt==3.2.2

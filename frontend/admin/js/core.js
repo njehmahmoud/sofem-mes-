@@ -16,7 +16,16 @@ async function api(path, method = 'GET', body = null) {
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
-  if (res.status === 401) { logout(); return null; }
+  if (res.status === 401) {
+    // Token expired or invalid — clear and go to login
+    // Use a small debounce so multiple simultaneous 401s don't stack
+    if (!window._loggingOut) {
+      window._loggingOut = true;
+      localStorage.clear();
+      window.location.replace('/');
+    }
+    return null;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || 'Erreur serveur');
@@ -94,7 +103,7 @@ tick(); setInterval(tick, 1000);
 // Logout
 function logout() {
   localStorage.clear();
-  window.location.href = '/';
+  window.location.replace('/');  // replace() prevents back-button loop
 }
 
 // User info from token
@@ -141,8 +150,12 @@ window.addEventListener('DOMContentLoaded', () => {
 // PDF URL helper — appends token for authenticated PDF endpoints
 function pdfUrl(path) {
   const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('No authentication token found. Please log in again.');
+    return '#';
+  }
   const sep = path.includes('?') ? '&' : '?';
-  return `${API}${path}${sep}token=${token}`;
+  return `${API}${path}${sep}token=${encodeURIComponent(token)}`;
 }
 
 // ── Theme toggle ──────────────────────────────────────────
@@ -159,6 +172,30 @@ function quickThemeToggle() {
     toast(next === 'dark' ? '🌙 Mode Sombre' : '☀️ Mode Clair');
   } catch(e) {}
 }
+
+// ── Sidebar toggle ────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  
+  const isCollapsed = sidebar.classList.contains('collapsed');
+  if (isCollapsed) {
+    sidebar.classList.remove('collapsed');
+    localStorage.setItem('sofem_sidebar_collapsed', 'false');
+  } else {
+    sidebar.classList.add('collapsed');
+    localStorage.setItem('sofem_sidebar_collapsed', 'true');
+  }
+}
+
+// Restore sidebar state on page load
+window.addEventListener('DOMContentLoaded', () => {
+  const wasCollapsed = localStorage.getItem('sofem_sidebar_collapsed') === 'true';
+  if (wasCollapsed) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.add('collapsed');
+  }
+});
 
 // Apply theme on initial load
 (function() {

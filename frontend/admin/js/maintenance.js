@@ -40,10 +40,19 @@ async function loadMaintenance(){
       <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${o.date_planifiee||'—'}</td>
       <td><span class="badge ${pMap[o.priorite]||'b-normal'}">${o.priorite}</span></td>
       <td><span class="badge ${sMap[o.statut]||'b-draft'}">${o.statut.replace('_',' ')}</span></td>
-      <td><select class="fbtn" onchange="updateOMStatus(${o.id},this.value)">
-        <option value="">Changer statut</option>
-        <option value="PLANIFIE">Planifié</option><option value="EN_COURS">En Cours</option>
-        <option value="TERMINE">Terminé</option><option value="ANNULE">Annulé</option>
+      <td style="display:flex;gap:4px;align-items:center">
+    <select class="fbtn" onchange="updateOMStatus(${o.id},this.value)">
+      <option value="">Changer statut</option>
+      <option value="PLANIFIE">Planifié</option>
+      <option value="EN_COURS">En Cours</option>
+      <option value="TERMINE">Terminé</option>
+    </select>
+    ${o.statut !== 'TERMINE' && o.statut !== 'ANNULE'
+      ? `<button class="fbtn" style="color:var(--accent)"
+           onclick="cancelMaintenance(${o.id},'${o.om_numero}','${(o.titre||'').replace(/'/g,"\\'")}','${o.statut}')"
+           title="Annuler">✕</button>`
+      : ''}
+  </td>
       </select></td>
     </tr>`).join('')}</tbody></table>
   `;

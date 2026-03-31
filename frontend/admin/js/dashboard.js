@@ -77,19 +77,19 @@ async function loadDashboard() {
             : pct < 1.5
               ? '<span class="badge b-inprogress" style="font-size:8px">BAS</span>'
               : '';
-          return \`<div class="mat-item">
+          return `<div class="mat-item">
             <div style="flex:1;min-width:0">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-                <span class="mat-name" style="font-size:11px">\${m.nom}</span>
-                \${badge}
+                <span class="mat-name" style="font-size:11px">${m.nom}</span>
+                ${badge}
               </div>
               <div style="display:flex;align-items:center;gap:.5rem">
-                <div class="bar-w"><div class="bar-f \${cls}" style="width:\${Math.min(pct*50,100)}%"></div></div>
-                <span class="bar-pct \${cls}">\${pctVal}%</span>
-                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">\${m.stock_actuel} / \${m.stock_minimum} \${m.unite}</span>
+                <div class="bar-w"><div class="bar-f ${cls}" style="width:${Math.min(pct*50,100)}%"></div></div>
+                <span class="bar-pct ${cls}">${pctVal}%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${m.stock_actuel} / ${m.stock_minimum} ${m.unite}</span>
               </div>
             </div>
-          </div>\`;
+          </div>`;
         }).join('');
       }
     }
@@ -101,29 +101,29 @@ async function loadDashboard() {
         $('dash-chart').innerHTML = '<div style="color:var(--muted);font-size:11px;padding:1rem;text-align:center">Aucune donnée</div>';
       } else {
         const max = Math.max(...data.map(d => d.total), 1);
-        if ($('chart-taux')) $('chart-taux').textContent = \`Taux: \${dash.taux_completion ?? 0}%\`;
-        $('dash-chart').innerHTML = \`
+        if ($('chart-taux')) $('chart-taux').textContent = `Taux: ${dash.taux_completion ?? 0}%`;
+        $('dash-chart').innerHTML = `
           <div style="display:flex;align-items:flex-end;gap:6px;height:100%;padding:0 8px">
-            \${data.map((d, i, arr) => {
+            ${data.map((d, i, arr) => {
               const isCurrent = i === arr.length - 1;
               const h = Math.max(Math.round(d.total / max * 80), 4);
-              return \`<div class="bc" style="position:relative" title="\${d.mois}: \${d.total} OF">
+              return `<div class="bc" style="position:relative" title="${d.mois}: ${d.total} OF">
                 <div style="position:relative;width:100%;display:flex;flex-direction:column;
                   align-items:center;justify-content:flex-end;flex:1">
                   <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;
-                    color:\${isCurrent?'var(--text)':'var(--muted)'};margin-bottom:3px;font-weight:\${isCurrent?700:400}">\${d.total}</span>
-                  <div class="bf\${isCurrent?' cur':''}"
-                    style="width:100%;height:\${h}%;border-radius:3px 3px 0 0;
-                      background:\${isCurrent?'var(--red)':'rgba(212,43,43,0.45)'};
+                    color:${isCurrent?'var(--text)':'var(--muted)'};margin-bottom:3px;font-weight:${isCurrent?700:400}">${d.total}</span>
+                  <div class="bf${isCurrent?' cur':''}"
+                    style="width:100%;height:${h}%;border-radius:3px 3px 0 0;
+                      background:${isCurrent?'var(--red)':'rgba(212,43,43,0.45)'};
                       transition:height .6s ease"></div>
                 </div>
-                <div class="bl" style="font-size:8px;color:\${isCurrent?'var(--red)':'var(--muted)'};
-                  font-weight:\${isCurrent?700:400};margin-top:4px;white-space:nowrap">
-                  \${(d.mois||'').slice(0,6)}
+                <div class="bl" style="font-size:8px;color:${isCurrent?'var(--red)':'var(--muted)'};
+                  font-weight:${isCurrent?700:400};margin-top:4px;white-space:nowrap">
+                  ${(d.mois||'').slice(0,6)}
                 </div>
-              </div>\`;
+              </div>`;
             }).join('')}
-          </div>\`;
+          </div>`;
       }
     }
 
