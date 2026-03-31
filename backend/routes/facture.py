@@ -78,7 +78,7 @@ def draw_footer(c, W, colors, numero, now,
 
 # ── SINGLE OF FACTURE ─────────────────────────────────────
 @router.get("/{of_id}")
-def get_facture(of_id: int, type: str = "interne", user=Depends(get_pdf_user), db=Depends(get_db)):
+def get_facture(of_id: int, user=Depends(get_pdf_user), type: str = "interne", db=Depends(get_db)):
     of = get_of_data(of_id, db)
     # Load settings
     cfg = get_all_settings(db)

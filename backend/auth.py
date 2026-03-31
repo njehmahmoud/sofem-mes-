@@ -85,10 +85,14 @@ def create_token(user_id: int, role: str, nom: str, prenom: str,
 
 def decode_token(token: str) -> dict:
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"DEBUG: Token decoded successfully for user {decoded.get('sub')}")
+        return decoded
     except jwt.ExpiredSignatureError:
+        print(f"DEBUG: Token expired")
         raise HTTPException(401, "Session expirée — reconnectez-vous")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        print(f"DEBUG: Invalid token: {str(e)}")
         raise HTTPException(401, "Token invalide")
 
 
@@ -101,15 +105,23 @@ def get_current_user(
 
 
 def get_pdf_user(
-    token: str = Query(None),
+    token: str = Query(None, alias="token"),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> dict:
     """Accepts token from query param OR Authorization header (for PDF window.open())."""
+    print(f"DEBUG: get_pdf_user called - token: {token[:20] if token else None}..., credentials: {bool(credentials)}")
     if token:
-        return decode_token(token)
+        print(f"DEBUG: Using token from query param, length: {len(token)}")
+        try:
+            return decode_token(token)
+        except Exception as e:
+            print(f"DEBUG: Token decode failed: {e}")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=f"Token invalide: {str(e)}")
     if credentials:
+        print(f"DEBUG: Using token from Authorization header")
         return decode_token(credentials.credentials)
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Non authentifié")
+    print(f"DEBUG: No token found - raising 401")
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Aucun token d'authentification fourni. Veuillez vous reconnecter.")
 
 
 def require_admin(user: dict = Depends(get_current_user)) -> dict:
