@@ -1,10 +1,17 @@
 """SOFEM MES v6.0 — Bons de Réception"""
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from database import get_db, q, exe, serialize, temp_numero, finalize_number, log_activity
-from auth import require_any_role, require_manager_or_admin, get_current_user
+from auth import require_any_role, require_manager_or_admin, get_current_user, get_pdf_user
 from models import BRCreate
 from datetime import datetime
+import io
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as rl_canvas
+from routes.settings import get_all_settings
 
 router = APIRouter(prefix="/api/achats/br", tags=["achats-br"])
 
@@ -164,3 +171,113 @@ def update_br_quantite(br_id: int, quantite_recue: float, db=Depends(get_db)):
     if br["statut"] == "EN_ATTENTE":
         exe(db, "UPDATE bons_reception SET statut='PARTIEL' WHERE id=%s", (br_id,))
     return {"message": "Quantite mise a jour"}
+
+
+@router.get("/{br_id}/pdf")
+def print_br(br_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
+    br = q(db, """
+        SELECT br.*, bc.bc_numero, bc.fournisseur
+        FROM bons_reception br
+        JOIN bons_commande bc ON br.bc_id = bc.id
+        WHERE br.id = %s
+    """, (br_id,), one=True)
+    if not br:
+        raise HTTPException(404, "BR non trouvée")
+    br = serialize(br)
+    br["lignes"] = serialize(q(db, """
+        SELECT brl.*, bcl.description, m.nom materiau_nom
+        FROM br_lignes brl
+        JOIN bc_lignes bcl ON brl.bc_ligne_id = bcl.id
+        LEFT JOIN materiaux m ON bcl.materiau_id = m.id
+        WHERE brl.br_id = %s
+    """, (br_id,)))
+
+    cfg = get_all_settings(db)
+    S_NOM   = cfg.get("societe_nom",       "SOFEM")
+    S_TAG   = cfg.get("societe_tagline",   "Partenaire des Briqueteries")
+    S_ADDR  = cfg.get("societe_adresse",   "Route Sidi Salem 2.5KM")
+    S_VILLE = cfg.get("societe_ville",     "Sfax")
+    S_TEL   = cfg.get("societe_telephone", "+216 74 469 181")
+    S_MF    = cfg.get("societe_mf",        "000000000/A/M/000")
+    S_WEB   = cfg.get("societe_website",   "sofem-tn.com")
+    PDF_PIED = cfg.get("pdf_pied_custom",  "SOFEM MES v6.0 · SMARTMOVE")
+
+    W, H = A4
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=A4)
+    RED   = colors.HexColor("#D42B2B")
+    DARK  = colors.HexColor("#111")
+    GRAY  = colors.HexColor("#6B7280")
+    LIGHT = colors.HexColor("#F9FAFB")
+    WHITE = colors.white
+    BORDER = colors.HexColor("#E5E7EB")
+    now = datetime.now().strftime("%d / %m / %Y")
+
+    # Header
+    c.setFillColor(DARK); c.rect(0, H-38*2.835, W, 38*2.835, fill=1, stroke=0)
+    c.setFillColor(RED);  c.rect(0, H-40*2.835, W, 2*2.835, fill=1, stroke=0)
+    c.setFillColor(RED);  c.roundRect(15*2.835, H-32*2.835, 22*2.835, 22*2.835, 4, fill=1, stroke=0)
+    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 18); c.drawCentredString(26*2.835, H-24*2.835, "S")
+    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 20); c.drawString(42*2.835, H-22*2.835, S_NOM)
+    c.setFillColor(RED);   c.setFont("Helvetica", 7);       c.drawString(42*2.835, H-27*2.835, S_TAG)
+    c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 7)
+    c.drawString(42*2.835, H-32*2.835, f"{S_ADDR} · {S_VILLE} · {S_TEL}")
+    c.setFillColor(WHITE); c.setFont("Helvetica-Bold", 26); c.drawRightString(W-15*2.835, H-20*2.835, "BON DE RECEPTION")
+    c.setFillColor(RED);   c.setFont("Helvetica-Bold", 13); c.drawRightString(W-15*2.835, H-27*2.835, br["br_numero"])
+    c.setFillColor(colors.HexColor("#9CA3AF")); c.setFont("Helvetica", 8)
+    c.drawRightString(W-15*2.835, H-33*2.835, f"Date: {br.get('date_reception', now)}")
+
+    y = H - 63*mm
+    c.setFillColor(LIGHT); c.rect(0, y, W, 18*mm, fill=1, stroke=0)
+    c.setStrokeColor(BORDER); c.setLineWidth(0.5)
+    c.line(0, y, W, y); c.line(0, y+18*mm, W, y+18*mm)
+    c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 7);  c.drawString(15*mm, y+14*mm, "FOURNISSEUR")
+    c.setFillColor(DARK); c.setFont("Helvetica-Bold", 11); c.drawString(15*mm, y+8*mm, str(br.get("fournisseur", "—"))[:40])
+    c.setFillColor(GRAY); c.setFont("Helvetica", 8);       c.drawString(15*mm, y+3*mm, f"BC réf: {br.get('bc_numero', '—')}")
+    c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 7);  c.drawRightString(W-15*mm, y+14*mm, "STATUT")
+    c.setFillColor(DARK); c.setFont("Helvetica-Bold", 11); c.drawRightString(W-15*mm, y+8*mm, br.get("statut", "—"))
+
+    # Lines table
+    y_cur = y - 14*mm
+    c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 8)
+    c.drawString(15*mm, y_cur+5*mm, "MATÉRIAU")
+    c.drawString(80*mm, y_cur+5*mm, "DESCRIPTION")
+    c.drawRightString(W-60*mm, y_cur+5*mm, "QTÉ RECUE")
+    c.drawRightString(W-15*mm, y_cur+5*mm, "UNITÉ")
+    y_cur -= 8*mm
+
+    c.setStrokeColor(BORDER); c.setLineWidth(0.5)
+    c.line(15*mm, y_cur+12*mm, W-15*mm, y_cur+12*mm)
+
+    for ligne in br["lignes"]:
+        if y_cur < 30*mm:  # New page if needed
+            c.showPage()
+            y_cur = H - 50*mm
+            c.setFillColor(GRAY); c.setFont("Helvetica-Bold", 8)
+            c.drawString(15*mm, y_cur+5*mm, "MATÉRIAU")
+            c.drawString(80*mm, y_cur+5*mm, "DESCRIPTION")
+            c.drawRightString(W-60*mm, y_cur+5*mm, "QTÉ RECUE")
+            c.drawRightString(W-15*mm, y_cur+5*mm, "UNITÉ")
+            y_cur -= 8*mm
+            c.line(15*mm, y_cur+12*mm, W-15*mm, y_cur+12*mm)
+
+        c.setFillColor(DARK); c.setFont("Helvetica", 8)
+        materiau = ligne.get("materiau_nom", "—")
+        desc = ligne.get("description", "—")
+        qte = ligne.get("quantite_recue", 0)
+        unite = ligne.get("unite", "—")
+
+        c.drawString(15*mm, y_cur+5*mm, str(materiau)[:25])
+        c.drawString(80*mm, y_cur+5*mm, str(desc)[:40])
+        c.drawRightString(W-60*mm, y_cur+5*mm, f"{qte}")
+        c.drawRightString(W-15*mm, y_cur+5*mm, str(unite))
+        y_cur -= 8*mm
+
+    # Footer
+    c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+    c.drawCentredString(W/2, 15*mm, PDF_PIED)
+
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=BR_{br['br_numero']}.pdf"})
