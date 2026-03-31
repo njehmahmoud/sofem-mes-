@@ -1,20 +1,12 @@
 """SOFEM MES v6.0 — Bons de Réception"""
 
-from fastapi import APIRouter, Depends
-from database import get_db, q, exe, serialize
-from auth import require_any_role, require_manager_or_admin
+from fastapi import APIRouter, Depends, HTTPException
+from database import get_db, q, exe, serialize, temp_numero, finalize_number, log_activity
+from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import BRCreate
 from datetime import datetime
 
 router = APIRouter(prefix="/api/achats/br", tags=["achats-br"])
-
-
-def gen_num(db):
-    last = q(db, "SELECT br_numero FROM bons_reception ORDER BY id DESC LIMIT 1", one=True)
-    year = datetime.now().year
-    try: n = int(last["br_numero"].split("-")[-1]) + 1 if last else 1
-    except: n = 1
-    return f"BR-{year}-{str(n).zfill(3)}"
 
 
 @router.get("", dependencies=[Depends(require_any_role)])
@@ -37,16 +29,19 @@ def list_br(db=Depends(get_db)):
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
-def create_br(data: BRCreate, db=Depends(get_db)):
-    numero = gen_num(db)
+def create_br(data: BRCreate, user=Depends(get_current_user), db=Depends(get_db)):
+    year = datetime.now().year
+    tmp = temp_numero()
     br_id = exe(db, """
         INSERT INTO bons_reception (br_numero,bc_id,date_reception,statut,notes)
         VALUES (%s,%s,%s,%s,%s)
-    """, (numero, data.bc_id, data.date_reception, data.statut, data.notes))
+    """, (tmp, data.bc_id, data.date_reception, data.statut, data.notes))
+    numero = finalize_number(db, "bons_reception", "br_numero", br_id, "BR", year)
 
     for l in data.lignes:
-        exe(db, "INSERT INTO br_lignes (br_id,bc_ligne_id,quantite_recue) VALUES (%s,%s,%s)",
-            (br_id, l.bc_ligne_id, l.quantite_recue))
+        price = float(l.prix_unitaire) if l.prix_unitaire else 0
+        exe(db, "INSERT INTO br_lignes (br_id,bc_ligne_id,quantite_recue,prix_unitaire) VALUES (%s,%s,%s,%s)",
+            (br_id, l.bc_ligne_id, l.quantite_recue, price))
         bcl = q(db, "SELECT materiau_id FROM bc_lignes WHERE id=%s", (l.bc_ligne_id,), one=True)
         if bcl and bcl["materiau_id"]:
             mat = q(db, "SELECT stock_actuel FROM materiaux WHERE id=%s",
@@ -64,14 +59,20 @@ def create_br(data: BRCreate, db=Depends(get_db)):
 
     exe(db, "UPDATE bons_commande SET statut=%s WHERE id=%s",
         ("RECU" if data.statut == "COMPLET" else "RECU_PARTIEL", data.bc_id))
+    
+    log_activity(db, "CREATE", "BR", br_id, numero,
+                 user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                 new_value=data.dict(), detail=f"BR {numero} créé — stock mis à jour")
+    
     return {"id": br_id, "br_numero": numero, "message": "BR créé — stock mis à jour"}
 
 
 @router.put("/{br_id}/confirmer", dependencies=[Depends(require_manager_or_admin)])
-def confirmer_reception(br_id: int, db=Depends(get_db)):
+def confirmer_reception(br_id: int, user=Depends(get_current_user), db=Depends(get_db)):
     """
     Confirm reception of an auto-generated BR (EN_ATTENTE).
     Updates quantite_recue from BC line, updates stock, marks DA as RECEIVED.
+    Synchronizes prices from br_lignes to bc_lignes.
     """
     br = q(db, "SELECT * FROM bons_reception WHERE id=%s", (br_id,), one=True)
     if not br: raise HTTPException(404, "BR introuvable")
@@ -79,7 +80,7 @@ def confirmer_reception(br_id: int, db=Depends(get_db)):
         raise HTTPException(400, f"BR deja traite (statut: {br['statut']})")
 
     lignes = q(db, """
-        SELECT brl.id, brl.bc_ligne_id, brl.quantite_recue,
+        SELECT brl.id, brl.bc_ligne_id, brl.quantite_recue, brl.prix_unitaire,
                bcl.materiau_id, bcl.quantite as quantite_commandee,
                bcl.unite, m.nom materiau_nom, m.stock_actuel
         FROM br_lignes brl
@@ -96,6 +97,11 @@ def confirmer_reception(br_id: int, db=Depends(get_db)):
             qte_recue = float(l["quantite_commandee"])
             exe(db, "UPDATE br_lignes SET quantite_recue=%s WHERE id=%s",
                 (qte_recue, l["id"]))
+
+        # Update bc_lignes price from br_lignes if available
+        if l["prix_unitaire"] and float(l["prix_unitaire"]) > 0:
+            exe(db, "UPDATE bc_lignes SET prix_unitaire=%s WHERE id=%s",
+                (l["prix_unitaire"], l["bc_ligne_id"]))
 
         if l["materiau_id"] and qte_recue > 0:
             avant = float(l["stock_actuel"] or 0)
@@ -130,6 +136,11 @@ def confirmer_reception(br_id: int, db=Depends(get_db)):
            (br["bc_id"],), one=True)
     if da:
         exe(db, "UPDATE demandes_achat SET statut='RECEIVED' WHERE id=%s", (da["id"],))
+
+    log_activity(db, "UPDATE", "BR", br_id, br["br_numero"],
+                 user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                 old_value={"statut": br["statut"]}, new_value={"statut": "COMPLET"},
+                 detail=f"BR {br['br_numero']} confirmée — {len(stock_updates)} matériau(x) mis à jour")
 
     return {
         "message": f"Reception confirmee — {len(stock_updates)} materiau(x) mis a jour",

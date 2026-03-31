@@ -42,6 +42,7 @@ def init_db():
         logger.info("✅ MySQL connected (pool_size=15)")
         _ensure_sequences_table()
         _ensure_activity_log()
+        _ensure_br_price_column()
     except Error as e:
         logger.error(f"❌ MySQL error: {e}")
         pool = None
@@ -148,6 +149,42 @@ def _ensure_activity_log():
         logger.info("✅ activity_log_v2 ready")
     except Exception as e:
         logger.error(f"_ensure_activity_log failed: {e}")
+    finally:
+        try: cur.close()
+        except: pass
+        conn.close()
+
+
+def _ensure_br_price_column():
+    """
+    Ensure br_lignes table has prix_unitaire column.
+    This column stores the unit price at the time of reception.
+    Safe to call on every startup — fully idempotent.
+    """
+    try:
+        conn = pool.get_connection()
+    except Exception as e:
+        logger.error(f"_ensure_br_price_column: could not get connection: {e}")
+        return
+    try:
+        cur = conn.cursor()
+        # Check if column exists
+        cur.execute("""
+            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME='br_lignes' AND COLUMN_NAME='prix_unitaire'
+        """)
+        result = cur.fetchone()
+        if result and result[0] == 0:
+            # Column doesn't exist, add it
+            cur.execute("""
+                ALTER TABLE br_lignes ADD COLUMN prix_unitaire FLOAT DEFAULT 0
+            """)
+            conn.commit()
+            logger.info("✅ br_lignes.prix_unitaire column added")
+        else:
+            logger.debug("✅ br_lignes.prix_unitaire column already exists")
+    except Exception as e:
+        logger.warning(f"_ensure_br_price_column: {e}")
     finally:
         try: cur.close()
         except: pass

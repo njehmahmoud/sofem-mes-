@@ -121,6 +121,20 @@ async function updateDA(id, statut) {
   } catch (e) { toast(e.message, 'err'); }
 }
 
+async function cancelDA(id, numero, description, statut) {
+  const reason = prompt(`Annuler DA ${numero}?\n\nMotif d'annulation (obligatoire):`);
+  if (!reason || reason.trim().length < 5) {
+    toast('Motif requis (min. 5 caractères)', 'err');
+    return;
+  }
+
+  try {
+    const res = await api(`/api/achats/da/${id}/cancel`, 'PUT', { reason });
+    toast(`${numero} annulée ✓`);
+    loadDA(); loadBC(); loadBR();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
 async function confirmerReception(brId, brNumero) {
   try {
     const brs = await api('/api/achats/br');
@@ -197,7 +211,11 @@ async function submitConfirmerReception() {
   if (!qteRecue || qteRecue <= 0) { toast('Quantité reçue requise', 'err'); return; }
 
   try {
+    // Update quantite_recue
     await api(`/api/achats/br/${brId}/quantite?quantite_recue=${qteRecue}`, 'PUT');
+
+    // Note: Price will be synchronized on confirmer via br_lignes.prix_unitaire → bc_lignes.prix_unitaire
+    // The price is already stored in br_lignes from BR creation
 
     const res = await api(`/api/achats/br/${brId}/confirmer`, 'PUT');
     toast(res.message + ' ✓');
@@ -260,14 +278,87 @@ async function loadBC() {
   } catch (e) { toast('Erreur BC: ' + e.message, 'err'); }
 }
 
+// BC line management
+function addBCLine() {
+  const container = $('bc-lines');
+  if (!container) return;
+  const lineId = Date.now();
+  const html = `
+    <div class="bc-line-row" id="bcline-${lineId}" style="display:flex;gap:.5rem;margin-bottom:.5rem;align-items:flex-start;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+      <div style="flex:1">
+        <select class="bc-materiau-sel" data-lineid="${lineId}" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+          <option value="">— Sélectionner matériau —</option>
+        </select>
+      </div>
+      <div style="width:80px">
+        <input type="text" class="bc-desc" placeholder="Description" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <div style="width:70px">
+        <input type="number" class="bc-qty" placeholder="Qté" min="0.001" step="0.001" value="1" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <div style="width:60px">
+        <input type="text" class="bc-unite" placeholder="Unité" value="pcs" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--text)">
+      </div>
+      <button class="fbtn" style="color:var(--red);min-width:30px" onclick="removeBCLine('bcline-${lineId}')">✕</button>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  
+  // Load matériaux into the new select
+  api('/api/materiaux').then(mats => {
+    const sel = document.querySelector(`#bcline-${lineId} .bc-materiau-sel`);
+    if (sel && mats) {
+      sel.innerHTML = '<option value="">— Sélectionner matériau —</option>' +
+        mats.map(m => `<option value="${m.id}|${m.nom}|${m.unite}">${m.nom} (${m.unite})</option>`).join('');
+      sel.addEventListener('change', function() {
+        if (this.value) {
+          const [id, nom, unite] = this.value.split('|');
+          const row = document.getElementById(`bcline-${lineId}`);
+          if (!row.querySelector('.bc-desc').value) {
+            row.querySelector('.bc-desc').value = nom;
+          }
+          row.querySelector('.bc-unite').value = unite;
+        }
+      });
+    }
+  });
+}
+
+function removeBCLine(lineId) {
+  const el = document.getElementById(lineId);
+  if (el) el.remove();
+}
+
 async function saveBC() {
   const four = $('bc-four')?.value;
   if (!four) { toast('Fournisseur requis', 'err'); return; }
+
+  // Collect lines
+  const lines = [];
+  document.querySelectorAll('#bc-lines .bc-line-row').forEach(row => {
+    const matSel = row.querySelector('.bc-materiau-sel').value;
+    const desc = row.querySelector('.bc-desc').value;
+    const qty = parseFloat(row.querySelector('.bc-qty').value);
+    const unite = row.querySelector('.bc-unite').value;
+    
+    if (!matSel && !desc) return; // Skip empty lines
+    const [matId] = matSel ? matSel.split('|') : [null];
+    
+    lines.push({
+      materiau_id: matId ? parseInt(matId) : null,
+      description: desc || null,
+      quantite: qty || 0,
+      unite: unite || 'pcs'
+    });
+  });
+
+  if (lines.length === 0) { toast('Ajouter au moins une ligne', 'err'); return; }
+
   try {
     const res = await api('/api/achats/bc', 'POST', {
       fournisseur: four,
       da_id:       $('bc-da')?.value   ? parseInt($('bc-da').value)   : null,
-      notes:       $('bc-notes')?.value || null
+      notes:       $('bc-notes')?.value || null,
+      lignes:      lines
     });
     toast(`${res.bc_numero} créé ✓`); closeModal('m-bc'); loadBC();
   } catch (e) { toast(e.message, 'err'); }
@@ -319,4 +410,126 @@ async function loadBR() {
     }).join('');
 
   } catch (e) { toast('Erreur BR: ' + e.message, 'err'); }
+}
+
+function loadBCLines() {
+  const bcId = parseInt($('br-bc')?.value);
+  if (!bcId) {
+    $('br-lines').innerHTML = '';
+    return;
+  }
+
+  api('/api/achats/bc').then(bcs => {
+    const bc = (bcs || []).find(b => b.id === bcId);
+    if (!bc || !bc.lignes) {
+      $('br-lines').innerHTML = '<span style="color:var(--muted);font-size:11px">— Aucune ligne disponible —</span>';
+      return;
+    }
+
+    const html = `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:1px">Lignes du BC — ${bc.bc_numero}</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+        ${bc.lignes.map((ligne, idx) => `
+          <div class="br-line-item" data-ligne-idx="${idx}" style="display:flex;gap:.5rem;margin-bottom:.5rem;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.5rem">
+            <div style="flex:1">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Matériau / Description</div>
+              <div style="font-size:11px;color:var(--text);font-weight:600">${ligne.materiau_nom || ligne.description || '—'}</div>
+            </div>
+            <div style="width:80px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Qté cmd</div>
+              <input type="number" class="br-qte-cmd" value="${ligne.quantite}" disabled style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;opacity:.6">
+            </div>
+            <div style="width:90px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Qté reçue</div>
+              <input type="number" class="br-qte-recue" value="${ligne.quantite}" min="0" step="0.001" style="width:100%;background:var(--bg2);border:1px solid var(--green);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-weight:600">
+            </div>
+            <div style="width:100px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Prix unit. HT</div>
+              <input type="number" class="br-prix" min="0" step="0.001" value="${ligne.prix_unitaire || 0}" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--text);font-family:'IBM Plex Mono',monospace">
+            </div>
+            <div style="width:80px">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Total HT</div>
+              <input type="number" disabled value="${(parseFloat(ligne.quantite || 0) * (parseFloat(ligne.prix_unitaire || 0))).toFixed(3)}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:10px;color:var(--accent);font-family:'IBM Plex Mono',monospace;opacity:.7;font-weight:600">
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    $('br-lines').innerHTML = html;
+  });
+}
+
+async function saveBR() {
+  const bcId = parseInt($('br-bc')?.value);
+  const date = $('br-date')?.value;
+  const statut = $('br-statut')?.value || 'COMPLET';
+  const notes = $('br-notes')?.value || null;
+
+  if (!bcId || !date) { toast('BC et Date requis', 'err'); return; }
+
+  // Collect line items with prices
+  const lignes = [];
+  document.querySelectorAll('#br-lines .br-line-item').forEach(item => {
+    const qteRecue = parseFloat(item.querySelector('.br-qte-recue').value);
+    const prix = parseFloat(item.querySelector('.br-prix').value || 0);
+    lignes.push({
+      quantite_recue: qteRecue || 0,
+      prix_unitaire: prix || 0
+    });
+  });
+
+  try {
+    const res = await api('/api/achats/br', 'POST', {
+      bc_id:  bcId,
+      date_reception: date,
+      statut: statut,
+      notes:  notes,
+      lignes: lignes
+    });
+    toast(`${res.br_numero} créé ✓`); closeModal('m-br'); loadBR();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function loadFA() {
+  try {
+    const [fas, bcs] = await Promise.all([
+      api('/api/achats/fa'), api('/api/achats/bc')
+    ]);
+
+    // Populate BC select  
+    if (bcs && $('fa-bc')) {
+      $('fa-bc').innerHTML = '<option value="">— Sélectionner BC —</option>' +
+        bcs.map(b => `<option value="${b.id}">${b.bc_numero} — ${b.fournisseur} (${b.statut})</option>`).join('');
+    }
+
+    $('fa-tb').innerHTML = (fas || []).length === 0 ? empty(5) : fas.map(fa => {
+      return `<tr>
+        <td><span class="of-num">${fa.fa_numero}</span></td>
+        <td>${fa.fournisseur || '—'}</td>
+        <td style="font-size:10px;color:var(--accent)">${fa.bc_numero}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.montant_ht} TND HT</td>
+        <td style="font-size:9px;color:var(--muted)">${fa.notes || '—'}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/fa/${fa.id}/pdf'),'_blank')">🖨️ PDF</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) { toast('Erreur FA: ' + e.message, 'err'); }
+}
+
+async function saveFA() {
+  const bcId = parseInt($('fa-bc')?.value);
+  const four = $('fa-four')?.value;
+  const date = $('fa-date')?.value;
+  const notes = $('fa-notes')?.value || null;
+
+  if (!bcId || !four || !date) { toast('BC, Fournisseur et Date requis', 'err'); return; }
+
+  try {
+    const res = await api('/api/achats/fa', 'POST', {
+      bc_id: bcId,
+      fournisseur: four,
+      date_facture: date,
+      notes: notes
+    });
+    toast(`${res.fa_numero} créé ✓`); closeModal('m-fa'); loadFA();
+  } catch (e) { toast(e.message, 'err'); }
 }

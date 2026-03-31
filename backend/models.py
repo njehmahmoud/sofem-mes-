@@ -200,14 +200,14 @@ class DAUpdate(BaseModel):
 
 class BCLigne(BaseModel):
     materiau_id: Optional[int]=None; description: str
-    quantite: float; unite: str="pcs"; prix_unitaire: float=0
+    quantite: float; unite: str="pcs"
 
 class BCCreate(BaseModel):
     fournisseur: str; da_id: Optional[int]=None
     notes: Optional[str]=None; lignes: List[BCLigne]=[]
 
 class BRLigne(BaseModel):
-    bc_ligne_id: int; quantite_recue: float
+    bc_ligne_id: int; quantite_recue: float; prix_unitaire: Optional[float]=None
 
 class BRCreate(BaseModel):
     bc_id: int; date_reception: date

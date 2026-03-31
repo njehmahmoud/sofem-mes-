@@ -64,7 +64,7 @@ def list_bc(db=Depends(get_db)):
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
-def create_bc(data: BCCreate, db=Depends(get_db)):
+def create_bc(data: BCCreate, db=Depends(get_db), user: dict = Depends(get_current_user)):
     year = datetime.now().year
     tmp = temp_numero()
     bc_id = exe(db, """
@@ -75,12 +75,16 @@ def create_bc(data: BCCreate, db=Depends(get_db)):
 
     for l in data.lignes:
         exe(db, """
-            INSERT INTO bc_lignes (bc_id, materiau_id, description, quantite, unite, prix_unitaire)
-            VALUES (%s,%s,%s,%s,%s,%s)
-        """, (bc_id, l.materiau_id, l.description, l.quantite, l.unite, l.prix_unitaire))
+            INSERT INTO bc_lignes (bc_id, materiau_id, description, quantite, unite)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (bc_id, l.materiau_id, l.description, l.quantite, l.unite))
 
     if data.da_id:
         exe(db, "UPDATE demandes_achat SET statut='ORDERED' WHERE id=%s", (data.da_id,))
+
+    log_activity(db, "CREATE", "BC", bc_id, numero,
+                 user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                 new_value=data.dict(), detail=f"BC {numero} créé")
 
     return {"id": bc_id, "bc_numero": numero, "message": "BC créé"}
 

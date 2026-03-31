@@ -975,3 +975,120 @@
   </div>
 </div>
 
+<!-- DOSSIER MODAL — Complete OF document package -->
+<div class="overlay" id="m-dossier">
+  <div class="modal" style="max-width:1000px;width:98vw;max-height:88vh;overflow-y:auto">
+    <div class="modal-h">
+      <div>
+        <div class="modal-title">📋 DOSSIER OF — <span id="dos-numero" style="color:var(--red)"></span></div>
+        <div id="dos-info-summary" style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px;display:flex;gap:1.5rem"></div>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" style="font-size:9px" onclick="printDossier()">🖨️ Imprimer</button>
+        <button class="x" onclick="closeModal('m-dossier')">✕</button>
+      </div>
+    </div>
+    <div class="modal-b" style="padding:0;font-size:11px">
+      
+      <!-- TABS -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto">
+        <button class="dos-tab active" onclick="dosTab('ops')">⚙️ Opérations</button>
+        <button class="dos-tab" onclick="dosTab('bom')">📦 Matériaux</button>
+        <button class="dos-tab" onclick="dosTab('achat')">🛒 Achats</button>
+        <button class="dos-tab" onclick="dosTab('qualite')">✓ Qualité</button>
+        <button class="dos-tab" onclick="dosTab('trace')">📝 Traçabilité</button>
+      </div>
+
+      <!-- OPS TAB -->
+      <div id="dos-pane-ops" class="dos-pane" style="padding:1rem">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px;color:var(--muted)">OPÉRATION</th>
+              <th style="text-align:left;padding:4px;color:var(--muted)">OPÉRATEUR</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">STATUT</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">DURÉE</th>
+            </tr>
+          </thead>
+          <tbody id="dos-ops-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- BOM TAB -->
+      <div id="dos-pane-bom" class="dos-pane" style="padding:1rem;display:none">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px;color:var(--muted)">MATÉRIAU</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">QTÉ</th>
+              <th style="text-align:center;padding:4px;color:var(--muted)">UNITÉ</th>
+              <th style="text-align:right;padding:4px;color:var(--muted)">PRIX UNIT.</th>
+              <th style="text-align:right;padding:4px;color:var(--muted)">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody id="dos-bom-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- ACHATS TAB (DA→BC→BR→FA chain) -->
+      <div id="dos-pane-achat" class="dos-pane" style="padding:1rem;display:none">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📄 Demandes Achat</div>
+            <div id="dos-das-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📋 Bons Commande</div>
+            <div id="dos-bcs-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">📦 Bons Réception</div>
+            <div id="dos-brs-list" style="font-size:9px"></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.75rem">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem">🧾 Factures</div>
+            <div id="dos-fas-list" style="font-size:9px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUALITÉ TAB (QC + NC) -->
+      <div id="dos-pane-qualite" class="dos-pane" style="padding:1rem;display:none">
+        <div style="margin-bottom:1.5rem">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;font-weight:600">Contrôles Qualité</div>
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:4px">TYPE</th>
+                <th style="text-align:center;padding:4px">TOTAL</th>
+                <th style="text-align:center;padding:4px">OK</th>
+                <th style="text-align:center;padding:4px">REBUT</th>
+                <th style="text-align:center;padding:4px">%</th>
+              </tr>
+            </thead>
+            <tbody id="dos-qc-tb"></tbody>
+          </table>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;font-weight:600">Non-Conformités</div>
+          <div id="dos-nc-list" style="font-size:9px"></div>
+        </div>
+      </div>
+
+      <!-- TRAÇABILITÉ TAB (Activity log) -->
+      <div id="dos-pane-trace" class="dos-pane" style="padding:1rem;display:none">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:1rem">Journal d'activité ISO 9001 — Toutes les mutations</div>
+        <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;background:var(--bg3)">
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <tbody id="dos-trace-tb"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('m-dossier')">Fermer</button>
+    </div>
+  </div>
+</div>
+

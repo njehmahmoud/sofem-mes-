@@ -124,7 +124,7 @@ def list_da(db=Depends(get_db)):
 # ── CREATE ────────────────────────────────────────────────
 
 @router.post("", status_code=201, dependencies=[Depends(require_any_role)])
-def create_da(data: DACreate, db=Depends(get_db)):
+def create_da(data: DACreate, user=Depends(get_current_user), db=Depends(get_db)):
     year = datetime.now().year
     tmp = temp_numero()
     da_id = exe(db, """
@@ -134,31 +134,37 @@ def create_da(data: DACreate, db=Depends(get_db)):
     """, (tmp, data.of_id, data.materiau_id, data.description, data.objet,
           data.quantite, data.unite, data.urgence, data.notes, data.demandeur_id))
     numero = finalize_number(db, "demandes_achat", "da_numero", da_id, "DA", year)
+    
+    log_activity(db, "CREATE", "DA", da_id, numero,
+                 user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                 new_value=data.dict(), detail=f"DA {numero} créée")
+    
     return {"id": da_id, "da_numero": numero, "message": "Demande créée"}
-# ── cancel ────────────────────────────────────────────────
 
-@router.put("/{da_id}/cancel")
-def cancel_da(da_id: int, data: CancelRequest,
-              user=Depends(get_current_user), db=Depends(get_db)):
-    numero = cancel_document(
-        db, "demandes_achat", "id", "da_numero",
-        da_id, user["id"],
-        f"{user.get('prenom','')} {user.get('nom','')}",
-        data.reason, "DA"
-    )
-    return {"message": f"DA {numero} annulée"}
 
 # ── UPDATE ────────────────────────────────────────────────
 
 @router.put("/{da_id}", dependencies=[Depends(require_manager_or_admin)])
-def update_da(da_id: int, data: DAUpdate, db=Depends(get_db)):
+def update_da(da_id: int, data: DAUpdate, user=Depends(get_current_user), db=Depends(get_db)):
+    da = q(db, "SELECT * FROM demandes_achat WHERE id=%s", (da_id,), one=True)
+    if not da:
+        raise HTTPException(404, "DA introuvable")
+        
     if data.statut == "APPROVED":
         existing = q(db, "SELECT id FROM bons_commande WHERE da_id=%s LIMIT 1", (da_id,), one=True)
         if existing:
             exe(db, "UPDATE demandes_achat SET statut='APPROVED' WHERE id=%s", (da_id,))
+            log_activity(db, "UPDATE", "DA", da_id, da["da_numero"],
+                         user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                         old_value={"statut": da["statut"]}, new_value={"statut": "APPROVED"},
+                         detail=f"DA {da['da_numero']} approuvée — BC/BR déjà existants")
             return {"message": "DA approuvée — BC/BR déjà existants"}
         result = _make_bc_br(db, da_id)
         if result:
+            log_activity(db, "UPDATE", "DA", da_id, da["da_numero"],
+                         user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                         old_value={"statut": da["statut"]}, new_value={"statut": "APPROVED"},
+                         detail=f"DA {da['da_numero']} approuvée — {result['bc_numero']} + {result['br_numero']} créés")
             return {
                 "message": f"DA approuvée — {result['bc_numero']} + {result['br_numero']} créés",
                 **result,
@@ -171,6 +177,10 @@ def update_da(da_id: int, data: DAUpdate, db=Depends(get_db)):
     if fields:
         params.append(da_id)
         exe(db, f"UPDATE demandes_achat SET {','.join(fields)} WHERE id=%s", params)
+        log_activity(db, "UPDATE", "DA", da_id, da["da_numero"],
+                     user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                     new_value=data.dict(exclude_none=True),
+                     detail=f"DA {da['da_numero']} mise à jour")
     return {"message": "DA mise à jour"}
 
 
