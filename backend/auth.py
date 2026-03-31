@@ -14,7 +14,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Query
 from passlib.context import CryptContext
@@ -105,23 +105,16 @@ def get_current_user(
 
 
 def get_pdf_user(
-    token: str = Query(None, alias="token"),
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> dict:
     """Accepts token from query param OR Authorization header (for PDF window.open())."""
-    print(f"DEBUG: get_pdf_user called - token: {token[:20] if token else None}..., credentials: {bool(credentials)}")
+    token = request.query_params.get("token")
     if token:
-        print(f"DEBUG: Using token from query param, length: {len(token)}")
-        try:
-            return decode_token(token)
-        except Exception as e:
-            print(f"DEBUG: Token decode failed: {e}")
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=f"Token invalide: {str(e)}")
+        return decode_token(token)
     if credentials:
-        print(f"DEBUG: Using token from Authorization header")
         return decode_token(credentials.credentials)
-    print(f"DEBUG: No token found - raising 401")
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Aucun token d'authentification fourni. Veuillez vous reconnecter.")
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Non authentifié")
 
 
 def require_admin(user: dict = Depends(get_current_user)) -> dict:

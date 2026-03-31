@@ -150,15 +150,12 @@ window.addEventListener('DOMContentLoaded', () => {
 // PDF URL helper — appends token for authenticated PDF endpoints
 function pdfUrl(path) {
   const token = localStorage.getItem('token') || '';
-  console.log('DEBUG: pdfUrl called with token length:', token.length, 'token starts with:', token.substring(0, 20));
   if (!token) {
     alert('No authentication token found. Please log in again.');
     return '#';
   }
   const sep = path.includes('?') ? '&' : '?';
-  const url = `${API}${path}${sep}token=${encodeURIComponent(token)}`;
-  console.log('DEBUG: Generated PDF URL:', url.substring(0, 100) + '...');
-  return url;
+  return `${API}${path}${sep}token=${encodeURIComponent(token)}`;
 }
 
 // ── Theme toggle ──────────────────────────────────────────

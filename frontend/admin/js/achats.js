@@ -57,7 +57,7 @@ async function loadDA() {
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent)">${bc.bc_numero}</span>
             <button class="btn btn-ghost btn-sm" style="font-size:8px;padding:1px 5px"
-              onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')" title="Imprimer BC">🖨️</button>
+              onclick="const token = localStorage.getItem('token'); window.open('/api/achats/bc/${bc.id}/pdf?token=' + encodeURIComponent(token), '_blank')" title="Imprimer BC">🖨️</button>
           </div>
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)">${bc.br_numero || '—'}</span>
@@ -76,7 +76,7 @@ async function loadDA() {
         <td style="font-size:10px;color:var(--muted)">${da.of_numero || '—'}</td>
         <td>${bcBrCell}</td>
         <td style="display:flex;gap:3px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/da/${da.id}/ba'),'_blank')" title="BA PDF">📋 BA</button>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/da/${da.id}/ba?token=' + encodeURIComponent(token), '_blank')" title="BA PDF">📋 BA</button>
           ${da.statut === 'PENDING'
             ? `<button class="fbtn" style="color:var(--green)" onclick="updateDA(${da.id},'APPROVED')" title="Approuver">✓</button>
                <button class="fbtn" style="color:var(--red)" onclick="updateDA(${da.id},'REJECTED')" title="Rejeter">✕</button>`
@@ -263,7 +263,7 @@ async function loadBC() {
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${bc.montant_ttc || 0} TND TTC</td>
         <td><span class="badge ${badge}">${bc.statut}</span></td>
         <td style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/bc/${bc.id}/pdf'),'_blank')">🖨️</button>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/bc/${bc.id}/pdf?token=' + encodeURIComponent(token), '_blank')">🖨️</button>
           <select class="fbtn" onchange="updateBC(${bc.id},this.value)" style="font-size:9px">
             <option value="">Statut</option>
             <option value="ENVOYE">Envoyé</option>
@@ -404,7 +404,7 @@ async function loadBR() {
           ${br.statut !== 'COMPLET' && br.statut !== 'ANNULE'
             ? `<button class="btn btn-ghost btn-sm" onclick="confirmerReception(${br.id},'${br.br_numero}')" title="Confirmer réception">✓ Réceptionner</button>`
             : ''}
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/br/${br.id}/pdf'),'_blank')" title="Imprimer BR">🖨️</button>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/br/${br.id}/pdf?token=' + encodeURIComponent(token), '_blank')" title="Imprimer BR">🖨️</button>
         </td>
       </tr>`;
     }).join('');
@@ -508,7 +508,7 @@ async function loadFA() {
         <td style="font-family:'IBM Plex Mono',monospace;font-size:10px">${fa.montant_ht} TND HT</td>
         <td style="font-size:9px;color:var(--muted)">${fa.notes || '—'}</td>
         <td>
-          <button class="btn btn-ghost btn-sm" onclick="window.open(pdfUrl('/api/achats/fa/${fa.id}/pdf'),'_blank')">🖨️ PDF</button>
+          <button class="btn btn-ghost btn-sm" onclick="const token = localStorage.getItem('token'); window.open('/api/achats/fa/${fa.id}/pdf?token=' + encodeURIComponent(token), '_blank')">🖨️ PDF</button>
         </td>
       </tr>`;
     }).join('');

@@ -59,7 +59,7 @@ function renderOrders(ofs) {
 
         ${of.statut==='COMPLETED' ? `
           <button class="btn btn-ghost btn-sm" style="color:var(--green);font-size:8px"
-            onclick="window.open(pdfUrl('/api/of/${of.id}/fiche'),'_blank')"
+            onclick="const token = localStorage.getItem('token'); window.open('/api/of/${of.id}/fiche?token=' + encodeURIComponent(token), '_blank')"
             title="Fiche Résumé Production">📋 Fiche</button>
           <button class="btn btn-ghost btn-sm" style="font-size:8px"
             onclick="printFacture(${of.id},'client')"
@@ -225,7 +225,8 @@ function cancelOF(ofId, ofNumero, produitNom, statut) {
 }
 
 function printFacture(ofId, type='interne') {
-  window.open(pdfUrl(`/api/facture/${ofId}?type=${type}`), '_blank');
+  const token = localStorage.getItem('token');
+  window.open(`/api/facture/${ofId}?type=${type}&token=${encodeURIComponent(token)}`, '_blank');
 }
 
 function selectAllCompleted() {
@@ -240,10 +241,11 @@ async function printGroupedInvoice() {
   const ids = [...document.querySelectorAll('.of-chk:checked')].map(c => parseInt(c.value));
   if (!ids.length) { toast('Sélectionner au moins un OF terminé', 'err'); return; }
   try {
-    const url = pdfUrl('/api/facture/grouped');
-    const res = await fetch(url.replace('?token=',''), {
+    const token = localStorage.getItem('token');
+    const url = `/api/facture/grouped?token=${encodeURIComponent(token)}`;
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+localStorage.getItem('token') },
+      headers: { 'Content-Type':'application/json' },
       body: JSON.stringify({ of_ids: ids })
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
