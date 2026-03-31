@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/of", tags=["fiche"])
 
 
 @router.get("/{of_id}/fiche")
-def generate_fiche(of_id: int, token: str=None, user=Depends(get_pdf_user), db=Depends(get_db)):
+def generate_fiche(of_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
     of = q(db, """
         SELECT o.*, p.nom produit_nom, p.code produit_code,
                p.prix_vente_ht,

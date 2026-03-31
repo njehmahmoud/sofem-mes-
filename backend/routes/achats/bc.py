@@ -133,7 +133,7 @@ def update_bc(bc_id: int, data: dict, db=Depends(get_db)):
 
 
 @router.get("/{bc_id}/pdf")
-def print_bc(bc_id: int, token: str = None, user=Depends(get_pdf_user), db=Depends(get_db)):
+def print_bc(bc_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
     bc = q(db, """
         SELECT bc.*, da.da_numero, da.of_id
         FROM bons_commande bc

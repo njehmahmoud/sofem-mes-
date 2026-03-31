@@ -82,7 +82,7 @@ def livrer_bl(bl_id: int, data: BLLivrer, db=Depends(get_db)):
 
 
 @router.get("/{bl_id}/pdf")
-def print_bl(bl_id: int, token: str = None, user=Depends(get_pdf_user), db=Depends(get_db)):
+def print_bl(bl_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
     bl = q(db, """
         SELECT bl.*, o.numero of_numero, o.quantite, o.atelier, o.date_echeance,
                p.nom produit_nom, p.code produit_code,

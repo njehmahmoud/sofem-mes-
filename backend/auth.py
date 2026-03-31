@@ -16,6 +16,7 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Query
 from passlib.context import CryptContext
 import jwt
 
@@ -100,7 +101,7 @@ def get_current_user(
 
 
 def get_pdf_user(
-    token: str = None,
+    token: str = Query(None),
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> dict:
     """Accepts token from query param OR Authorization header (for PDF window.open())."""
@@ -108,7 +109,7 @@ def get_pdf_user(
         return decode_token(token)
     if credentials:
         return decode_token(credentials.credentials)
-    raise HTTPException(401, "Non authentifié")
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Non authentifié")
 
 
 def require_admin(user: dict = Depends(get_current_user)) -> dict:

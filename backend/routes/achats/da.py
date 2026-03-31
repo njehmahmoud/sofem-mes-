@@ -187,7 +187,7 @@ def update_da(da_id: int, data: DAUpdate, user=Depends(get_current_user), db=Dep
 # ── PDF: Bon d'Achat ──────────────────────────────────────
 
 @router.get("/{da_id}/ba")
-def print_ba(da_id: int, token: str = None, user=Depends(get_pdf_user), db=Depends(get_db)):
+def print_ba(da_id: int, user=Depends(get_pdf_user), db=Depends(get_db)):
     da = q(db, """
         SELECT da.*, m.nom materiau_nom, m.code materiau_code, m.unite materiau_unite,
                o.numero of_numero, o.quantite of_quantite, o.date_echeance, c.nom client_nom
