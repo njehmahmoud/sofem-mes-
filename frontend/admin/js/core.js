@@ -169,6 +169,30 @@ function quickThemeToggle() {
   } catch(e) {}
 }
 
+// ── Sidebar toggle ────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  
+  const isCollapsed = sidebar.classList.contains('collapsed');
+  if (isCollapsed) {
+    sidebar.classList.remove('collapsed');
+    localStorage.setItem('sofem_sidebar_collapsed', 'false');
+  } else {
+    sidebar.classList.add('collapsed');
+    localStorage.setItem('sofem_sidebar_collapsed', 'true');
+  }
+}
+
+// Restore sidebar state on page load
+window.addEventListener('DOMContentLoaded', () => {
+  const wasCollapsed = localStorage.getItem('sofem_sidebar_collapsed') === 'true';
+  if (wasCollapsed) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.add('collapsed');
+  }
+});
+
 // Apply theme on initial load
 (function() {
   try {
