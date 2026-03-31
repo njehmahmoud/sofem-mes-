@@ -326,6 +326,9 @@ function renderOFOpsBuilder() {
   const mach   = window._machinesCache || [];
   const types  = window._opTypesCache || [];
 
+  // Filter machines to only show operational ones
+  const machOperationnelles = mach.filter(m => m.statut === 'OPERATIONNELLE');
+
   $('of-ops-list').innerHTML = _ofOpsData.length === 0
     ? '<div style="color:var(--muted);font-size:11px;padding:.5rem">— Cliquez + Ajouter pour créer une opération —</div>'
     : _ofOpsData.map((op, i) => `
@@ -340,7 +343,8 @@ function renderOFOpsBuilder() {
           <select onchange="_ofOpsData[${i}].machine_id=this.value?parseInt(this.value):null"
             style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px">
             <option value="">— Machine —</option>
-            ${mach.map(m => `<option value="${m.id}" ${op.machine_id===m.id?'selected':''}>${m.nom}</option>`).join('')}
+            ${machOperationnelles.map(m => `<option value="${m.id}" ${op.machine_id===m.id?'selected':''}>${m.nom}</option>`).join('')}
+            ${machOperationnelles.length === 0 ? '<option disabled style="color:var(--muted)">⚠ Aucune machine opérationnelle</option>' : ''}
           </select>
           <button class="fbtn" style="color:var(--red)" onclick="_ofOpsData.splice(${i},1);renderOFOpsBuilder()">✕</button>
         </div>
