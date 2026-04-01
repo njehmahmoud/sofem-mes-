@@ -77,14 +77,52 @@ def get_fa_detail(fa_id: int, db=Depends(get_db)):
 
 
 @router.get("")
-
 def list_fa(db=Depends(get_db)):
-    return serialize(q(db, """
+    fas = serialize(q(db, """
         SELECT fa.*, bc.bc_numero
         FROM factures_achat fa
         JOIN bons_commande bc ON fa.bc_id = bc.id
         ORDER BY fa.created_at DESC
     """))
+    
+    # Ensure each FA has frozen prices calculated
+    for fa in fas:
+        fa_id = fa["id"]
+        # Get or create fa_lignes
+        existing_lignes = q(db, "SELECT id FROM fa_lignes WHERE fa_id=%s LIMIT 1", (fa_id,), one=True)
+        if not existing_lignes:
+            # Backfill from BR/BC data
+            lignes_data = q(db, """
+                SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite,
+                       COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
+                FROM bc_lignes bcl
+                LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
+                WHERE bcl.bc_id = %s
+            """, (fa["bc_id"],))
+            
+            for l in lignes_data:
+                price_snapshot = float(l["prix_snapshot"] or 0)
+                amount = float(l["quantite"]) * price_snapshot
+                exe(db, """
+                    INSERT IGNORE INTO fa_lignes 
+                    (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (fa_id, l["id"], l.get("description", ""), 
+                      l["quantite"], l.get("unite", "pcs"), 
+                      price_snapshot, amount))
+        
+        # Recalculate totals from frozen lignes
+        lignes = q(db, "SELECT montant FROM fa_lignes WHERE fa_id=%s", (fa_id,))
+        ht_total = sum(float(l["montant"] or 0) for l in lignes)
+        tva_rate = float(get_all_settings(db).get("tva_rate", 19))
+        tva_total = round(ht_total * tva_rate / 100, 3)
+        ttc_total = round(ht_total + tva_total, 3)
+        
+        fa["montant_ht"] = ht_total
+        fa["tva"] = tva_total
+        fa["montant_ttc"] = ttc_total
+    
+    return fas
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
