@@ -8,6 +8,7 @@ from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
 from models import OperationCreate, OperationUpdate
 from routes.settings import get_all_settings
+from routes.of.snapshot_capture import capture_of_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,10 @@ def update_operation(of_id: int, op_id: int, data: OperationUpdate,
     if statuts:
         if all(s == "COMPLETED" for s in statuts):
             exe(db, "UPDATE ordres_fabrication SET statut='COMPLETED' WHERE id=%s", (of_id,))
+            
+            # ─── CAPTURE SNAPSHOT ──────────────────────────────────
+            # Create immutable backup with all OF data when completion done
+            capture_of_snapshot(db, of_id, user_id=None)
             
             # Finalize invoice snapshot with actual costs (material + labor)
             try:

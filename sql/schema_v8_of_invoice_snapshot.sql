@@ -65,9 +65,14 @@ CREATE TABLE IF NOT EXISTS of_invoice_snapshot (
 
 -- ── FA_REFERENCE_OF: Link factures to OF snapshots for immutability ────
 -- Instead of recalculating from OF, factures reference this snapshot
-ALTER TABLE factures_achat ADD COLUMN of_id INT NULL;
+ALTER TABLE factures_achat ADD COLUMN IF NOT EXISTS of_id INT NULL;
+
+-- Add foreign key constraint (ignore if already exists)
 ALTER TABLE factures_achat ADD CONSTRAINT fk_fa_of FOREIGN KEY (of_id) REFERENCES ordres_fabrication(id) ON DELETE SET NULL;
 
 -- ── INDEXES ──────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_of_invoice_of ON of_invoice_snapshot(of_id);
-CREATE INDEX IF NOT EXISTS idx_fa_of ON factures_achat(of_id);
+DROP INDEX IF EXISTS idx_of_invoice_of ON of_invoice_snapshot;
+DROP INDEX IF EXISTS idx_fa_of ON factures_achat;
+
+CREATE INDEX idx_of_invoice_of ON of_invoice_snapshot(of_id);
+CREATE INDEX idx_fa_of ON factures_achat(of_id);

@@ -8,7 +8,7 @@
 USE sofem_mes;
 
 -- ── PRODUITS: Add price column (required for price snapshots) ────
-ALTER TABLE produits ADD COLUMN prix_vente_ht DECIMAL(10,3) DEFAULT 0 COMMENT 'Selling price ex-tax';
+ALTER TABLE produits ADD COLUMN IF NOT EXISTS prix_vente_ht DECIMAL(10,3) DEFAULT 0 COMMENT 'Selling price ex-tax';
 
 -- ── PRICE HISTORY (Audit trail of all price changes) ─────
 CREATE TABLE IF NOT EXISTS prix_historique (
@@ -73,10 +73,27 @@ CREATE TABLE IF NOT EXISTS of_costs (
     FOREIGN KEY (of_id) REFERENCES ordres_fabrication(id) ON DELETE CASCADE
 );
 
+-- ── SNAPSHOT: Immutable backup when OF is TERMINATED ────
+-- Captures product, materials, operations, and costs at OF completion
+-- ONE snapshot per OF (PRIMARY KEY = order_id)
+-- Automatically populated when OF status changes to TERMINATED
+CREATE TABLE IF NOT EXISTS of_invoice_snapshot (
+    order_id            INT PRIMARY KEY,
+    of_numero           VARCHAR(50) NOT NULL,
+    snapshot_json       LONGTEXT NOT NULL COMMENT 'Complete snapshot: product + materials + operations + costs',
+    total_cost          DECIMAL(10,2) NOT NULL COMMENT 'Sum of all costs (product + materials + operations)',
+    created_by          INT,
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (order_id) REFERENCES ordres_fabrication(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 -- ── ORDRES_FABRICATION: Add cost fields ────────────────
 -- Store estimated and actual costs when OF is completed
 -- REQUIRED - produit_prix_snapshot needed for frozen pricing
-ALTER TABLE ordres_fabrication ADD COLUMN produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
+ALTER TABLE ordres_fabrication ADD COLUMN IF NOT EXISTS produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
 -- Other cost fields to be applied later if needed
 -- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_materials DECIMAL(10,2) DEFAULT 0;
 -- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_labor DECIMAL(10,2) DEFAULT 0;
