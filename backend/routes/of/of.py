@@ -178,11 +178,17 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
     if not of:
         raise HTTPException(404, "OF non trouvé")
 
-    # Backfill frozen price snapshot for legacy OFs
-    if float(of.get("produit_prix_snapshot") or 0) == 0 and float(of.get("produit_prix_actuel") or 0) > 0:
+    # CRITICAL: Freeze price for legacy OFs on first view
+    # This ensures old OFs created before frozen pricing feature get their price locked
+    current_snapshot = float(of.get("produit_prix_snapshot") or 0)
+    current_price = float(of.get("produit_prix_actuel") or 0)
+    
+    if current_snapshot <= 0 and current_price > 0:
+        # Lock the current product price as frozen snapshot
         exe(db, "UPDATE ordres_fabrication SET produit_prix_snapshot=%s WHERE id=%s",
-            (float(of.get("produit_prix_actuel")), of_id))
-        of["produit_prix_snapshot"] = float(of.get("produit_prix_actuel"))
+            (current_price, of_id))
+        of["produit_prix_snapshot"] = current_price
+        logger.info(f"Froze price for legacy OF {of_id}: {current_price}")
 
     # Cost summary
     try:
