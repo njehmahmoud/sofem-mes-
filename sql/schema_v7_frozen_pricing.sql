@@ -72,8 +72,9 @@ CREATE TABLE IF NOT EXISTS of_costs (
 
 -- ── ORDRES_FABRICATION: Add cost fields ────────────────
 -- Store estimated and actual costs when OF is completed
--- ALREADY APPLIED - Columns exist, skipping
--- ALTER TABLE ordres_fabrication ADD COLUMN produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
+-- REQUIRED - produit_prix_snapshot needed for frozen pricing
+ALTER TABLE ordres_fabrication ADD COLUMN produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
+-- Other cost fields to be applied later if needed
 -- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_materials DECIMAL(10,2) DEFAULT 0;
 -- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_labor DECIMAL(10,2) DEFAULT 0;
 -- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_overhead DECIMAL(10,2) DEFAULT 0;
