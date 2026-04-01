@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/achats/fa", tags=["achats-fa"])
 
 @router.get("/{fa_id}", dependencies=[Depends(require_any_role)])
 def get_fa_detail(fa_id: int, db=Depends(get_db)):
-    """Get FA details with frozen prices from fa_lignes."""
+    """Get FA details with frozen prices from fa_lignes (backfill for legacy FAs)."""
     fa = q(db, """
         SELECT fa.*, bc.bc_numero, bc.fournisseur
         FROM factures_achat fa
@@ -30,10 +30,47 @@ def get_fa_detail(fa_id: int, db=Depends(get_db)):
     
     fa = serialize(fa)
     
+    # Backfill fa_lignes for legacy FAs (created before frozen pricing)
+    existing_lignes = q(db, "SELECT id FROM fa_lignes WHERE fa_id=%s LIMIT 1", (fa_id,), one=True)
+    if not existing_lignes:
+        # No fa_lignes yet - backfill from BR and BC data
+        lignes_data = q(db, """
+            SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite,
+                   COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
+            FROM bc_lignes bcl
+            LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
+            WHERE bcl.bc_id = (SELECT bc_id FROM factures_achat WHERE id=%s LIMIT 1)
+        """, (fa_id,))
+        
+        for l in lignes_data:
+            price_snapshot = float(l["prix_snapshot"] or 0)
+            amount = float(l["quantite"]) * price_snapshot
+            exe(db, """
+                INSERT IGNORE INTO fa_lignes 
+                (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (fa_id, l["id"], l.get("description", ""), 
+                  l["quantite"], l.get("unite", "pcs"), 
+                  price_snapshot, amount))
+    
     # Get frozen price lines
     lignes = serialize(q(db, """
         SELECT * FROM fa_lignes WHERE fa_id = %s ORDER BY id
     """, (fa_id,)))
+    
+    # Recalculate totals from frozen lignes to ensure consistency
+    ht_total = sum(float(l["montant"] or 0) for l in lignes)
+    tva_rate = float(get_all_settings(db).get("tva_rate", 19))
+    tva_total = round(ht_total * tva_rate / 100, 3)
+    ttc_total = round(ht_total + tva_total, 3)
+    
+    # Update FA totals from frozen prices
+    if abs(float(fa.get("montant_ht") or 0) - ht_total) > 0.01:
+        exe(db, "UPDATE factures_achat SET montant_ht=%s, tva=%s, montant_ttc=%s WHERE id=%s",
+            (ht_total, tva_total, ttc_total, fa_id))
+        fa["montant_ht"] = ht_total
+        fa["tva"] = tva_total
+        fa["montant_ttc"] = ttc_total
     
     fa["lignes"] = lignes
     return fa
