@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-from datetime import datetime
+from datetime import datetime, date
 from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
 from models import OperationCreate, OperationUpdate
+from routes.settings import get_all_settings
 
 router = APIRouter(prefix="/api/of/{of_id}/operations", tags=["of-operations"])
 
@@ -85,6 +86,19 @@ def update_operation(of_id: int, op_id: int, data: OperationUpdate,
     if statuts:
         if all(s == "COMPLETED" for s in statuts):
             exe(db, "UPDATE ordres_fabrication SET statut='COMPLETED' WHERE id=%s", (of_id,))
+            
+            # Auto-create quality ticket if setting enabled
+            settings = get_all_settings(db)
+            if settings.get("cq_auto_creation"):
+                of_data = q(db, "SELECT id, numero, quantite, produit_id FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+                if of_data and not q(db, "SELECT id FROM controles_qualite WHERE of_id=%s", (of_id,), one=True):
+                    count = q(db, "SELECT COUNT(*) as c FROM controles_qualite", one=True)["c"]
+                    cq_num = f"CQ-{date.today().year}-{count+1:04d}"
+                    exe(db, """
+                        INSERT INTO controles_qualite
+                        (cq_numero, of_id, type_controle, date_controle, statut, quantite_controlée)
+                        VALUES (%s, %s, 'FINAL', %s, 'EN_ATTENTE', %s)
+                    """, (cq_num, of_id, date.today(), of_data["quantite"]))
         elif any(s == "IN_PROGRESS" for s in statuts):
             exe(db, "UPDATE ordres_fabrication SET statut='IN_PROGRESS' WHERE id=%s", (of_id,))
 
