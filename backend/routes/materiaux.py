@@ -1,6 +1,7 @@
 """SOFEM MES v6.0 — Materiaux Routes (Commit 01 — ISO 9001 soft delete)"""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from datetime import datetime
 from database import get_db, q, exe, serialize, soft_delete, log_activity, cancel_document
 from auth import require_any_role, require_manager_or_admin, get_current_user
 from models import MateriauCreate, MateriauUpdate, MouvementCreate, DeactivateRequest, CancelRequest
@@ -127,6 +128,76 @@ def update_materiau(mat_id: int, data: MateriauUpdate, request: Request,
         ip_address    = request.client.host if request.client else None,
     )
     return {"message": "Matériau mis à jour"}
+
+
+@router.put("/{mat_id}/prix", dependencies=[Depends(require_manager_or_admin)])
+def update_materiau_price(mat_id: int, new_price: float = 0, reason: str = "",
+                          request: Request = None, user=Depends(get_current_user),
+                          db=Depends(get_db)):
+    """
+    Update material price and track change in prix_historique.
+    Enables traceability of price changes for audit and cost analysis.
+    """
+    mat = q(db, "SELECT * FROM materiaux WHERE id=%s", (mat_id,), one=True)
+    if not mat:
+        raise HTTPException(404, "Matériau non trouvé")
+    
+    old_price = float(mat.get("prix_unitaire", 0))
+    new_price = float(new_price)
+    
+    if old_price == new_price:
+        return {"message": "Prix identique — aucune mise à jour"}
+    
+    # Update material price
+    exe(db, "UPDATE materiaux SET prix_unitaire=%s WHERE id=%s", (new_price, mat_id))
+    
+    # Log price change in prix_historique (immutable audit trail)
+    exe(db, """
+        INSERT INTO prix_historique 
+        (entity_type, entity_id, prix_ancien, prix_nouveau, date_changement, change_reason, changed_by)
+        VALUES ('MATERIAU', %s, %s, %s, %s, %s, %s)
+    """, (mat_id, old_price, new_price, datetime.today().date(),
+          reason or "Changement de prix", user.get("id")))
+    
+    # Log to activity log
+    log_activity(
+        db,
+        action        = "UPDATE",
+        entity_type   = "MATERIAU_PRICE",
+        entity_id     = mat_id,
+        entity_numero = mat.get("code"),
+        user_id       = user.get("id"),
+        user_nom      = f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+        old_value     = {"prix_unitaire": old_price},
+        new_value     = {"prix_unitaire": new_price},
+        detail        = f"Prix {mat.get('code')} → {old_price} → {new_price} ({reason or 'Changement'})",
+        ip_address    = request.client.host if request and request.client else None,
+    )
+    
+    return {
+        "message": f"Prix mis à jour: {old_price} → {new_price} TND",
+        "prix_ancien": old_price,
+        "prix_nouveau": new_price
+    }
+
+
+@router.get("/{mat_id}/prix-historique", dependencies=[Depends(require_any_role)])
+def get_prix_historique(mat_id: int, db=Depends(get_db)):
+    """Get price change history for a material."""
+    mat = q(db, "SELECT * FROM materiaux WHERE id=%s", (mat_id,), one=True)
+    if not mat:
+        raise HTTPException(404, "Matériau non trouvé")
+    
+    history = serialize(q(db, """
+        SELECT ph.*, 
+               CONCAT(u.prenom,' ',u.nom) changed_by_nom
+        FROM prix_historique ph
+        LEFT JOIN users u ON ph.changed_by = u.id
+        WHERE ph.entity_type='MATERIAU' AND ph.entity_id = %s
+        ORDER BY ph.date_changement DESC, ph.id DESC
+    """, (mat_id,)))
+    
+    return history
 
 
 @router.delete("/{mat_id}", dependencies=[Depends(require_manager_or_admin)])

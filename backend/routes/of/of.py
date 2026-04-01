@@ -229,6 +229,13 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
 def create_of(data: OFCreate, db=Depends(get_db)):
     year = datetime.now().year
 
+    # Get product info (including current price for snapshot)
+    produit = q(db, "SELECT * FROM produits WHERE id=%s", (data.produit_id,), one=True)
+    if not produit:
+        raise HTTPException(404, "Produit non trouvé")
+    
+    produit_prix_snapshot = float(produit.get("prix_vente_ht", 0))
+
     # ── Race-free OF numbering: insert placeholder, use auto-increment id ──
     tmp = temp_numero()
     of_id = exe(db, """
@@ -236,12 +243,14 @@ def create_of(data: OFCreate, db=Depends(get_db)):
           (numero, produit_id, quantite, priorite, statut,
            chef_projet_id, client_id, plan_numero,
            atelier, date_echeance, notes,
-           sous_traitant, sous_traitant_op, sous_traitant_cout)
-        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           sous_traitant, sous_traitant_op, sous_traitant_cout,
+           produit_prix_snapshot)
+        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (tmp, data.produit_id, data.quantite, data.priorite,
           data.chef_projet_id, data.client_id, data.plan_numero,
           data.atelier, data.date_echeance, data.notes,
-          data.sous_traitant, data.sous_traitant_op, data.sous_traitant_cout))
+          data.sous_traitant, data.sous_traitant_op, data.sous_traitant_cout,
+          produit_prix_snapshot))
     numero = finalize_number(db, "ordres_fabrication", "numero", of_id, "OF", year)
 
     # Dynamic operations
@@ -420,14 +429,19 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
     if not src:
         raise HTTPException(404, "OF non trouvé")
 
+    # Get current product price (snapshot at duplication time)
+    produit = q(db, "SELECT * FROM produits WHERE id=%s", (src["produit_id"],), one=True)
+    produit_prix_snapshot = float(produit.get("prix_vente_ht", 0)) if produit else 0
+
     year = datetime.now().year
     tmp = temp_numero()
     new_id = exe(db, """
         INSERT INTO ordres_fabrication
           (numero, produit_id, quantite, priorite, statut,
            chef_projet_id, client_id, plan_numero, atelier,
-           date_echeance, notes, sous_traitant, sous_traitant_op, sous_traitant_cout)
-        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           date_echeance, notes, sous_traitant, sous_traitant_op, sous_traitant_cout,
+           produit_prix_snapshot)
+        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (tmp,
           src["produit_id"],
           data.quantite       or src["quantite"],
@@ -438,7 +452,8 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
           src["atelier"],
           data.date_echeance  or src["date_echeance"],
           data.notes          if data.notes          is not None else src["notes"],
-          src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"]))
+          src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"],
+          produit_prix_snapshot))
     numero = finalize_number(db, "ordres_fabrication", "numero", new_id, "OF", year)
 
     # Copy operations + operator assignments

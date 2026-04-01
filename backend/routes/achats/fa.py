@@ -16,7 +16,31 @@ from reportlab.pdfgen import canvas as rl_canvas
 router = APIRouter(prefix="/api/achats/fa", tags=["achats-fa"])
 
 
-@router.get("", dependencies=[Depends(require_any_role)])
+@router.get("/{fa_id}", dependencies=[Depends(require_any_role)])
+def get_fa_detail(fa_id: int, db=Depends(get_db)):
+    """Get FA details with frozen prices from fa_lignes."""
+    fa = q(db, """
+        SELECT fa.*, bc.bc_numero, bc.fournisseur
+        FROM factures_achat fa
+        JOIN bons_commande bc ON fa.bc_id = bc.id
+        WHERE fa.id = %s
+    """, (fa_id,), one=True)
+    if not fa:
+        raise HTTPException(404, "FA non trouvée")
+    
+    fa = serialize(fa)
+    
+    # Get frozen price lines
+    lignes = serialize(q(db, """
+        SELECT * FROM fa_lignes WHERE fa_id = %s ORDER BY id
+    """, (fa_id,)))
+    
+    fa["lignes"] = lignes
+    return fa
+
+
+@router.get("")
+
 def list_fa(db=Depends(get_db)):
     return serialize(q(db, """
         SELECT fa.*, bc.bc_numero
@@ -35,33 +59,48 @@ def create_fa(data: FACreate, user=Depends(get_current_user), db=Depends(get_db)
     bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (data.bc_id,), one=True)
     if not bc: raise HTTPException(404, "BC non trouvé")
     
-    # Read prices from BR lignes (confirmed reception prices)
-    # Join on bc_id via bons_reception
+    # Read prices from BR lignes (actual frozen prices at reception)
+    # Use prix_unitaire_snapshot (frozen price paid)
     lignes = q(db, """
-        SELECT bcl.quantite, COALESCE(brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_unitaire
+        SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite, 
+               COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
         FROM bc_lignes bcl
         LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
         WHERE bcl.bc_id=%s
     """, (data.bc_id,))
     
-    ht  = sum(float(l["quantite"])*float(l["prix_unitaire"]) for l in lignes)
+    ht  = sum(float(l["quantite"])*float(l["prix_snapshot"]) for l in lignes)
     tva = round(ht*TVA_RATE/100, 3)
     ttc = round(ht+tva, 3)
     
     fa_id = exe(db, """
         INSERT INTO factures_achat
-          (fa_numero,bc_id,fournisseur,date_facture,montant_ht,tva,montant_ttc,notes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (tmp, data.bc_id, data.fournisseur, data.date_facture, ht, tva, ttc, data.notes))
+          (fa_numero,bc_id,fournisseur,date_facture,montant_ht,tva,montant_ttc,
+           cost_locked_at,cost_locked_by,notes)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (tmp, data.bc_id, data.fournisseur, data.date_facture, 
+          ht, tva, ttc, datetime.now(), user.get("id"), data.notes))
     
     numero = finalize_number(db, "factures_achat", "fa_numero", fa_id, "FA", year)
     
+    # Create fa_lignes with frozen prices (immutable history)
+    for l in lignes:
+        price_snapshot = float(l["prix_snapshot"])
+        amount = float(l["quantite"]) * price_snapshot
+        exe(db, """
+            INSERT INTO fa_lignes 
+            (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (fa_id, l["id"], l.get("description", ""), 
+              l["quantite"], l.get("unite", "pcs"), 
+              price_snapshot, amount))
+    
     log_activity(db, "CREATE", "FA", fa_id, numero,
                  user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
-                 new_value={"bc_id": data.bc_id, "montant_ttc": ttc},
-                 detail=f"FA {numero} créée — Montant TTC: {ttc} TND")
+                 new_value={"bc_id": data.bc_id, "montant_ttc": ttc, "frozen_prices": True},
+                 detail=f"FA {numero} créée — Montant TTC: {ttc} TND — Prix figés")
     
-    return {"id": fa_id, "fa_numero": numero, "montant_ttc": ttc, "message": "Facture créée"}
+    return {"id": fa_id, "fa_numero": numero, "montant_ttc": ttc, "message": "Facture créée avec prix figés"}
 
 
 @router.put("/{fa_id}/payer", dependencies=[Depends(require_manager_or_admin)])
