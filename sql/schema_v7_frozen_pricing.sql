@@ -25,18 +25,18 @@ CREATE TABLE IF NOT EXISTS prix_historique (
 
 -- ── BR_LIGNES: Add frozen price snapshot ───────────────
 -- Stores actual price paid at reception (may differ from BC)
-ALTER TABLE br_lignes ADD COLUMN prix_unitaire_snapshot DECIMAL(10,3) COMMENT 'Frozen price at reception time';
+-- ALREADY APPLIED - Column exists, skipping
+-- ALTER TABLE br_lignes ADD COLUMN prix_unitaire_snapshot DECIMAL(10,3) COMMENT 'Frozen price at reception time';
 
 -- ── FACTURES_ACHAT: Add cost fields ────────────────────
 -- Track total costs and variance for invoice freeze
--- Note: If columns already exist, the statements below will fail gracefully
--- Just skip them and continue with the rest of the schema
-ALTER TABLE factures_achat ADD COLUMN montant_ht DECIMAL(10,2) DEFAULT 0 COMMENT 'Total ex-tax (HT)';
-ALTER TABLE factures_achat ADD COLUMN tva DECIMAL(10,2) DEFAULT 0 COMMENT 'VAT amount';
-ALTER TABLE factures_achat ADD COLUMN montant_ttc DECIMAL(10,2) DEFAULT 0 COMMENT 'Total inc-tax (TTC)';
-ALTER TABLE factures_achat ADD COLUMN cost_locked_at TIMESTAMP NULL COMMENT 'When prices were frozen';
-ALTER TABLE factures_achat ADD COLUMN cost_locked_by INT NULL;
-ALTER TABLE factures_achat ADD FOREIGN KEY (cost_locked_by) REFERENCES users(id) ON DELETE SET NULL;
+-- ALREADY APPLIED - Columns exist, skipping
+-- ALTER TABLE factures_achat ADD COLUMN montant_ht DECIMAL(10,2) DEFAULT 0 COMMENT 'Total ex-tax (HT)';
+-- ALTER TABLE factures_achat ADD COLUMN tva DECIMAL(10,2) DEFAULT 0 COMMENT 'VAT amount';
+-- ALTER TABLE factures_achat ADD COLUMN montant_ttc DECIMAL(10,2) DEFAULT 0 COMMENT 'Total inc-tax (TTC)';
+-- ALTER TABLE factures_achat ADD COLUMN cost_locked_at TIMESTAMP NULL COMMENT 'When prices were frozen';
+-- ALTER TABLE factures_achat ADD COLUMN cost_locked_by INT NULL;
+-- ALTER TABLE factures_achat ADD FOREIGN KEY (cost_locked_by) REFERENCES users(id) ON DELETE SET NULL;
 
 -- ── FA_LIGNES: Immutable invoice lines with frozen prices ─
 -- Each line stores the price that was paid at that moment
@@ -72,18 +72,17 @@ CREATE TABLE IF NOT EXISTS of_costs (
 
 -- ── ORDRES_FABRICATION: Add cost fields ────────────────
 -- Store estimated and actual costs when OF is completed
--- Note: If columns already exist, the statements below will fail gracefully
--- Just skip them and continue with the rest of the schema
-ALTER TABLE ordres_fabrication ADD COLUMN produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
-ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_materials DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_labor DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_overhead DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_total DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE ordres_fabrication ADD COLUMN cost_actual_total DECIMAL(10,2) DEFAULT 0 COMMENT 'Frozen when OF completes';
-ALTER TABLE ordres_fabrication ADD COLUMN cost_variance DECIMAL(10,2) DEFAULT 0 COMMENT 'actual - estimated';
-ALTER TABLE ordres_fabrication ADD COLUMN cost_locked_at TIMESTAMP NULL COMMENT 'When cost was frozen';
-ALTER TABLE ordres_fabrication ADD COLUMN cost_locked_by INT NULL;
-ALTER TABLE ordres_fabrication ADD FOREIGN KEY (cost_locked_by) REFERENCES users(id) ON DELETE SET NULL;
+-- ALREADY APPLIED - Columns exist, skipping
+-- ALTER TABLE ordres_fabrication ADD COLUMN produit_prix_snapshot DECIMAL(10,3) DEFAULT 0 COMMENT 'Product price frozen at OF creation';
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_materials DECIMAL(10,2) DEFAULT 0;
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_labor DECIMAL(10,2) DEFAULT 0;
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_overhead DECIMAL(10,2) DEFAULT 0;
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_estimated_total DECIMAL(10,2) DEFAULT 0;
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_actual_total DECIMAL(10,2) DEFAULT 0 COMMENT 'Frozen when OF completes';
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_variance DECIMAL(10,2) DEFAULT 0 COMMENT 'actual - estimated';
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_locked_at TIMESTAMP NULL COMMENT 'When cost was frozen';
+-- ALTER TABLE ordres_fabrication ADD COLUMN cost_locked_by INT NULL;
+-- ALTER TABLE ordres_fabrication ADD FOREIGN KEY (cost_locked_by) REFERENCES users(id) ON DELETE SET NULL;
 
 -- ── INDEXES for performance ──────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_fa_lignes_fa ON fa_lignes(fa_id);
