@@ -85,6 +85,6 @@ CREATE TABLE IF NOT EXISTS of_costs (
 -- ALTER TABLE ordres_fabrication ADD FOREIGN KEY (cost_locked_by) REFERENCES users(id) ON DELETE SET NULL;
 
 -- ── INDEXES for performance ──────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_fa_lignes_fa ON fa_lignes(fa_id);
-CREATE INDEX IF NOT EXISTS idx_of_costs_of ON of_costs(of_id);
-CREATE INDEX IF NOT EXISTS idx_prix_hist_entity ON prix_historique(entity_type, entity_id);
+CREATE INDEX idx_fa_lignes_fa ON fa_lignes(fa_id);
+CREATE INDEX idx_of_costs_of ON of_costs(of_id);
+CREATE INDEX idx_prix_hist_entity ON prix_historique(entity_type, entity_id);
