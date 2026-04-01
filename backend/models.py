@@ -215,8 +215,17 @@ class BRCreate(BaseModel):
     lignes: List[BRLigne]=[]
 
 class FACreate(BaseModel):
-    bc_id: int; fournisseur: str
-    date_facture: date; notes: Optional[str]=None
+    # For purchase invoices (materials)
+    bc_id: Optional[int] = None
+    # For sales invoices (OF sales)
+    of_id: Optional[int] = None
+    # Common fields
+    fournisseur: Optional[str] = None  # supplier for purchase, or "SOFEM" for sales
+    date_facture: date
+    notes: Optional[str] = None
+    
+    class Config:
+        validate_assignment = True
 
 # ── BL ────────────────────────────────────────────────────
 class BLCreate(BaseModel):

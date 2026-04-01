@@ -3,10 +3,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from datetime import datetime, date
+import logging
 from database import get_db, q, exe, serialize
 from auth import require_any_role, require_manager_or_admin
 from models import OperationCreate, OperationUpdate
 from routes.settings import get_all_settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/of/{of_id}/operations", tags=["of-operations"])
 
@@ -86,6 +89,86 @@ def update_operation(of_id: int, op_id: int, data: OperationUpdate,
     if statuts:
         if all(s == "COMPLETED" for s in statuts):
             exe(db, "UPDATE ordres_fabrication SET statut='COMPLETED' WHERE id=%s", (of_id,))
+            
+            # Finalize invoice snapshot with actual costs (material + labor)
+            try:
+                # Get actual material cost from BOM (materials consumed)
+                bom_cost = q(db, """
+                    SELECT COALESCE(SUM(ob.quantite_requise * m.prix_unitaire), 0) as total
+                    FROM of_bom ob
+                    JOIN materiaux m ON m.id = ob.materiau_id
+                    WHERE ob.of_id = %s
+                """, (of_id,), one=True)
+                actual_material_cost = float(bom_cost.get("total") or 0)
+                
+                # Get actual labor cost from completed operations
+                ops_data = q(db, """
+                    SELECT o.operation_nom, o.duree_reelle, GROUP_CONCAT(o.id) as op_ids
+                    FROM of_operations o
+                    WHERE o.of_id = %s AND o.statut = 'COMPLETED'
+                    GROUP BY o.operation_nom, o.duree_reelle
+                """, (of_id,))
+                
+                actual_labor_cost = 0
+                of_info = q(db, "SELECT quantite FROM ordres_fabrication WHERE id=%s", (of_id,), one=True)
+                qty = float(of_info.get("quantite", 1)) if of_info else 1
+                
+                for op_rec in ops_data:
+                    op_id_list = op_rec.get("op_ids", "").split(",")
+                    # Get operateurs for this operation
+                    operateurs = q(db, """
+                        SELECT DISTINCT o.taux_horaire, o.taux_piece, o.type_taux
+                        FROM op_operateurs oo
+                        JOIN operateurs o ON o.id = oo.operateur_id
+                        WHERE oo.operation_id IN ({})
+                    """.format(",".join(op_id_list)), ())
+                    
+                    for oper in operateurs:
+                        if op_rec.get("operation_nom") and "autocad" in str(op_rec.get("operation_nom", "")).lower():
+                            # AutoCAD - pay once per operation
+                            if oper.get("type_taux") == "PIECE":
+                                actual_labor_cost += float(oper.get("taux_piece", 0))
+                        else:
+                            # Regular operation - pay per quantity or hourly
+                            if oper.get("type_taux") == "PIECE":
+                                actual_labor_cost += qty * float(oper.get("taux_piece", 0))
+                            elif oper.get("type_taux") == "HORAIRE":
+                                duration_hours = (float(op_rec.get("duree_reelle", 0)) or 60) / 60
+                                actual_labor_cost += duration_hours * float(oper.get("taux_horaire", 0))
+                
+                # Get snapshot to calculate margins
+                snapshot = q(db, """
+                    SELECT montant_vente_ht, cost_sous_traitance, cost_main_oeuvre_estime
+                    FROM of_invoice_snapshot
+                    WHERE of_id = %s
+                """, (of_id,), one=True)
+                
+                montant_ht = float(snapshot.get("montant_vente_ht", 0)) if snapshot else 0
+                sous_traitance = float(snapshot.get("cost_sous_traitance", 0)) if snapshot else 0
+                
+                actual_total_cost = actual_material_cost + actual_labor_cost + sous_traitance
+                actual_margin = montant_ht - actual_total_cost
+                margin_pct = (actual_margin / montant_ht * 100) if montant_ht > 0 else 0
+                
+                # Update invoice snapshot with actual costs
+                exe(db, """
+                    UPDATE of_invoice_snapshot
+                    SET cost_materiel_reel = %s,
+                        cost_main_oeuvre_reel = %s,
+                        cost_total_reel = %s,
+                        marge_brute_reel = %s,
+                        marge_pourcentage_reel = %s,
+                        snapshot_at_completion = NOW(),
+                        updated_by = %s
+                    WHERE of_id = %s
+                """, (actual_material_cost, actual_labor_cost, actual_total_cost, 
+                      actual_margin, margin_pct, None, of_id))
+                
+                logger.info(f"OF {of_id} completed: Material={actual_material_cost}, Labor={actual_labor_cost}, Total={actual_total_cost}, Margin={actual_margin} ({margin_pct:.1f}%)")
+            except Exception as e:
+                logger.warning(f"Failed to finalize invoice snapshot for OF {of_id}: {e}")
+                import traceback
+                traceback.print_exc()
             
             # Auto-create quality ticket if setting enabled
             settings = get_all_settings(db)
