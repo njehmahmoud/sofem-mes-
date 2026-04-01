@@ -7,6 +7,9 @@
 
 USE sofem_mes;
 
+-- ── PRODUITS: Add price column (required for price snapshots) ────
+ALTER TABLE produits ADD COLUMN prix_vente_ht DECIMAL(10,3) DEFAULT 0 COMMENT 'Selling price ex-tax';
+
 -- ── PRICE HISTORY (Audit trail of all price changes) ─────
 CREATE TABLE IF NOT EXISTS prix_historique (
     id              INT AUTO_INCREMENT PRIMARY KEY,

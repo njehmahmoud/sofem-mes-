@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/of", tags=["of"])
 def get_of_full(db, of_id):
     of = q(db, """
         SELECT o.*,
-               p.nom produit_nom, p.code produit_code,
+               p.nom produit_nom, p.code produit_code, p.prix_vente_ht produit_prix_actuel,
                CONCAT(cp.prenom,' ',cp.nom) chef_projet_nom,
                c.nom client_nom, c.matricule_fiscal client_mf,
                c.adresse client_adresse, c.ville client_ville,
@@ -177,6 +177,12 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
     of = get_of_full(db, of_id)
     if not of:
         raise HTTPException(404, "OF non trouvé")
+
+    # Backfill frozen price snapshot for legacy OFs
+    if float(of.get("produit_prix_snapshot") or 0) == 0 and float(of.get("produit_prix_actuel") or 0) > 0:
+        exe(db, "UPDATE ordres_fabrication SET produit_prix_snapshot=%s WHERE id=%s",
+            (float(of.get("produit_prix_actuel")), of_id))
+        of["produit_prix_snapshot"] = float(of.get("produit_prix_actuel"))
 
     # Cost summary
     try:

@@ -711,8 +711,9 @@ function renderOFDetailCost() {
   const moCost  = parseFloat(of.cout_main_oeuvre || 0);
   const stCost  = parseFloat(of.cout_sous_traitance || 0);
   const total   = parseFloat(of.cout_revient || 0);
-  // Use frozen price snapshot, not current product price
-  const pv      = parseFloat(of.produit_prix_snapshot || of.prix_vente_ht || 0) * parseInt(of.quantite || 1);
+  // Use frozen price snapshot if available, never current product price
+  const frozenPrice = parseFloat(of.produit_prix_snapshot || 0);
+  const pv      = (frozenPrice > 0 ? frozenPrice : parseFloat(of.produit_prix_actuel || 0)) * parseInt(of.quantite || 1);
   const marge   = pv > 0 ? (pv - total) : null;
 
   const row = (lbl, val, highlight=false) =>
