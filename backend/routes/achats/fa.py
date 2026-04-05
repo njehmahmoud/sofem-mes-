@@ -16,52 +16,211 @@ from reportlab.pdfgen import canvas as rl_canvas
 router = APIRouter(prefix="/api/achats/fa", tags=["achats-fa"])
 
 
-@router.get("", dependencies=[Depends(require_any_role)])
+@router.get("/{fa_id}", dependencies=[Depends(require_any_role)])
+def get_fa_detail(fa_id: int, db=Depends(get_db)):
+    """Get FA details with frozen prices from fa_lignes (backfill for legacy FAs)."""
+    fa = q(db, """
+        SELECT fa.*, bc.bc_numero, bc.fournisseur
+        FROM factures_achat fa
+        JOIN bons_commande bc ON fa.bc_id = bc.id
+        WHERE fa.id = %s
+    """, (fa_id,), one=True)
+    if not fa:
+        raise HTTPException(404, "FA non trouvée")
+    
+    fa = serialize(fa)
+    
+    # Backfill fa_lignes for legacy FAs (created before frozen pricing)
+    existing_lignes = q(db, "SELECT id FROM fa_lignes WHERE fa_id=%s LIMIT 1", (fa_id,), one=True)
+    if not existing_lignes:
+        # No fa_lignes yet - backfill from BR and BC data
+        lignes_data = q(db, """
+            SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite,
+                   COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
+            FROM bc_lignes bcl
+            LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
+            WHERE bcl.bc_id = (SELECT bc_id FROM factures_achat WHERE id=%s LIMIT 1)
+        """, (fa_id,))
+        
+        for l in lignes_data:
+            price_snapshot = float(l["prix_snapshot"] or 0)
+            amount = float(l["quantite"]) * price_snapshot
+            exe(db, """
+                INSERT IGNORE INTO fa_lignes 
+                (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (fa_id, l["id"], l.get("description", ""), 
+                  l["quantite"], l.get("unite", "pcs"), 
+                  price_snapshot, amount))
+    
+    # Get frozen price lines
+    lignes = serialize(q(db, """
+        SELECT * FROM fa_lignes WHERE fa_id = %s ORDER BY id
+    """, (fa_id,)))
+    
+    # Recalculate totals from frozen lignes to ensure consistency
+    ht_total = sum(float(l["montant"] or 0) for l in lignes)
+    tva_rate = float(get_all_settings(db).get("tva_rate", 19))
+    tva_total = round(ht_total * tva_rate / 100, 3)
+    ttc_total = round(ht_total + tva_total, 3)
+    
+    # Update FA totals from frozen prices
+    if abs(float(fa.get("montant_ht") or 0) - ht_total) > 0.01:
+        exe(db, "UPDATE factures_achat SET montant_ht=%s, tva=%s, montant_ttc=%s WHERE id=%s",
+            (ht_total, tva_total, ttc_total, fa_id))
+        fa["montant_ht"] = ht_total
+        fa["tva"] = tva_total
+        fa["montant_ttc"] = ttc_total
+    
+    fa["lignes"] = lignes
+    return fa
+
+
+@router.get("")
 def list_fa(db=Depends(get_db)):
-    return serialize(q(db, """
+    fas = serialize(q(db, """
         SELECT fa.*, bc.bc_numero
         FROM factures_achat fa
         JOIN bons_commande bc ON fa.bc_id = bc.id
         ORDER BY fa.created_at DESC
     """))
+    
+    # Ensure each FA has frozen prices calculated
+    for fa in fas:
+        fa_id = fa["id"]
+        # Get or create fa_lignes
+        existing_lignes = q(db, "SELECT id FROM fa_lignes WHERE fa_id=%s LIMIT 1", (fa_id,), one=True)
+        if not existing_lignes:
+            # Backfill from BR/BC data
+            lignes_data = q(db, """
+                SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite,
+                       COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
+                FROM bc_lignes bcl
+                LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
+                WHERE bcl.bc_id = %s
+            """, (fa["bc_id"],))
+            
+            for l in lignes_data:
+                price_snapshot = float(l["prix_snapshot"] or 0)
+                amount = float(l["quantite"]) * price_snapshot
+                exe(db, """
+                    INSERT IGNORE INTO fa_lignes 
+                    (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (fa_id, l["id"], l.get("description", ""), 
+                      l["quantite"], l.get("unite", "pcs"), 
+                      price_snapshot, amount))
+        
+        # Recalculate totals from frozen lignes
+        lignes = q(db, "SELECT montant FROM fa_lignes WHERE fa_id=%s", (fa_id,))
+        ht_total = sum(float(l["montant"] or 0) for l in lignes)
+        tva_rate = float(get_all_settings(db).get("tva_rate", 19))
+        tva_total = round(ht_total * tva_rate / 100, 3)
+        ttc_total = round(ht_total + tva_total, 3)
+        
+        fa["montant_ht"] = ht_total
+        fa["tva"] = tva_total
+        fa["montant_ttc"] = ttc_total
+    
+    return fas
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_manager_or_admin)])
 def create_fa(data: FACreate, user=Depends(get_current_user), db=Depends(get_db)):
-
     TVA_RATE = float(get_all_settings(db).get("tva_rate", 19))
     year = datetime.now().year
     tmp = temp_numero()
-    bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (data.bc_id,), one=True)
-    if not bc: raise HTTPException(404, "BC non trouvé")
     
-    # Read prices from BR lignes (confirmed reception prices)
-    # Join on bc_id via bons_reception
-    lignes = q(db, """
-        SELECT bcl.quantite, COALESCE(brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_unitaire
-        FROM bc_lignes bcl
-        LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
-        WHERE bcl.bc_id=%s
-    """, (data.bc_id,))
+    # ── PURCHASE INVOICE (from BC) ────────────────────────
+    if data.bc_id:
+        bc = q(db, "SELECT id FROM bons_commande WHERE id=%s", (data.bc_id,), one=True)
+        if not bc: raise HTTPException(404, "BC non trouvé")
+        
+        # Read prices from BR lignes (actual frozen prices at reception)
+        lignes = q(db, """
+            SELECT bcl.id, bcl.quantite, bcl.description, bcl.unite, 
+                   COALESCE(brl.prix_unitaire_snapshot, brl.prix_unitaire, bcl.prix_unitaire, 0) as prix_snapshot
+            FROM bc_lignes bcl
+            LEFT JOIN br_lignes brl ON brl.bc_ligne_id = bcl.id
+            WHERE bcl.bc_id=%s
+        """, (data.bc_id,))
+        
+        ht  = sum(float(l["quantite"])*float(l["prix_snapshot"]) for l in lignes)
+        tva = round(ht*TVA_RATE/100, 3)
+        ttc = round(ht+tva, 3)
+        
+        fa_id = exe(db, """
+            INSERT INTO factures_achat
+              (fa_numero,bc_id,fournisseur,date_facture,montant_ht,tva,montant_ttc,
+               cost_locked_at,cost_locked_by,notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (tmp, data.bc_id, data.fournisseur, data.date_facture, 
+              ht, tva, ttc, datetime.now(), user.get("id"), data.notes))
+        
+        numero = finalize_number(db, "factures_achat", "fa_numero", fa_id, "FA", year)
+        
+        # Create fa_lignes with frozen prices (immutable history)
+        for l in lignes:
+            price_snapshot = float(l["prix_snapshot"])
+            amount = float(l["quantite"]) * price_snapshot
+            exe(db, """
+                INSERT INTO fa_lignes 
+                (fa_id, bc_ligne_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (fa_id, l["id"], l.get("description", ""), 
+                  l["quantite"], l.get("unite", "pcs"), 
+                  price_snapshot, amount))
+        
+        log_activity(db, "CREATE", "FA", fa_id, numero,
+                     user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                     new_value={"bc_id": data.bc_id, "montant_ttc": ttc, "frozen_prices": True},
+                     detail=f"FA {numero} créée — Montant TTC: {ttc} TND — Prix figés")
+        
+        return {"id": fa_id, "fa_numero": numero, "montant_ttc": ttc, "message": "Facture Achat créée avec prix figés"}
     
-    ht  = sum(float(l["quantite"])*float(l["prix_unitaire"]) for l in lignes)
-    tva = round(ht*TVA_RATE/100, 3)
-    ttc = round(ht+tva, 3)
+    # ── SALES INVOICE (from OF - using frozen snapshot) ────
+    elif data.of_id:
+        # Get frozen invoice data from OF snapshot
+        snapshot = q(db, """
+            SELECT os.*, o.numero as of_numero FROM of_invoice_snapshot os
+            JOIN ordres_fabrication o ON os.of_id = o.id
+            WHERE os.of_id=%s
+        """, (data.of_id,), one=True)
+        if not snapshot:
+            raise HTTPException(404, f"OF {data.of_id} n'a pas de snapshot ou n'existe pas")
+        
+        # Create facture using frozen snapshot data
+        ht = float(snapshot.get("montant_vente_ht") or 0)
+        tva = round(ht * TVA_RATE / 100, 3)
+        ttc = round(ht + tva, 3)
+        
+        fa_id = exe(db, """
+            INSERT INTO factures_achat
+              (fa_numero, of_id, fournisseur, date_facture, montant_ht, tva, montant_ttc,
+               cost_locked_at, cost_locked_by, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (tmp, data.of_id, data.fournisseur or "SOFEM", data.date_facture,
+              ht, tva, ttc, datetime.now(), user.get("id"), data.notes or f"Facture ventes OF"))
+        
+        numero = finalize_number(db, "factures_achat", "fa_numero", fa_id, "FA", year)
+        
+        # Create single fa_ligne for the product (from frozen snapshot)
+        exe(db, """
+            INSERT INTO fa_lignes 
+            (fa_id, description, quantite, unite, prix_unitaire_snapshot, montant)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (fa_id, f"{snapshot['produit_code']} - {snapshot['produit_nom']}", 
+              snapshot["quantite_of"], "pcs", snapshot["produit_prix_unitaire"], ht))
+        
+        log_activity(db, "CREATE", "FA", fa_id, numero,
+                     user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
+                     new_value={"of_id": data.of_id, "montant_ttc": ttc, "frozen_prices": True},
+                     detail=f"FA Ventes {numero} — OF {snapshot['of_numero']} — Montant TTC: {ttc} TND")
+        
+        return {"id": fa_id, "fa_numero": numero, "montant_ttc": ttc, "message": f"Facture Ventes {numero} créée from OF {data.of_id}"}
     
-    fa_id = exe(db, """
-        INSERT INTO factures_achat
-          (fa_numero,bc_id,fournisseur,date_facture,montant_ht,tva,montant_ttc,notes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (tmp, data.bc_id, data.fournisseur, data.date_facture, ht, tva, ttc, data.notes))
-    
-    numero = finalize_number(db, "factures_achat", "fa_numero", fa_id, "FA", year)
-    
-    log_activity(db, "CREATE", "FA", fa_id, numero,
-                 user.get("id"), f"{user.get('prenom','')} {user.get('nom','')}".strip(),
-                 new_value={"bc_id": data.bc_id, "montant_ttc": ttc},
-                 detail=f"FA {numero} créée — Montant TTC: {ttc} TND")
-    
-    return {"id": fa_id, "fa_numero": numero, "montant_ttc": ttc, "message": "Facture créée"}
+    else:
+        raise HTTPException(400, "Either bc_id or of_id must be provided")
 
 
 @router.put("/{fa_id}/payer", dependencies=[Depends(require_manager_or_admin)])

@@ -47,8 +47,11 @@ def create_br(data: BRCreate, user=Depends(get_current_user), db=Depends(get_db)
 
     for l in data.lignes:
         price = float(l.prix_unitaire) if l.prix_unitaire else 0
-        exe(db, "INSERT INTO br_lignes (br_id,bc_ligne_id,quantite_recue,prix_unitaire) VALUES (%s,%s,%s,%s)",
-            (br_id, l.bc_ligne_id, l.quantite_recue, price))
+        # SNAPSHOT the price paid at reception (frozen for history)
+        exe(db, """INSERT INTO br_lignes 
+                   (br_id,bc_ligne_id,quantite_recue,prix_unitaire,prix_unitaire_snapshot) 
+                   VALUES (%s,%s,%s,%s,%s)""",
+            (br_id, l.bc_ligne_id, l.quantite_recue, price, price))
         bcl = q(db, "SELECT materiau_id FROM bc_lignes WHERE id=%s", (l.bc_ligne_id,), one=True)
         if bcl and bcl["materiau_id"]:
             mat = q(db, "SELECT stock_actuel FROM materiaux WHERE id=%s",

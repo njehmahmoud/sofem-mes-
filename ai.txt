@@ -1,7 +1,7 @@
 Commit 01 — Soft delete + Audit trail       ✅ DONE
-Commit 02 — Purchase fix (DA→BC→BR→FA)      ← next
-Commit 03 — Traceability (batch/serial)
-Commit 04 — Cost calculation (frozen)
+Commit 02 — Purchase fix (DA→BC→BR→FA)      ✅ DONE
+Commit 03 — Traceability (batch/serial)      skipped
+Commit 04 — Cost calculation (frozen)       ✅ DONE
 Commit 05 — Quality module
 Commit 06 — Equipment/calibration
 Commit 07 — Suppliers/Clients evaluation

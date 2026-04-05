@@ -711,7 +711,8 @@ function renderOFDetailCost() {
   const moCost  = parseFloat(of.cout_main_oeuvre || 0);
   const stCost  = parseFloat(of.cout_sous_traitance || 0);
   const total   = parseFloat(of.cout_revient || 0);
-  const pv      = parseFloat(of.prix_vente_ht || 0) * parseInt(of.quantite || 1);
+  // Always use frozen price snapshot (backend ensures it's set on first view)
+  const pv      = parseFloat(of.produit_prix_snapshot || 0) * parseInt(of.quantite || 1);
   const marge   = pv > 0 ? (pv - total) : null;
 
   const row = (lbl, val, highlight=false) =>

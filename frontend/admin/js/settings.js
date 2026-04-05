@@ -69,12 +69,13 @@ const SYSTEM_GROUPS = {
     desc: 'Contrôle le comportement automatique du système',
     color: 'var(--accent)',
     fields: [
-      { cle:'bl_auto_creation',      label:'Créer BL automatiquement à la création OF', type:'boolean', full:true  },
-      { cle:'stock_deduction_auto',  label:'Déduire stock au démarrage production',      type:'boolean', full:true  },
-      { cle:'cq_avant_completed',    label:'Exiger contrôle qualité avant OF TERMINÉ',  type:'boolean', full:true  },
-      { cle:'da_auto_approve_seuil', label:'Auto-approuver DA sous X TND (0=désactivé)',type:'number',  full:false },
-      { cle:'of_numero_format',      label:'Format numéro OF',                           type:'text',   full:false },
-      { cle:'da_numero_format',      label:'Format numéro DA',                           type:'text',   full:false },
+      { cle:'bl_auto_creation',      label:'Créer BL automatiquement à la création OF',         type:'boolean', full:true  },
+      { cle:'stock_deduction_auto',  label:'Déduire stock au démarrage production',            type:'boolean', full:true  },
+      { cle:'cq_avant_completed',    label:'Exiger contrôle qualité avant OF TERMINÉ',        type:'boolean', full:true  },
+      { cle:'cq_auto_creation',      label:'Créer automatiquement ticket qualité après OF terminé', type:'boolean', full:true  },
+      { cle:'da_auto_approve_seuil', label:'Auto-approuver DA sous X TND (0=désactivé)',      type:'number',  full:false },
+      { cle:'of_numero_format',      label:'Format numéro OF',                                 type:'text',   full:false },
+      { cle:'da_numero_format',      label:'Format numéro DA',                                 type:'text',   full:false },
     ]
   },
   alertes: {

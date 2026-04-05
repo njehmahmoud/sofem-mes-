@@ -35,7 +35,7 @@ def init_db():
     try:
         pool = pooling.MySQLConnectionPool(
             pool_name="sofem_pool",
-            pool_size=15,
+            pool_size=5,
             pool_reset_session=True,
             **DB_CONFIG
         )

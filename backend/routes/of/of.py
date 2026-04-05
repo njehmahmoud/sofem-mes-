@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/of", tags=["of"])
 def get_of_full(db, of_id):
     of = q(db, """
         SELECT o.*,
-               p.nom produit_nom, p.code produit_code,
+               p.nom produit_nom, p.code produit_code, p.prix_vente_ht produit_prix_actuel,
                CONCAT(cp.prenom,' ',cp.nom) chef_projet_nom,
                c.nom client_nom, c.matricule_fiscal client_mf,
                c.adresse client_adresse, c.ville client_ville,
@@ -178,6 +178,18 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
     if not of:
         raise HTTPException(404, "OF non trouvé")
 
+    # CRITICAL: Freeze price for legacy OFs on first view
+    # This ensures old OFs created before frozen pricing feature get their price locked
+    current_snapshot = float(of.get("produit_prix_snapshot") or 0)
+    current_price = float(of.get("produit_prix_actuel") or 0)
+    
+    if current_snapshot <= 0 and current_price > 0:
+        # Lock the current product price as frozen snapshot
+        exe(db, "UPDATE ordres_fabrication SET produit_prix_snapshot=%s WHERE id=%s",
+            (current_price, of_id))
+        of["produit_prix_snapshot"] = current_price
+        logger.info(f"Froze price for legacy OF {of_id}: {current_price}")
+
     # Cost summary
     try:
         bom = q(db, """
@@ -229,6 +241,13 @@ def get_of(of_id: int, user=Depends(require_any_role), db=Depends(get_db)):
 def create_of(data: OFCreate, db=Depends(get_db)):
     year = datetime.now().year
 
+    # Get product info (including current price for snapshot)
+    produit = q(db, "SELECT * FROM produits WHERE id=%s", (data.produit_id,), one=True)
+    if not produit:
+        raise HTTPException(404, "Produit non trouvé")
+    
+    produit_prix_snapshot = float(produit.get("prix_vente_ht", 0))
+
     # ── Race-free OF numbering: insert placeholder, use auto-increment id ──
     tmp = temp_numero()
     of_id = exe(db, """
@@ -236,12 +255,14 @@ def create_of(data: OFCreate, db=Depends(get_db)):
           (numero, produit_id, quantite, priorite, statut,
            chef_projet_id, client_id, plan_numero,
            atelier, date_echeance, notes,
-           sous_traitant, sous_traitant_op, sous_traitant_cout)
-        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           sous_traitant, sous_traitant_op, sous_traitant_cout,
+           produit_prix_snapshot)
+        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (tmp, data.produit_id, data.quantite, data.priorite,
           data.chef_projet_id, data.client_id, data.plan_numero,
           data.atelier, data.date_echeance, data.notes,
-          data.sous_traitant, data.sous_traitant_op, data.sous_traitant_cout))
+          data.sous_traitant, data.sous_traitant_op, data.sous_traitant_cout,
+          produit_prix_snapshot))
     numero = finalize_number(db, "ordres_fabrication", "numero", of_id, "OF", year)
 
     # Dynamic operations
@@ -287,6 +308,63 @@ def create_of(data: OFCreate, db=Depends(get_db)):
         logger.warning(f"Auto BL creation failed for OF {of_id}: {e}")
 
     das = auto_create_das(db, of_id, data.produit_id, data.quantite, data.bom_overrides)
+
+    # Save immutable invoice snapshot for this OF
+    # This data will be used when printing factures - never recalculated
+    montant_vente_ht = data.quantite * produit_prix_snapshot
+    
+    # Calculate estimated material costs at OF creation
+    bom_src = data.bom_overrides if data.bom_overrides else []
+    if not bom_src:
+        raw = q(db, "SELECT materiau_id, quantite_par_unite*%s qr FROM bom WHERE produit_id=%s",
+                (data.quantite, data.produit_id))
+        bom_src = [BOMOverride(materiau_id=r["materiau_id"],
+                               quantite_requise=float(r["qr"])) for r in raw]
+    
+    # Calculate material cost from BOM at creation time
+    estimated_material_cost = 0
+    for bom_item in bom_src:
+        mat = q(db, "SELECT prix_unitaire FROM materiaux WHERE id=%s", (bom_item.materiau_id,), one=True)
+        if mat:
+            estimated_material_cost += float(bom_item.quantite_requise) * float(mat.get("prix_unitaire", 0))
+    
+    # Calculate estimated labor costs from operations
+    estimated_labor_cost = 0
+    for op in data.operations:
+        for oper_id in op.operateur_ids:
+            oper = q(db, "SELECT taux_horaire, taux_piece, type_taux FROM operateurs WHERE id=%s", (oper_id,), one=True)
+            if oper:
+                if op.operation_nom and "autocad" in str(op.operation_nom).lower():
+                    # AutoCAD - pay once per operation
+                    if oper.get("type_taux") == "PIECE":
+                        estimated_labor_cost += float(oper.get("taux_piece", 0))
+                else:
+                    # Regular operation - pay per quantity
+                    if oper.get("type_taux") == "PIECE":
+                        estimated_labor_cost += data.quantite * float(oper.get("taux_piece", 0))
+                    elif oper.get("type_taux") == "HORAIRE":
+                        estimated_labor_cost += float(oper.get("taux_horaire", 0))  # Estimate 1 hour
+    
+    estimated_total_cost = estimated_material_cost + estimated_labor_cost + float(data.sous_traitant_cout or 0)
+    estimated_margin = montant_vente_ht - estimated_total_cost
+    margin_pct = (estimated_margin / montant_vente_ht * 100) if montant_vente_ht > 0 else 0
+    
+    try:
+        exe(db, """
+            INSERT INTO of_invoice_snapshot
+            (of_id, produit_id, produit_nom, produit_code, produit_prix_unitaire,
+             quantite_of, montant_vente_ht, 
+             cost_materiel_estime, cost_main_oeuvre_estime, cost_sous_traitance,
+             cost_total_estime, marge_brute_estime, marge_pourcentage, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (of_id, data.produit_id, produit.get("nom"), produit.get("code"),
+              produit_prix_snapshot, data.quantite, montant_vente_ht,
+              estimated_material_cost, estimated_labor_cost, data.sous_traitant_cout or 0,
+              estimated_total_cost, estimated_margin, margin_pct,
+              user.get("id") if user else None))
+        logger.info(f"OF {numero}: Invoice snapshot saved with estimated costs - Material: {estimated_material_cost}, Labor: {estimated_labor_cost}")
+    except Exception as e:
+        logger.warning(f"Failed to save invoice snapshot for OF {of_id}: {e}")
 
     return {
         "id": of_id,
@@ -420,14 +498,19 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
     if not src:
         raise HTTPException(404, "OF non trouvé")
 
+    # Get current product price (snapshot at duplication time)
+    produit = q(db, "SELECT * FROM produits WHERE id=%s", (src["produit_id"],), one=True)
+    produit_prix_snapshot = float(produit.get("prix_vente_ht", 0)) if produit else 0
+
     year = datetime.now().year
     tmp = temp_numero()
     new_id = exe(db, """
         INSERT INTO ordres_fabrication
           (numero, produit_id, quantite, priorite, statut,
            chef_projet_id, client_id, plan_numero, atelier,
-           date_echeance, notes, sous_traitant, sous_traitant_op, sous_traitant_cout)
-        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           date_echeance, notes, sous_traitant, sous_traitant_op, sous_traitant_cout,
+           produit_prix_snapshot)
+        VALUES (%s,%s,%s,%s,'DRAFT',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (tmp,
           src["produit_id"],
           data.quantite       or src["quantite"],
@@ -438,7 +521,8 @@ def duplicate_of(of_id: int, data: DuplicateOverride = DuplicateOverride(), db=D
           src["atelier"],
           data.date_echeance  or src["date_echeance"],
           data.notes          if data.notes          is not None else src["notes"],
-          src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"]))
+          src["sous_traitant"], src["sous_traitant_op"], src["sous_traitant_cout"],
+          produit_prix_snapshot))
     numero = finalize_number(db, "ordres_fabrication", "numero", new_id, "OF", year)
 
     # Copy operations + operator assignments
